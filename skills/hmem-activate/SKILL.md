@@ -1,6 +1,6 @@
 ---
 name: hmem-activate
-description: Activate a project mid-session via load_project, then check for and fix misrouted O-entry exchanges. Use whenever the user says "aktiviere Projekt X", "lade Projekt X", "load project X", "wechsel zu Projekt X", or switches project context during a session.
+description: Activate a project mid-session via load_project, then check for and fix misrouted O-entry exchanges. Use whenever the user says "aktiviere Projekt X", "lade Projekt X", "load project X", "wechsel zu Projekt X", or switches project context during a session. ALSO use when you are about to call load_project mid-session for any reason — even if the user didn't explicitly ask to switch projects.
 ---
 
 # hmem-activate
@@ -13,8 +13,8 @@ Use when the user switches to a different project mid-session.
 Before calling load_project, check which project is currently active. The active project is shown in every tool response as `Active project: PXXXX <name>`.
 
 Note:
-- **OLD_PROJECT**: currently active project ID (e.g. P0043)
-- **OLD_O**: corresponding O-entry (same seq: P0043 → O0043)
+- **OLD_PROJECT**: currently active project ID (e.g. P0043) — or `none` if no project was active
+- **OLD_O**: corresponding O-entry (same seq: P0043 → O0043) — if OLD_PROJECT = `none`, use **O0000** (catch-all for unattributed sessions)
 - **TARGET_PROJECT**: the project the user wants to switch to
 - **TARGET_O**: corresponding O-entry (e.g. P0048 → O0048)
 

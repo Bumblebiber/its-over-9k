@@ -370,6 +370,36 @@ Agents update L4 after every code change (enforced via `hmem-subagent` POST-TASK
 
 ---
 
+## Step 2k: v7.2.2 — Richer Session-Start Context + I-Entry Active Device Block
+
+**Only needed when upgrading from < v7.2.2**
+
+### context-inject: 5 most recent projects instead of full list
+
+`hmem context-inject` (SessionStart[clear] hook) now shows only the **5 most recently edited P-entries** instead of all projects. A hint is appended:
+```
+(full list: read_memory({prefix:"P", titles_only:true}))
+```
+No config change needed — automatic.
+
+### hook-startup: H-entry title fix
+
+H-entries without a `title` field (entries whose content lives entirely in `level_1`) now display correctly. Previously they appeared as blank lines in the `--- Human context (H-entries) ---` block.
+
+### hook-startup: Active device block
+
+The first-message context injection now includes a **`--- Active device (I00XX) ---`** block showing:
+- I-entry body (L1) — device name, specs, IP
+- All L2 section titles (Specs, OS, IP Address, Access, Services, Apps, Storage, Notes, Rules)
+- For the **Apps** section: full L3 title list (installed software)
+- Irrelevant L2/L3 nodes are filtered out
+
+### hook-startup: recent projects limit raised 3 → 5
+
+The `--- Recent projects ---` block in the first-message injection now shows 5 most recently updated P-entries (was 3).
+
+---
+
 ## Step 3: Entry Migration
 
 Some versions introduce new data formats. Check if migration is needed:

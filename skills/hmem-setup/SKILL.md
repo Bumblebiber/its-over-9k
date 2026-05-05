@@ -78,10 +78,10 @@ Script: `~/.claude/hooks/hmem-log-exchange.sh`
 Fires only after `/clear` (matcher: `"clear"`). Two hooks run in sequence:
 
 **a) `hmem context-inject`** — outputs `additionalContext` containing:
-  - Last 20 user/assistant messages from the pre-clear transcript
-  - Active project briefing (title + overview)
-  - Recent O-entries (session logs) linked to the project
-  - R-entries (rules)
+  - 5 most recently edited P-entries (one line each, active marked with `[*]`)
+  - Hint to call `read_memory({prefix:"P", titles_only:true})` for the full list
+  - All R-entries (rules, one line each)
+  - Footer with `load_project` call for the active project (if any)
   - Keeps the agent oriented after a context reset without a full `read_memory()` call.
 
 **b) `hmem deactivate`** — resets the active project for the new session:
