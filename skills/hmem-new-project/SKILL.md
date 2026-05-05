@@ -61,10 +61,30 @@ This creates:
 
 ## Step 4: Fill in details
 
-If a codebase was scanned, append the findings:
+If a codebase was scanned, append the findings. The Codebase node (`.2`) follows a strict schema:
+
+### Codebase node structure
+
+- **L3 — Pipeline** (first child): Data flow overview — `entry → moduleA → moduleB → storage`
+- **L3 — Modules**: One node per source file. Title = filename, body = purpose + `src/file.ts`
+- **L4 — Functions**: Under each module, one node per exported function/class. Title = full TypeScript signature, body = one-line description + `src/file.ts`
 
 ```
-append_memory(id="P00XX.2", content="Entry point: src/index.ts\n\n...")
+append_memory(id="P00XX.2", title="Pipeline", body="src/cli.ts → moduleA.ts → DB")
+append_memory(id="P00XX.2", title="moduleA.ts", body="Core logic handler. src/moduleA.ts")
+append_memory(id="P00XX.2.N", title="doThing(x: string): Promise<boolean>", body="Does the thing. src/moduleA.ts")
+```
+
+**L4 is critical.** Without function signatures, every agent must read source files for every task. Fill L4 for all exported functions when creating a new project — dispatch a subagent to extract them if the codebase is large.
+
+- **L5 — Extended Notes** (optional, use selectively): Add under an L4 node only when it adds real value:
+  - Usage example: `write("P", { content: "Title\n\nBody", tags: ["#foo"] })`
+  - Important caveats: "triggers sync push", "returns null if not found — never throws"
+  - Parameter details: field list for complex option types like `ReadOptions`
+
+  Not every function needs L5 — only where the signature alone leaves agents guessing.
+
+```
 append_memory(id="P00XX.3", content="Installation: npm install\n\n...")
 ```
 

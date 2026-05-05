@@ -340,6 +340,36 @@ Rules (`R`-prefix entries) are now only shown in `load_project` if the rule has 
 
 ---
 
+## Step 2j: v7.2.0 — Codebase Node Schema + checkpointPolicy Fix
+
+**Only needed when upgrading from < v7.2.0**
+
+### checkpointPolicy: readonly now correctly scoped
+
+`readonly` on a schema section previously blocked ALL `append_memory` calls under that section (including adding L3 modules or L4 function signatures). This was a bug — the intent was only to prevent adding new L2 sections to a project root.
+
+**New behavior:**
+- `append_memory(id="P0048")` → blocked if schema has readonly sections (prevents new L2 sections) ✓
+- `append_memory(id="P0048.2")` → allowed (add module to Codebase) ✓
+- `append_memory(id="P0048.2.N")` → allowed (add function signature) ✓
+- `pointer` policy still enforced at all depths ✓
+
+**Action:** Change `"checkpointPolicy": "readonly"` on the **Codebase** section in your `hmem.config.json` to `"checkpointPolicy": "append"` — the section is now freely appendable by agents.
+
+### Codebase node schema standardized
+
+The `.2 Codebase` section now has a standard 4-level structure:
+- **L3 — Pipeline** (auto-created via `defaultChildren`): data flow overview
+- **L3.N — Module**: title = filename, body = purpose + `src/file.ts`
+- **L4 — Function** (mandatory): title = full TS signature, body = description + `src/file.ts`
+- **L5 — Extended Notes** (optional): usage example, caveats, complex param details
+
+Agents update L4 after every code change (enforced via `hmem-subagent` POST-TASK NODE SYNC).
+
+**Action:** Run `load_project` on each active project — the Pipeline sub-node is auto-created via `defaultChildren` reconcile if missing.
+
+---
+
 ## Step 3: Entry Migration
 
 Some versions introduce new data formats. Check if migration is needed:
@@ -380,7 +410,7 @@ All P-entries (projects) must follow the standard 16-section L2 structure define
 
 ```
 .1  Overview       (readonly)
-.2  Codebase       (readonly)
+.2  Codebase       (append — L3 modules + L4 signatures freely appendable by agents)
 .3  Dependencies   (readonly)
 .4  Usage          (readonly)
 .5  Requirements   (readonly)
@@ -401,6 +431,13 @@ All P-entries (projects) must follow the standard 16-section L2 structure define
 - `readonly` — Haiku never modifies this section
 - `pointer` — Haiku may only add nodes that reference an entry ID (e.g. `[E0124]`)
 - `append` — Haiku may freely add sub-nodes
+
+**Codebase node structure (`.2`):**
+- L3 first child = **Pipeline** (data flow overview)
+- L3.N = **Module** (title: filename, body: purpose + `src/file.ts`)
+- L4 = **Function** (title: full TS signature, body: one-line description + `src/file.ts`)
+
+Agents update `.2` after every code change (POST-TASK NODE SYNC in hmem-subagent skill).
 
 For each active P-entry:
 1. `read_memory(id="P00XX", depth=2)` — check L2 structure
@@ -432,7 +469,7 @@ In `memory.schemas.P.sections`, make these changes:
 Full recommended policies (add to each section):
 ```json
 { "name": "Overview",     "checkpointPolicy": "readonly" },
-{ "name": "Codebase",     "checkpointPolicy": "readonly" },
+{ "name": "Codebase",     "checkpointPolicy": "append"   },
 { "name": "Dependencies", "checkpointPolicy": "readonly" },
 { "name": "Usage",        "checkpointPolicy": "readonly" },
 { "name": "Requirements", "checkpointPolicy": "readonly" },
