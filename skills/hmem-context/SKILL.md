@@ -53,3 +53,12 @@ If nothing relevant found:
 [CONTEXT LOADED]
 No relevant context found for: <your query>
 [/CONTEXT LOADED]
+
+→ If the missing info is code structure: dispatch an Explore agent to locate it in the filesystem.
+→ After finding it, update the Codebase node immediately using the correct depth:
+  L3 — module group (if the group is missing):
+    append_memory(id="P00XX.2", title="Core modules")
+  L4 — individual module with signature + purpose:
+    append_memory(id="P00XX.2.N", title="moduleName.ts", body="functionName(param: Type): Return — purpose. src/path/moduleName.ts")
+  L5 — optional extended notes (edge cases, caveats):
+    append_memory(id="P00XX.2.N.M", title="Note", body="...")

@@ -65,6 +65,14 @@ Move the misrouted session/batch node to the correct O-entry.
 
 **Rule:** Never call `load_project` on a secondary project without immediately re-calling it on your working project. Routing follows the last `load_project` call — always return control explicitly.
 
+## What gets injected automatically (first message)
+
+The UserPromptSubmit hook injects the following into every session start:
+- **H-entries** — top 10 by access count (ID + title)
+- **Active device apps** — Apps list of the current I-entry (if device is set)
+- **Infrastructure favorites** — any I-entry with `favorite: true` (e.g. reMarkable, shared server). Mark with `update_memory(id="I00XX", favorite=true)`.
+- **Recent projects** — 5 most recently updated P-entries
+
 ## OUTPUT
 
 After both steps, output exactly:
