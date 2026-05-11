@@ -3888,7 +3888,36 @@ export class HmemStore {
     if (oldId === newId) return { ok: false, affected: 0, error: "old and new ID are identical" };
 
     const oldEntry = this.db.prepare("SELECT id, prefix FROM memories WHERE id = ?").get(oldId) as any;
-    if (!oldEntry) return { ok: false, affected: 0, error: `entry ${oldId} not found` };
+
+    // Sub-node rename (e.g. P0054.19 → P0054.6)
+    if (!oldEntry) {
+      const oldNode = this.db.prepare("SELECT id, root_id, parent_id FROM memory_nodes WHERE id = ?").get(oldId) as any;
+      if (!oldNode) return { ok: false, affected: 0, error: `entry ${oldId} not found` };
+      const nodeExists = this.db.prepare("SELECT id FROM memory_nodes WHERE id = ?").get(newId) as any;
+      if (nodeExists) return { ok: false, affected: 0, error: `target ID ${newId} already exists` };
+      let affected = 0;
+      this.db.transaction(() => {
+        // Rename the node and all its descendants
+        const descendants = this.db.prepare(
+          "SELECT id, parent_id FROM memory_nodes WHERE id = ? OR id LIKE ?"
+        ).all(oldId, `${oldId}.%`) as { id: string; parent_id: string }[];
+        for (const n of descendants) {
+          const newNId = n.id.replace(oldId, newId);
+          const newPId = n.parent_id.replace(oldId, newId);
+          this.db.prepare("UPDATE memory_nodes SET id = ?, parent_id = ? WHERE id = ?").run(newNId, newPId, n.id);
+          affected++;
+        }
+        // FTS rowid-map
+        const ftsNodes = this.db.prepare(
+          "SELECT fts_rowid, node_id FROM hmem_fts_rowid_map WHERE node_id = ? OR node_id LIKE ?"
+        ).all(oldId, `${oldId}.%`) as { fts_rowid: number; node_id: string }[];
+        for (const fn of ftsNodes) {
+          this.db.prepare("UPDATE hmem_fts_rowid_map SET node_id = ? WHERE fts_rowid = ?")
+            .run(fn.node_id.replace(oldId, newId), fn.fts_rowid);
+        }
+      })();
+      return { ok: true, affected };
+    }
 
     const newExists = this.db.prepare("SELECT id FROM memories WHERE id = ?").get(newId) as any;
     if (newExists) return { ok: false, affected: 0, error: `target ID ${newId} already exists` };
