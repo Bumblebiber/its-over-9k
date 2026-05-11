@@ -33,13 +33,13 @@ You've tried workarounds — CLAUDE.md files, custom prompts, manually pasting c
 
 ```
 You:    "Load project"
-Agent:  [calls load_project("P0048") — 700 tokens]
+Agent:  [calls load_project("P0048") — 3000 tokens]
 Agent:  "v7.4.1, TypeScript/SQLite/npm. 3 open bugs, 8 roadmap items.
          Last session: rebrand complete, rename_id bug fixed (89 changes).
          Next: O-Entry Auto-Purge. What's the focus today?"
 ```
 
-That's it. 700 tokens for a complete project briefing. The agent knows the stack, the architecture, the open bugs, the recent decisions, and exactly where you left off — even if "you" was a different AI on a different machine yesterday.
+That's it. 3000 tokens for a complete project briefing. The agent knows the stack, the architecture, the open bugs, the recent decisions, and exactly where you left off — even if "you" was a different AI on a different machine yesterday.
 
 ---
 
@@ -53,7 +53,7 @@ Level 1  ──  One-line summary          (always loaded — ~5k tokens for 300
         Level 5  ──  Raw/verbatim data  (loaded on demand)
 ```
 
-At session start, the agent loads Level 1 summaries — one line per memory. When it needs detail, it drills down. Your 300-entry memory costs 5k tokens to overview. A single project costs ~700 tokens.
+At session start, the agent loads Level 1 summaries — one line per memory. When it needs detail, it drills down. Your 300-entry memory costs 5k tokens to overview. A single project costs ~3000 tokens.
 
 **Nothing is summarized away.** Level 1 is a compressed view, but Levels 2–5 hold the complete original text, word for word, accessible on demand.
 
