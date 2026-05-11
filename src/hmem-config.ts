@@ -269,6 +269,11 @@ export const DEFAULT_CONFIG: HmemConfig = {
         { name: "Key Learnings",   loadDepth: 1, description: "Generalizable insight for future work. Tag #open / #solved" },
       ],
     },
+    H: {
+      sections: [
+        { name: "Directive", loadDepth: 1, description: "Agent directives derived from this context category — how to adapt communication and behavior. Main content goes directly as flat L2 sub-nodes (one item per node, e.g. skill level, preference, trait)." },
+      ],
+    },
     I: {
       sections: [
         { name: "Specs",    loadDepth: 2, description: "Hardware or service description. L1 body: Name | Status | Type | Host" },
