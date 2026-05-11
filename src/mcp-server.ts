@@ -1709,7 +1709,8 @@ server.tool(
         }).filter(r => !r.obsolete && !r.irrelevant && Array.isArray(r.links) && r.links.includes(id));
         if (ruleEntries.length > 0) {
           lines.push("");
-          lines.push("  Rules:");
+          lines.push("  --- Rules ---");
+          lines.push("");
           for (const r of ruleEntries) {
             lines.push(`    ${r.id}  ${cleanTitle(r.title)}`);
             if (r.level_1 && r.level_1 !== r.title) {
@@ -1742,6 +1743,8 @@ server.tool(
             { prefix: "C", loadDepth: 2, tagFilter: "#universal" },
           ];
           for (const item of globalItems) {
+            // R: project-specific rules already rendered above. I: device context belongs in session-start hook.
+            if (item.prefix === "R" || item.prefix === "I") continue;
             try {
               const readDepth = item.loadDepth >= 3 ? 2 : 1;
               let entries = hmemStore.read({ prefix: item.prefix, depth: readDepth })
