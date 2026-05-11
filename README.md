@@ -6,6 +6,8 @@
 
 One `load_project()` call. ~3000 tokens. Your agent knows everything important about a project — every past mistake, every decision, every open task — **across sessions, devices, and AI providers.** No setup per conversation. No "let me re-read the codebase." It just *remembers*.
 
+> **AI agent?** Skip this file. Read [AGENT_SETUP.md](AGENT_SETUP.md) — written for you, not for humans.
+
 ---
 
 ## What This Is
