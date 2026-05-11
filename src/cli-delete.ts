@@ -53,7 +53,7 @@ export async function deleteEntry(args: string[]): Promise<void> {
   const ok = store.delete(id);
   if (ok) {
     console.log(`Deleted: ${id}`);
-    const synced = syncPushSync(hmemPath);
+    const synced = await syncPushSync(hmemPath);
     if (synced) {
       console.log("Synced to remote servers.");
     } else {

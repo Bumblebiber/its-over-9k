@@ -496,7 +496,11 @@ export function loadHmemConfig(projectDir: string): HmemConfig {
         if (!s || typeof s !== "object" || !s.serverUrl || !s.userId || !s.salt) return null;
         return {
           serverUrl: s.serverUrl, userId: s.userId, salt: s.salt,
-          token: s.token, syncSecrets: s.syncSecrets !== undefined ? s.syncSecrets : true,
+          // Default to FALSE: tokens/salts/passphrases are not pushed to the sync server
+          // unless the user explicitly opts in. Avoids accidental secret exfiltration
+          // (see security incident 2026-05-05). Set `"syncSecrets": true` in hmem.config.json
+          // to restore the old behaviour.
+          token: s.token, syncSecrets: s.syncSecrets === true,
           lastPushAt: s.lastPushAt ?? null, lastPullAt: s.lastPullAt ?? null,
           ...(s.name ? { name: s.name } : {}),
         };

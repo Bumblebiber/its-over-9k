@@ -11,7 +11,7 @@ description: "Dispatch an isolated sub-agent for a specific task. Sub-agent rece
 - **Searching** — "does a spec exist?", "find the plan for X", "search the codebase for Y", "check if skill Z covers this", "read the docs for W", "is there already a file that does X?" — any exploration or lookup task
 - **Calculation or lookup** — deterministic, context-free
 - **Writing an isolated section or document** — no conversation history needed
-- **Writing or modifying code** — never write code directly in the main context. Pass the project ID and relevant node IDs (e.g. `.2 Codebase`) in the task so the sub-agent can sync them after completing the work.
+- **Writing or modifying code** — never write code directly in the main context. Pass the project ID and relevant node IDs (e.g. `.2 Codebase`) in the task so the sub-agent can sync them after completing the work. Always include in the task: `"Invoke superpowers:coding-discipline before writing code."`
 
 **Never dispatch for tasks that require knowing the conversation context.**
 

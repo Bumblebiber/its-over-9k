@@ -400,6 +400,37 @@ The `--- Recent projects ---` block in the first-message injection now shows 5 m
 
 ---
 
+## Step 2l: v7.4.0 — syncSecrets default flipped + non-blocking sync
+
+**Only needed when upgrading from < v7.4.0**
+
+### syncSecrets default is now `false` (was `true`) — BREAKING
+
+Sync configs that omitted `syncSecrets` previously pushed tokens/salts to the sync server. After upgrading, secrets stay local unless `"syncSecrets": true` is set explicitly in `hmem.config.json`. Motivated by the 2026-05-05 credential-exposure incident.
+
+**Action:**
+- If you rely on secret-sync between devices (e.g. for `hmem-sync restore` shortcuts), add `"syncSecrets": true` to your sync block.
+- Otherwise: nothing to do. The safer default kicks in automatically.
+
+Check your config:
+```bash
+grep -A 10 '"sync"' "$(dirname "$HMEM_PATH")/hmem.config.json"
+```
+
+### Non-blocking sync I/O
+
+`syncPull`, `syncPullThenPush`, `syncPushSync`, `syncPushWithRetry`, `reserveId`, `reserveNextId`, and `reserveNextSubIds` are now async. The stdio transport is no longer frozen during a slow push. Tool behaviour is unchanged for callers.
+
+### Internal: HmemStore.db is `@internal`
+
+If you wrote third-party code that called `store.db.prepare(...)`, prefer the new public methods (`isObsolete`, `hasActiveEntryWithPrefix`, `getNonObsoleteTitle`) — direct access still works but bypasses the integrity-check guard.
+
+### Internal: migration tracking via schema_version
+
+The `MIGRATIONS` array of `ALTER TABLE` statements is now tracked in `schema_version` (`alter_vN`). Genuine errors are logged instead of silently swallowed. No action needed; first open after upgrade marks all known migrations as applied.
+
+---
+
 ## Step 3: Entry Migration
 
 Some versions introduce new data formats. Check if migration is needed:

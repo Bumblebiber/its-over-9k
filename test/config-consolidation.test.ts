@@ -62,6 +62,26 @@ describe("loadHmemConfig", () => {
     const cfg = loadHmemConfig(TMP);
     expect(getSyncServers(cfg)[0].syncSecrets).toBe(false);
   });
+
+  it("defaults syncSecrets to false when omitted (opt-in for secret sync)", () => {
+    const config = {
+      memory: {},
+      sync: { serverUrl: "x", userId: "y", salt: "z", token: "t" }
+    };
+    writeFileSync(join(TMP, "hmem.config.json"), JSON.stringify(config));
+    const cfg = loadHmemConfig(TMP);
+    expect(getSyncServers(cfg)[0].syncSecrets).toBe(false);
+  });
+
+  it("preserves syncSecrets: true when explicitly set", () => {
+    const config = {
+      memory: {},
+      sync: { serverUrl: "x", userId: "y", salt: "z", token: "t", syncSecrets: true }
+    };
+    writeFileSync(join(TMP, "hmem.config.json"), JSON.stringify(config));
+    const cfg = loadHmemConfig(TMP);
+    expect(getSyncServers(cfg)[0].syncSecrets).toBe(true);
+  });
 });
 
 describe("saveHmemConfig", () => {

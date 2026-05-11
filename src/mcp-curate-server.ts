@@ -51,7 +51,7 @@ server.tool(
         ? openCompanyMemory(PROJECT_DIR, hmemConfig)
         : new HmemStore(HMEM_PATH, hmemConfig);
       try {
-        if (storeName === "personal") syncPullThenPush(HMEM_PATH);
+        if (storeName === "personal") await syncPullThenPush(HMEM_PATH);
 
         let updated = 0;
         let notFound = 0;
@@ -185,7 +185,7 @@ server.tool(
         : new HmemStore(HMEM_PATH, hmemConfig);
       try {
         const safePath = validateFilePath(source_path, path.dirname(hmemStore.getDbPath()));
-        if (storeName === "personal" && !dry_run) syncPullThenPush(HMEM_PATH);
+        if (storeName === "personal" && !dry_run) await syncPullThenPush(HMEM_PATH);
         const result = hmemStore.importFromHmem(safePath, dry_run);
         const mode = dry_run ? "preview" : "imported";
         log(`import_memory: ${mode} from ${safePath} (${result.inserted} new, ${result.merged} merged)`);
@@ -203,7 +203,7 @@ server.tool(
           lines.push(`  ID remapping ${dry_run ? "required" : "applied"} (${result.conflicts} conflicts)`);
         }
         if (storeName === "personal" && !dry_run && (result.inserted > 0 || result.merged > 0)) {
-          const retry = syncPushWithRetry(HMEM_PATH);
+          const retry = await syncPushWithRetry(HMEM_PATH);
           if (!retry.resolved) lines.push(`  ⚠ unresolved push conflicts after ${retry.attempts} attempts`);
           else if (retry.attempts > 1) lines.push(`  (resolved push conflict after ${retry.attempts} attempts)`);
         }
@@ -508,14 +508,14 @@ server.tool(
         ? openCompanyMemory(PROJECT_DIR, hmemConfig)
         : new HmemStore(HMEM_PATH, hmemConfig);
       try {
-        if (store === "personal") syncPullThenPush(HMEM_PATH);
+        if (store === "personal") await syncPullThenPush(HMEM_PATH);
         const result = hmemStore.moveNodes(node_ids, target_o_id);
         let text = `Moved ${result.moved} node(s) to ${target_o_id}.`;
         if (result.errors.length > 0) {
           text += `\nErrors:\n${result.errors.join("\n")}`;
         }
         if (store === "personal") {
-          const retry = syncPushWithRetry(HMEM_PATH);
+          const retry = await syncPushWithRetry(HMEM_PATH);
           if (!retry.resolved) text += `\n⚠ unresolved push conflicts after ${retry.attempts} attempts`;
           else if (retry.attempts > 1) text += `\n(resolved push conflict after ${retry.attempts} attempts)`;
         }

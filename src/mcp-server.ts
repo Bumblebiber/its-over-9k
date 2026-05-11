@@ -503,11 +503,11 @@ server.tool(
           };
         }
 
-        if (storeName === "personal") syncPullThenPush(HMEM_PATH);
+        if (storeName === "personal") await syncPullThenPush(HMEM_PATH);
         // Multi-agent ID-collision prevention: reserve next ID at sync server before writing.
         // No-op if hmem-sync is disabled. Throws after maxAttempts if continually conflicting.
         if (storeName === "personal") {
-          reserveNextId(HMEM_PATH, prefix, hmemStore);
+          await reserveNextId(HMEM_PATH, prefix, hmemStore);
         }
         const result = hmemStore.write(prefix, content, links, undefined, favorite, tags, pinned, force);
         const storeLabel = storeName === "company" ? "company" : path.basename(HMEM_PATH, ".hmem");
@@ -666,7 +666,7 @@ server.tool(
           };
         }
 
-        if (storeName === "personal" && !isExternal) syncPullThenPush(HMEM_PATH);
+        if (storeName === "personal" && !isExternal) await syncPullThenPush(HMEM_PATH);
         // Cross-project write notice: if updating a P-sub-node of a project that isn't currently
         // active, do NOT auto-switch. The agent may be doing a quick cross-project edit (e.g.
         // logging a hmem bug while working on another project). Instead, return a notice in the
@@ -712,7 +712,7 @@ server.tool(
         if (active === false) parts.push("active flag cleared");
         if (tags !== undefined) parts.push(tags.length > 0 ? `tags: ${tags.join(" ")}` : "tags cleared");
         if (storeName === "personal" && !isExternal) {
-          const retry = syncPushWithRetry(HMEM_PATH);
+          const retry = await syncPushWithRetry(HMEM_PATH);
           if (!retry.resolved) {
             parts.push(`⚠ unresolved push conflicts after ${retry.attempts} attempts`);
           } else if (retry.attempts > 1) {
@@ -768,7 +768,7 @@ server.tool(
     try {
       const hmemStore = new HmemStore(HMEM_PATH, hmemConfig);
       try {
-        syncPullThenPush(HMEM_PATH);
+        await syncPullThenPush(HMEM_PATH);
 
         const result = hmemStore.writeLinear("O", { l1, l2, l3, l4, l5 }, tags, links);
 
@@ -922,7 +922,7 @@ server.tool(
           }
         }
 
-        if (storeName === "personal") syncPullThenPush(HMEM_PATH);
+        if (storeName === "personal") await syncPullThenPush(HMEM_PATH);
         // Cross-project write notice (see update_memory for rationale)
         const rootId = id.includes(".") ? id.split(".")[0] : id;
         let crossProjectNotice = "";
@@ -938,7 +938,7 @@ server.tool(
         // (e.g. both inserting P0048.7.5 with different content). On conflict the loop
         // pulls and recomputes the next free sub-seq before retrying.
         if (storeName === "personal") {
-          reserveNextSubIds(HMEM_PATH, id, content, hmemStore);
+          await reserveNextSubIds(HMEM_PATH, id, content, hmemStore);
         }
         const result = hmemStore.appendChildren(id, content);
         const storeLabel = storeName === "company" ? "company" : path.basename(HMEM_PATH, ".hmem");
@@ -952,7 +952,7 @@ server.tool(
 
         let conflictNote = "";
         if (storeName === "personal") {
-          const retry = syncPushWithRetry(HMEM_PATH);
+          const retry = await syncPushWithRetry(HMEM_PATH);
           if (!retry.resolved) {
             conflictNote = `\n⚠ Push had unresolved conflicts after ${retry.attempts} attempts — your local changes are saved but another agent's writes may have collided. Run hmem-sync sync manually to investigate.`;
           } else if (retry.attempts > 1) {
@@ -1063,7 +1063,7 @@ server.tool(
   async ({ id, depth, prefix, after, before, search, limit: maxResults, time, period, time_around, show_obsolete, show_obsolete_path, titles_only, expand, mode, store: storeName, curator, show_all, tag, stale_days, context_for, min_tag_score, hmem_path }) => {
 
     // Pull before read to get latest from server (30s cooldown)
-    const newEntries = storeName === "personal" && !hmem_path ? syncPull(HMEM_PATH) : [];
+    const newEntries = storeName === "personal" && !hmem_path ? await syncPull(HMEM_PATH) : [];
 
     try {
       const { store: hmemStore, label: storeLabelResolved, path: resolvedPath } = resolveStore(storeName, hmem_path);
@@ -1464,10 +1464,7 @@ server.tool(
         }
 
         // Check if project is obsolete
-        const isObsolete = (hmemStore.db.prepare(
-          "SELECT obsolete FROM memories WHERE id = ? AND obsolete = 1"
-        ).get(id) as any);
-        if (isObsolete) {
+        if (hmemStore.isObsolete(id)) {
           return {
             content: [{ type: "text" as const, text: `ERROR: ${id} is obsolete. Use the current version instead.` }],
             isError: true,
@@ -1787,9 +1784,7 @@ server.tool(
         // Onboarding hints: show when no I/A-entries exist or no active I-entry
         const onboardingHints: string[] = [];
         const hasAnyI = !!totalStats.byPrefix["I"];
-        const hasActiveI = hasAnyI && !!(hmemStore.db.prepare(
-          "SELECT 1 FROM memories WHERE prefix = 'I' AND active = 1 AND irrelevant != 1 AND obsolete != 1 LIMIT 1"
-        ).get());
+        const hasActiveI = hasAnyI && hmemStore.hasActiveEntryWithPrefix("I");
         if (!hasAnyI || !hasActiveI) {
           const reason = !hasAnyI ? "No I-entries found" : "No active I-entry";
           onboardingHints.push(
@@ -1854,10 +1849,7 @@ server.tool(
           };
         }
 
-        const isObsolete = (hmemStore.db.prepare(
-          "SELECT obsolete FROM memories WHERE id = ? AND obsolete = 1"
-        ).get(id) as any);
-        if (isObsolete) {
+        if (hmemStore.isObsolete(id)) {
           return {
             content: [{ type: "text" as const, text: `ERROR: ${id} is obsolete. Use the current version instead.` }],
             isError: true,
@@ -2038,8 +2030,8 @@ server.tool(
 
         // Pull + reserve P-ID before write (multi-agent collision prevention)
         if (storeName === "personal") {
-          syncPullThenPush(HMEM_PATH);
-          reserveNextId(HMEM_PATH, "P", hmemStore);
+          await syncPullThenPush(HMEM_PATH);
+          await reserveNextId(HMEM_PATH, "P", hmemStore);
         }
 
         // Write P-entry (signature: prefix, content, links, minRole, favorite, tags)
@@ -2055,7 +2047,7 @@ server.tool(
           if (!existingO) {
             // Reserve the O-prefix slot too — even though we may rename it afterwards,
             // the initial write needs collision protection
-            if (storeName === "personal") reserveNextId(HMEM_PATH, "O", hmemStore);
+            if (storeName === "personal") await reserveNextId(HMEM_PATH, "O", hmemStore);
             hmemStore.write("O", `${name} — Session Log`, [pId], undefined, false, ["#session-log"]);
             // The O-entry gets auto-assigned the next seq, which may not match pSeq.
             // We need to ensure it has the right ID. Check if it matches:
@@ -2071,7 +2063,7 @@ server.tool(
         // Note: write() with prefix "P" auto-activates the project (deactivates others)
 
         // Sync with retry loop to catch any version conflicts from the rename
-        if (storeName === "personal") syncPushWithRetry(HMEM_PATH);
+        if (storeName === "personal") await syncPushWithRetry(HMEM_PATH);
 
         log(`create_project: ${pId} + ${oId} created and activated`);
 
@@ -2147,16 +2139,14 @@ server.tool(
       const store = new HmemStore(HMEM_PATH, hmemConfig);
       let title = id;
       try {
-        const row = store.db.prepare(
-          "SELECT title FROM memories WHERE id = ? AND obsolete != 1 LIMIT 1"
-        ).get(id) as { title: string } | undefined;
-        if (!row) {
+        const rowTitle = store.getNonObsoleteTitle(id);
+        if (rowTitle === undefined) {
           return {
             content: [{ type: "text" as const, text: `ERROR: Entry ${id} not found or obsolete.` }],
             isError: true,
           };
         }
-        title = (row.title ?? id).split("|")[0].trim();
+        title = rowTitle.split("|")[0].trim();
       } finally {
         store.close();
       }

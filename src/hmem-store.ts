@@ -343,6 +343,11 @@ const MIGRATIONS = [
 // ---- HmemStore class ----
 
 export class HmemStore {
+  /**
+   * @internal Raw SQLite handle. Reserved for migration scripts and trusted internal modules.
+   * Application code should prefer the public methods on HmemStore — direct queries bypass
+   * the integrity-check guard, tag handling, and FTS5 triggers' invariants.
+   */
   public db: Database.Database;
   public readonly dbPath: string;
   getDbPath(): string { return this.dbPath; }
@@ -2719,11 +2724,29 @@ export class HmemStore {
   }
 
   private migrate(): void {
-    for (const sql of MIGRATIONS) {
+    // Schema_version-tracked, per-statement migrations. The list is append-only:
+    // never reorder or delete entries — only add new ones at the bottom.
+    const checkApplied = this.db.prepare("SELECT 1 FROM schema_version WHERE key = ?");
+    const markApplied = this.db.prepare(
+      "INSERT OR REPLACE INTO schema_version (key, value) VALUES (?, ?)"
+    );
+    for (let i = 0; i < MIGRATIONS.length; i++) {
+      const key = `alter_v${i + 1}`;
+      if (checkApplied.get(key)) continue;
+      const sql = MIGRATIONS[i];
       try {
         this.db.exec(sql);
-      } catch {
-        // Column already exists — ignore
+        markApplied.run(key, new Date().toISOString());
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        // Idempotent failures (column/index already exists) — table is already in the
+        // target shape, so the migration is effectively applied. Mark it so we don't
+        // retry on every open.
+        if (/duplicate column|already exists/i.test(msg)) {
+          markApplied.run(key, new Date().toISOString());
+        } else {
+          console.error(`[hmem] migration ${key} failed (will retry on next open): ${msg}`);
+        }
       }
     }
   }
@@ -3131,6 +3154,29 @@ export class HmemStore {
     return (this.db.prepare(
       "SELECT id, prefix, seq, level_1, links FROM memories WHERE id = ?"
     ).get(id) as { id: string; prefix: string; seq: number; level_1: string; links: string | null } | undefined) ?? null;
+  }
+
+  /** True if the entry with `id` exists and is flagged obsolete. */
+  isObsolete(id: string): boolean {
+    const row = this.db.prepare(
+      "SELECT obsolete FROM memories WHERE id = ?"
+    ).get(id) as { obsolete: number } | undefined;
+    return row?.obsolete === 1;
+  }
+
+  /** True if there is at least one entry with the given prefix that is active and neither irrelevant nor obsolete. */
+  hasActiveEntryWithPrefix(prefix: string): boolean {
+    return !!this.db.prepare(
+      "SELECT 1 FROM memories WHERE prefix = ? AND active = 1 AND irrelevant != 1 AND obsolete != 1 LIMIT 1"
+    ).get(prefix);
+  }
+
+  /** Return the title of a non-obsolete entry, or undefined if missing or obsolete. */
+  getNonObsoleteTitle(id: string): string | undefined {
+    const row = this.db.prepare(
+      "SELECT title FROM memories WHERE id = ? AND obsolete != 1 LIMIT 1"
+    ).get(id) as { title: string | null } | undefined;
+    return row ? (row.title ?? id) : undefined;
   }
 
   /** Get the display title of any entry or sub-node by ID. Used by update_memory body-only mode. */

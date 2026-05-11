@@ -1,5 +1,19 @@
 # Changelog
 
+## 7.4.0 — 2026-05-11
+
+### Breaking changes
+
+- **`syncSecrets` default flipped to `false`.** Sync configs that previously omitted `syncSecrets` were treating it as `true` and pushing tokens/salts to the sync server. After upgrading, secrets stay local unless the user explicitly sets `"syncSecrets": true` in `hmem.config.json`. Motivated by the 2026-05-05 credential-exposure incident; the safe default is now opt-in.
+
+### Changed
+
+- **Sync I/O no longer blocks the event loop.** `syncPull`, `syncPullThenPush`, `syncPushSync`, `syncPushWithRetry`, `reserveId`, `reserveNextId`, and `reserveNextSubIds` now return Promises and use `child_process.spawn` instead of `spawnSync`. MCP tool handlers `await` them, so behaviour is unchanged for callers — but a slow `hmem-sync` push no longer freezes the stdio transport for other work.
+
+- **`HmemStore.db` marked `@internal`.** New public helpers — `isObsolete(id)`, `hasActiveEntryWithPrefix(prefix)`, `getNonObsoleteTitle(id)` — replace four raw `store.db.prepare(...)` queries in `mcp-server.ts`. The raw handle is still accessible for migration scripts but no application code should use it.
+
+- **Migration tracking via `schema_version`.** The `MIGRATIONS` array of `ALTER TABLE` statements now records each successful migration in `schema_version` (`alter_vN`) and only retries the ones that haven't been applied. Real errors are logged instead of silently swallowed; idempotent "duplicate column" failures are recognised and marked as applied.
+
 ## 7.0.1 — 2026-04-27
 
 ### Added

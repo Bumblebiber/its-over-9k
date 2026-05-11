@@ -122,6 +122,36 @@ function spawnSyncHmemSync(args: string[]): ReturnType<typeof spawnSync> {
   });
 }
 
+interface AsyncSpawnResult {
+  status: number | null;
+  stdout: string;
+  stderr: string;
+  error?: Error;
+}
+
+/**
+ * Promise-based spawn that does NOT block the event loop. Mirrors the shape of
+ * spawnSync's return value enough that callers can keep their existing logic.
+ */
+function spawnAsyncHmemSync(args: string[]): Promise<AsyncSpawnResult> {
+  const bin = resolveHmemSyncBin();
+  return new Promise((resolve) => {
+    let stdout = "";
+    let stderr = "";
+    const child = bin
+      ? spawn(bin[0], [bin[1], ...args], { env: { ...process.env }, windowsHide: true })
+      : spawn("hmem-sync", args, {
+          env: { ...process.env }, shell: process.platform === "win32", windowsHide: true,
+        });
+    child.stdout?.setEncoding("utf8");
+    child.stderr?.setEncoding("utf8");
+    child.stdout?.on("data", (d: string) => { stdout += d; });
+    child.stderr?.on("data", (d: string) => { stderr += d; });
+    child.on("error", (err) => resolve({ status: null, stdout, stderr, error: err }));
+    child.on("close", (code) => resolve({ status: code, stdout, stderr }));
+  });
+}
+
 function spawnDetachedHmemSync(args: string[]): void {
   const bin = resolveHmemSyncBin();
   if (bin) {
@@ -138,7 +168,7 @@ function spawnDetachedHmemSync(args: string[]): void {
   }
 }
 
-export function syncPull(hmemPath: string): Array<{id: string, title: string, created_at: string, modified?: boolean}> {
+export async function syncPull(hmemPath: string): Promise<Array<{id: string, title: string, created_at: string, modified?: boolean}>> {
   if (!hmemSyncEnabled(hmemPath)) return [];
   const now = Date.now();
   if (now - lastPullAt < PULL_COOLDOWN_MS) return [];
@@ -159,7 +189,7 @@ export function syncPull(hmemPath: string): Array<{id: string, title: string, cr
   if (servers.length > 0) {
     for (const s of servers) {
       if (!s.serverUrl || !s.token) continue;
-      const result = spawnSyncHmemSync([
+      const result = await spawnAsyncHmemSync([
         "pull", "--config", hmemSyncConfig(hmemPath),
         "--hmem-path", hmemPath,
         "--server-url", s.serverUrl, "--token", s.token,
@@ -167,7 +197,7 @@ export function syncPull(hmemPath: string): Array<{id: string, title: string, cr
       if (result.error) process.stderr.write(`hmem-sync pull error (${s.name ?? s.serverUrl}): ${result.error.message}\n`);
     }
   } else {
-    const result = spawnSyncHmemSync(["pull", "--config", hmemSyncConfig(hmemPath), "--hmem-path", hmemPath]);
+    const result = await spawnAsyncHmemSync(["pull", "--config", hmemSyncConfig(hmemPath), "--hmem-path", hmemPath]);
     if (result.error) process.stderr.write(`hmem-sync pull error: ${result.error.message}\n`);
   }
 
@@ -209,20 +239,20 @@ export function syncPull(hmemPath: string): Array<{id: string, title: string, cr
   } catch { return []; }
 }
 
-export function syncPullThenPush(hmemPath: string): void {
+export async function syncPullThenPush(hmemPath: string): Promise<void> {
   if (!hmemSyncEnabled(hmemPath)) return;
   const servers = getSyncServers(hmemConfig);
   if (servers.length > 0) {
     for (const s of servers) {
       if (!s.serverUrl || !s.token) continue;
-      spawnSyncHmemSync([
+      await spawnAsyncHmemSync([
         "pull", "--config", hmemSyncConfig(hmemPath),
         "--hmem-path", hmemPath,
         "--server-url", s.serverUrl, "--token", s.token,
       ]);
     }
   } else {
-    spawnSyncHmemSync(["pull", "--config", hmemSyncConfig(hmemPath), "--hmem-path", hmemPath]);
+    await spawnAsyncHmemSync(["pull", "--config", hmemSyncConfig(hmemPath), "--hmem-path", hmemPath]);
   }
   lastPullAt = Date.now();
 }
@@ -244,7 +274,7 @@ export function syncPush(hmemPath: string): void {
   }
 }
 
-export function reserveId(hmemPath: string, id: string): boolean {
+export async function reserveId(hmemPath: string, id: string): Promise<boolean> {
   if (!hmemSyncEnabled(hmemPath)) return true;
   const servers = getSyncServers(hmemConfig);
   const targets = servers.length > 0
@@ -254,7 +284,7 @@ export function reserveId(hmemPath: string, id: string): boolean {
   for (const t of targets) {
     const args = ["reserve", "--config", hmemSyncConfig(hmemPath), "--id", id];
     if (t.url) args.push("--server-url", t.url, "--token", t.token);
-    const result = spawnSyncHmemSync(args);
+    const result = await spawnAsyncHmemSync(args);
     if (result.status === 1) return false;
     if (result.status !== 0) {
       process.stderr.write(`reserveId(${id}) error on ${t.url || "default"}: ${result.stderr || result.error?.message || "unknown"}\n`);
@@ -263,7 +293,7 @@ export function reserveId(hmemPath: string, id: string): boolean {
   return true;
 }
 
-export function syncPushSync(hmemPath: string): boolean {
+export async function syncPushSync(hmemPath: string): Promise<boolean> {
   if (!hmemSyncEnabled(hmemPath)) return true;
   const servers = getSyncServers(hmemConfig);
   const targets = servers.length > 0
@@ -274,7 +304,7 @@ export function syncPushSync(hmemPath: string): boolean {
   for (const t of targets) {
     const args = ["push", "--config", hmemSyncConfig(hmemPath), "--hmem-path", hmemPath];
     if (t.url) args.push("--server-url", t.url, "--token", t.token);
-    const result = spawnSyncHmemSync(args);
+    const result = await spawnAsyncHmemSync(args);
     if (result.status === 3) {
       allClean = false;
     } else if (result.status !== 0 && result.status !== null) {
@@ -284,28 +314,28 @@ export function syncPushSync(hmemPath: string): boolean {
   return allClean;
 }
 
-export function syncPushWithRetry(hmemPath: string, maxAttempts = 3): { attempts: number; resolved: boolean } {
+export async function syncPushWithRetry(hmemPath: string, maxAttempts = 3): Promise<{ attempts: number; resolved: boolean }> {
   if (!hmemSyncEnabled(hmemPath)) return { attempts: 0, resolved: true };
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    if (syncPushSync(hmemPath)) {
+    if (await syncPushSync(hmemPath)) {
       if (attempt > 1) log(`syncPushWithRetry: resolved on attempt ${attempt}/${maxAttempts}`);
       return { attempts: attempt, resolved: true };
     }
     log(`syncPushWithRetry: conflict on attempt ${attempt}/${maxAttempts}, pulling...`);
     lastPullAt = 0;
-    syncPull(hmemPath);
+    await syncPull(hmemPath);
   }
   log(`syncPushWithRetry: gave up after ${maxAttempts} attempts — local changes remain unpushed for this entry`);
   return { attempts: maxAttempts, resolved: false };
 }
 
-export function reserveNextSubIds(
+export async function reserveNextSubIds(
   hmemPath: string,
   parentId: string,
   content: string,
   hmemStore: HmemStore,
   maxAttempts = 5,
-): string[] {
+): Promise<string[]> {
   if (!hmemSyncEnabled(hmemPath)) {
     return hmemStore.peekAppendTopLevelIds(parentId, content);
   }
@@ -316,7 +346,7 @@ export function reserveNextSubIds(
 
     let conflictAt = -1;
     for (let i = 0; i < candidates.length; i++) {
-      if (!reserveId(hmemPath, candidates[i])) {
+      if (!await reserveId(hmemPath, candidates[i])) {
         conflictAt = i;
         break;
       }
@@ -329,7 +359,7 @@ export function reserveNextSubIds(
 
     log(`reserveNextSubIds: conflict on ${candidates[conflictAt]} (attempt ${attempt}/${maxAttempts}), pulling...`);
     lastPullAt = 0;
-    syncPull(hmemPath);
+    await syncPull(hmemPath);
   }
   throw new Error(
     `Could not reserve sub-IDs under ${parentId} after ${maxAttempts} attempts. ` +
@@ -350,18 +380,18 @@ export function compareIds(a: string, b: string): number {
   return Number(ma[1]) - Number(mb[1]);
 }
 
-export function reserveNextId(hmemPath: string, prefix: string, hmemStore: HmemStore, maxAttempts = 5): string {
+export async function reserveNextId(hmemPath: string, prefix: string, hmemStore: HmemStore, maxAttempts = 5): Promise<string> {
   let candidate = hmemStore.peekNextId(prefix);
   let lastTried = "";
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     lastTried = candidate;
-    if (reserveId(hmemPath, candidate)) {
+    if (await reserveId(hmemPath, candidate)) {
       log(`reserveNextId: claimed ${candidate} (attempt ${attempt}/${maxAttempts})`);
       return candidate;
     }
     log(`reserveNextId: conflict on ${candidate}, pulling and bumping (${attempt}/${maxAttempts})`);
     lastPullAt = 0;
-    syncPull(hmemPath);
+    await syncPull(hmemPath);
     const fresh = hmemStore.peekNextId(prefix);
     candidate = compareIds(fresh, candidate) > 0 ? fresh : bumpId(candidate);
   }
