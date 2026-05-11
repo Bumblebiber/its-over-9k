@@ -14,7 +14,7 @@
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
-      "identifier": "o9k",
+      "identifier": "its-over-9k",
       "version": "1.6.7",
       "runtimeHint": "npx",
       "transport": {

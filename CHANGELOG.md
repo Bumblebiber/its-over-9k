@@ -3,9 +3,9 @@
 ## [1.0.0] — 2026-05-11
 
 ### Breaking Changes
-- Package renamed from `hmem-mcp` to `o9k` on npm
-- GitHub repo renamed from `Bumblebiber/hmem` to `Bumblebiber/o9k`
-- `hmem-mcp` is now deprecated — migrate: `npm uninstall -g hmem-mcp && npm install -g o9k`
+- Package renamed from `hmem-mcp` to `its-over-9k` on npm
+- GitHub repo renamed from `Bumblebiber/hmem` to `Bumblebiber/its-over-9k`
+- `hmem-mcp` is now deprecated — migrate: `npm uninstall -g hmem-mcp && npm install -g its-over-9k`
 - MCP config path update required (see README)
 
 ### What stays the same

@@ -1,5 +1,5 @@
 {
-  "name": "o9k",
+  "name": "its-over-9k",
   "version": "1.0.0",
   "description": "Persistent memory and agent lifecycle for Claude Code — because sessions shouldn't start from zero.",
   "author": "Bumblebiber",
@@ -16,7 +16,7 @@
     "type": "ko-fi",
     "url": "https://ko-fi.com/bumblebiber"
   },
-  "mcpName": "io.github.Bumblebiber/o9k",
+  "mcpName": "io.github.Bumblebiber/its-over-9k",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
