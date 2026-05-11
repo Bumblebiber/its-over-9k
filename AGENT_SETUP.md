@@ -29,21 +29,29 @@ npx hmem version
 
 ## Step 2: Detect the user's AI tool
 
-Check which tools are present:
-
 ```bash
-ls ~/.claude/settings.json 2>/dev/null && echo "claude-code"
-ls ~/.config/gemini/ 2>/dev/null && echo "gemini-cli"
+ls ~/.claude/settings.json 2>/dev/null         && echo "claude-code"
 ls ~/.config/opencode/opencode.json 2>/dev/null && echo "opencode"
-ls ~/.cursor/mcp.json 2>/dev/null && echo "cursor"
+ls ~/.gemini/ 2>/dev/null                       && echo "gemini-cli"
+ls ~/.cursor/mcp.json 2>/dev/null               && echo "cursor"
 ls ~/.codeium/windsurf/mcp_config.json 2>/dev/null && echo "windsurf"
+ls ~/.vscode/ 2>/dev/null                       && echo "cline"
+which pi 2>/dev/null                            && echo "pi"
 ```
+
+| Tool | MCP config | Hooks | Skills |
+|------|-----------|-------|--------|
+| Claude Code | ✓ `~/.claude/.mcp.json` | ✓ via `hmem init` | ✓ `~/.claude/skills/` |
+| OpenCode | ✓ `~/.config/opencode/opencode.json` | ✓ via plugin | ✓ `~/.config/opencode/skills/` |
+| Gemini CLI | ✓ `~/.gemini/settings.json` | — | ✓ `~/.gemini/skills/` |
+| Cursor | ✓ `~/.cursor/mcp.json` | — | — |
+| Windsurf | ✓ `~/.codeium/windsurf/mcp_config.json` | — | — |
+| Cline | ✓ `.vscode/mcp.json` | — | — |
+| Pi | ✗ (extension, not MCP) | ✓ built-in via extension | — |
 
 ---
 
 ## Step 3: Run the automated installer
-
-The installer detects tools, creates the memory directory, and installs hooks:
 
 ```bash
 npx hmem init
@@ -52,18 +60,20 @@ npx hmem init
 Flags for non-interactive mode:
 ```bash
 npx hmem init --global --tools claude-code    # Claude Code only
-npx hmem init --global --tools gemini-cli     # Gemini CLI only
 npx hmem init --global --tools opencode       # OpenCode only
+npx hmem init --global --tools gemini-cli     # Gemini CLI only
 npx hmem init --global                        # All detected tools
 ```
 
-The installer handles everything in Steps 4–6 automatically. **If `hmem init` succeeds, skip to Step 7.**
+**Pi users:** `hmem init` does not cover Pi — see [Pi setup](#pi) below.
+
+The installer handles Steps 4–6 automatically. **If `hmem init` succeeds, skip to Step 7.**
 
 ---
 
 ## Step 4: Manual MCP config (if `hmem init` fails)
 
-Get the exact paths first:
+Get exact paths first:
 ```bash
 NODE_PATH=$(which node)
 SERVER_PATH=$(npm root -g)/its-over-9k/dist/mcp-server.js
@@ -99,23 +109,6 @@ HMEM_PATH="$MEMORY_DIR/Agents/$AGENT_ID/$AGENT_ID.hmem"
 }
 ```
 
-### Gemini CLI — `~/.config/gemini/settings.json`
-
-```json
-{
-  "mcpServers": {
-    "hmem": {
-      "command": "<NODE_PATH>",
-      "args": ["<SERVER_PATH>"],
-      "env": {
-        "HMEM_PATH": "<HMEM_PATH>",
-        "HMEM_PROJECT_DIR": "<MEMORY_DIR>"
-      }
-    }
-  }
-}
-```
-
 ### OpenCode — `~/.config/opencode/opencode.json`
 
 ```json
@@ -134,7 +127,7 @@ HMEM_PATH="$MEMORY_DIR/Agents/$AGENT_ID/$AGENT_ID.hmem"
 }
 ```
 
-### Cursor / Windsurf / Cline — `~/.cursor/mcp.json` or equivalent
+### Gemini CLI — `~/.gemini/settings.json`
 
 ```json
 {
@@ -151,6 +144,38 @@ HMEM_PATH="$MEMORY_DIR/Agents/$AGENT_ID/$AGENT_ID.hmem"
 }
 ```
 
+### Cursor / Windsurf / Cline
+
+Edit `~/.cursor/mcp.json`, `~/.codeium/windsurf/mcp_config.json`, or `.vscode/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "hmem": {
+      "command": "<NODE_PATH>",
+      "args": ["<SERVER_PATH>"],
+      "env": {
+        "HMEM_PATH": "<HMEM_PATH>",
+        "HMEM_PROJECT_DIR": "<MEMORY_DIR>"
+      }
+    }
+  }
+}
+```
+
+### Pi
+
+Pi does not use MCP config. Instead, copy the extension file to Pi's plugin directory:
+
+```bash
+PLUGIN_SRC=$(npm root -g)/its-over-9k/dist/extensions/pi-hmem.js
+PLUGIN_DIR="$HOME/.config/pi/plugins"   # adjust if Pi uses a different path
+mkdir -p "$PLUGIN_DIR"
+cp "$PLUGIN_SRC" "$PLUGIN_DIR/pi-hmem.js"
+```
+
+Pi loads plugins at startup — no config file changes needed. The extension injects memory context, auto-logs exchanges, and runs background checkpoints automatically.
+
 ---
 
 ## Step 5: Create memory directory
@@ -161,52 +186,50 @@ mkdir -p "$HOME/.hmem/Agents/DEVELOPER"
 
 ---
 
-## Step 6: Install hooks (Claude Code only)
+## Step 6: Hooks
 
-Add to `~/.claude/settings.json` under `"hooks"`:
+### Claude Code
+
+Hooks are installed by `hmem init`. For manual setup, add to `~/.claude/settings.json`:
 
 ```json
 {
   "hooks": {
     "UserPromptSubmit": [{
       "matcher": "",
-      "hooks": [{
-        "type": "command",
-        "command": "node <SERVER_PATH_DIR>/cli.js hook-startup"
-      }]
+      "hooks": [{ "type": "command", "command": "hmem hook-startup", "timeout": 5 }]
     }],
     "Stop": [
       {
         "matcher": "",
-        "hooks": [{
-          "type": "command",
-          "command": "node <SERVER_PATH_DIR>/cli.js log-exchange"
-        }]
+        "hooks": [{ "type": "command", "command": "hmem log-exchange" }]
       },
       {
         "matcher": "",
-        "hooks": [{
-          "type": "command",
-          "command": "node <SERVER_PATH_DIR>/cli.js log-exchange --title-only",
-          "background": true
-        }]
+        "hooks": [{ "type": "command", "command": "hmem log-exchange --title-only", "background": true }]
       }
     ],
     "SessionStart": [{
       "matcher": "clear",
-      "hooks": [{
-        "type": "command",
-        "command": "node <SERVER_PATH_DIR>/cli.js context-inject"
-      }]
+      "hooks": [{ "type": "command", "command": "hmem context-inject" }]
     }]
   }
 }
 ```
 
-Replace `<SERVER_PATH_DIR>` with the directory of `mcp-server.js`:
+### OpenCode
+
+The OpenCode plugin bridges hmem into OpenCode's event system. `hmem init` installs it automatically. For manual setup:
+
 ```bash
-dirname $(npm root -g)/its-over-9k/dist/mcp-server.js
+PLUGIN_SRC=$(npm root -g)/its-over-9k/opencode-plugin/hmem.js
+mkdir -p "$HOME/.config/opencode/plugins"
+cp "$PLUGIN_SRC" "$HOME/.config/opencode/plugins/hmem.js"
 ```
+
+### Pi
+
+Hooks are built into the Pi extension — no separate setup needed.
 
 ---
 
@@ -223,13 +246,32 @@ read_memory()
 
 ---
 
-## Step 8: Install skills (Claude Code)
+## Step 8: Install skills
 
 ```bash
 npx hmem update-skills
 ```
 
-Copies skill files to `~/.claude/skills/`. Agents gain `/o9k-*` slash commands.
+Copies skill files to all detected tool skill directories:
+
+| Tool | Destination |
+|------|-------------|
+| Claude Code | `~/.claude/skills/o9k-*/` |
+| OpenCode | `~/.config/opencode/skills/o9k-*/` |
+| Gemini CLI | `~/.gemini/skills/o9k-*/` |
+
+After install, agents gain `/o9k-*` slash commands (session start, write, read, curate, etc.).
+
+---
+
+## Default configuration
+
+`hmem init` writes `hmem.config.json` to your memory directory on first install. It includes:
+
+- **P-entry schema** (9 sections): Overview, Codebase, Usage, Context, Deployment, Bugs, History, Roadmap, Ideas
+- **E-entry schema** (7 sections): Reproduction, Analysis, Possible Fixes, Fixing Attempts, Solution, Cause, Key Learnings
+
+These schemas guide `create_project` and `load_project` — agents always know what structure to expect. You can extend or override them in `hmem.config.json`.
 
 ---
 
