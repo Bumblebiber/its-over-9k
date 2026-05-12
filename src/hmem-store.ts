@@ -731,6 +731,89 @@ export class HmemStore {
   }
 
   /**
+   * Append a linear context chunk to an existing O-entry root.
+   * Used by flush_context so all chunks land under the project-bound O-entry
+   * (e.g. O0048 for P0048, O0000 for no active project) instead of creating
+   * a new sequential root each time.
+   *
+   * Structure: existing root → new L2 node (l1) → .1 (l2) → .1.1 (l3) → …
+   */
+  appendLinear(
+    rootId: string,
+    levels: { l1: string; l2?: string; l3?: string; l4?: string; l5?: string },
+    tags?: string[],
+    links?: string[]
+  ): { nodeId: string; timestamp: string } {
+    this.guardCorrupted();
+
+    const root = this.db.prepare("SELECT id, links FROM memories WHERE id = ?")
+      .get(rootId) as { id: string; links: string | null } | undefined;
+    if (!root) throw new Error(`Root entry ${rootId} not found.`);
+
+    if (!levels.l1 || levels.l1.trim().length === 0) {
+      throw new Error("L1 content is required.");
+    }
+
+    const validatedTags = tags && tags.length > 0 ? this.validateTags(tags) : [];
+    const timestamp = new Date().toISOString();
+
+    const insertNode = this.db.prepare(`
+      INSERT INTO memory_nodes (id, parent_id, root_id, depth, seq, title, content, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    let l2NodeId!: string;
+
+    this.db.transaction(() => {
+      // Next L2 seq under root
+      const { m } = this.db.prepare(
+        "SELECT COALESCE(MAX(seq), 0) as m FROM memory_nodes WHERE root_id = ? AND depth = 2"
+      ).get(rootId) as { m: number };
+      const l2Seq = m + 1;
+      l2NodeId = `${rootId}.${l2Seq}`;
+
+      const l1Title = this.autoExtractTitle(levels.l1.trim());
+      insertNode.run(l2NodeId, rootId, rootId, 2, l2Seq, l1Title, levels.l1.trim(), timestamp, timestamp);
+
+      // Linear chain under l2: .1 (l2) → .1.1 (l3) → .1.1.1 (l4) → .1.1.1.1 (l5)
+      let parentId = l2NodeId;
+      const levelData = [
+        { depth: 3, content: levels.l2 },
+        { depth: 4, content: levels.l3 },
+        { depth: 5, content: levels.l4 },
+        { depth: 6, content: levels.l5 },
+      ];
+
+      for (const { depth, content } of levelData) {
+        if (!content || content.trim().length === 0) continue;
+        const nodeId = `${parentId}.1`;
+        const nodeTitle = this.autoExtractTitle(content.trim());
+        insertNode.run(nodeId, parentId, rootId, depth, 1, nodeTitle, content.trim(), timestamp, timestamp);
+        parentId = nodeId;
+      }
+
+      // Tags on first child node (or l2 node if no deeper levels)
+      if (validatedTags.length > 0) {
+        const tagTarget = levels.l2 ? `${l2NodeId}.1` : l2NodeId;
+        this.setTags(tagTarget, validatedTags);
+      }
+
+      // Merge any new links into the root entry's link list
+      if (links && links.length > 0) {
+        const existing: string[] = root.links ? JSON.parse(root.links) : [];
+        const merged = [...new Set([...existing, ...links])];
+        this.db.prepare("UPDATE memories SET links = ?, updated_at = ? WHERE id = ?")
+          .run(JSON.stringify(merged), timestamp, rootId);
+      } else {
+        this.db.prepare("UPDATE memories SET updated_at = ? WHERE id = ?")
+          .run(timestamp, rootId);
+      }
+    })();
+
+    return { nodeId: l2NodeId, timestamp };
+  }
+
+  /**
    * Read memories with flexible querying.
    *
    * For ID-based queries: always returns the node + its DIRECT children.

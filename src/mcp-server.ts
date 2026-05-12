@@ -770,20 +770,68 @@ server.tool(
       try {
         await syncPullThenPush(HMEM_PATH);
 
-        const result = hmemStore.writeLinear("O", { l1, l2, l3, l4, l5 }, tags, links);
+        // Route to project-bound O-entry (O0048 for P0048, O0000 for no active project)
+        const activeProject = hmemStore.getActiveProject();
+        const projectSeq = activeProject ? parseInt(activeProject.id.replace(/\D/g, ""), 10) : 0;
+        const oId = hmemStore.resolveProjectO(projectSeq);
+
+        const result = hmemStore.appendLinear(oId, { l1, l2, l3, l4, l5 }, tags, links);
 
         const levels = [l1, l2, l3, l4, l5].filter(Boolean).length;
-        log(`flush_context: ${result.id} (${levels} levels, ${tags.join(" ")})`);
+        log(`flush_context: ${result.nodeId} → ${oId} (${levels} levels, ${tags.join(" ")})`);
 
         syncPush(HMEM_PATH);
         return trackTokens({
           content: [{
             type: "text" as const,
-            text: `Context saved: ${result.id} (${levels} levels)\n` +
+            text: `Context saved: ${result.nodeId} (${levels} levels)\n` +
+              `O-entry: ${oId}${activeProject ? ` [${activeProject.id}]` : " [no project → O0000]"}\n` +
               `Title: ${l1}\nTags: ${tags.join(" ")}` +
               (links?.length ? `\nLinks: ${links.join(", ")}` : ""),
           }],
         });
+      } finally {
+        hmemStore.close();
+      }
+    } catch (e) {
+      return {
+        content: [{ type: "text" as const, text: `ERROR: ${safeError(e)}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
+server.tool(
+  "move_nodes",
+  "Move session (L2), batch (L3), or exchange (L4) nodes between O-entries. " +
+    "Handles ID rewriting, tag migration, and cleanup of empty parents.\n\n" +
+    "Use to fix misrouted O-entry nodes — e.g. move a session from O0173 to O0048.",
+  {
+    node_ids: z.array(z.string()).describe("IDs of nodes to move (L2, L3, or L4)"),
+    target_o_id: z.string().describe("Target O-entry ID (e.g. O0048)"),
+    store: z.enum(["personal", "company"]).default("personal").describe("Which store to operate on"),
+  },
+  async ({ node_ids, target_o_id, store: storeName }) => {
+    try {
+      const hmemStore = storeName === "company"
+        ? openCompanyMemory(PROJECT_DIR, hmemConfig)
+        : new HmemStore(HMEM_PATH, hmemConfig);
+      try {
+        if (storeName === "personal") syncPullThenPush(HMEM_PATH);
+        const result = hmemStore.moveNodes(node_ids, target_o_id);
+        let text = `Moved ${result.moved} node(s) to ${target_o_id}.`;
+        if (result.errors.length > 0) {
+          text += `\nErrors:\n${result.errors.join("\n")}`;
+        }
+        if (storeName === "personal") {
+          const retry = syncPushWithRetry(HMEM_PATH);
+          if (!retry.resolved)
+            text += `\n⚠ unresolved push conflicts after ${retry.attempts} attempts`;
+          else if (retry.attempts > 1)
+            text += `\n(resolved push conflict after ${retry.attempts} attempts)`;
+        }
+        return { content: [{ type: "text" as const, text }] };
       } finally {
         hmemStore.close();
       }
