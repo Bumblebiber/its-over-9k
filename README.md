@@ -1,4 +1,4 @@
-# its-over-9k — The AI Memory Framework
+# its-over-9k - The AI Memory Framework
 
 > Your AI forgets everything between sessions. **its-over-9k fixes that** — and a lot more.
 
