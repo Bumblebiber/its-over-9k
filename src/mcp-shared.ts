@@ -65,9 +65,32 @@ export function activeProjectLine(store: HmemStore): string {
 let lastPullAt = 0;
 const PULL_COOLDOWN_MS = 30_000;
 
+function getNewSyncConfig(hmemPath: string): { activeFile: string; stagingPath: string } | null {
+  const cfgPath = path.join(path.dirname(hmemPath), "config.json");
+  if (!fs.existsSync(cfgPath)) return null;
+  try {
+    const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8")) as { active_file?: string };
+    if (!cfg.active_file) return null;
+    return {
+      activeFile: cfg.active_file,
+      stagingPath: path.join(path.dirname(hmemPath), `${cfg.active_file}.hmem`),
+    };
+  } catch { return null; }
+}
+
 function hmemSyncEnabled(hmemPath: string): boolean {
   const passphrase = process.env["HMEM_SYNC_PASSPHRASE"];
   if (!passphrase) return false;
+  // Check new v2 config
+  const newCfg = getNewSyncConfig(hmemPath);
+  if (newCfg) {
+    const cfgPath = path.join(path.dirname(hmemPath), "config.json");
+    try {
+      const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8")) as { session_token?: string };
+      if (cfg.session_token) return true;
+    } catch { /* fall through */ }
+  }
+  // Legacy v1 config
   const servers = getSyncServers(hmemConfig);
   if (servers.length > 0 && servers.some(s => s.serverUrl && s.token)) return true;
   const cfg = path.join(path.dirname(hmemPath), ".hmem-sync-config.json");
@@ -185,20 +208,29 @@ export async function syncPull(hmemPath: string): Promise<Array<{id: string, tit
     db.close();
   } catch { /* db may not exist yet */ }
 
-  const servers = getSyncServers(hmemConfig);
-  if (servers.length > 0) {
-    for (const s of servers) {
-      if (!s.serverUrl || !s.token) continue;
-      const result = await spawnAsyncHmemSync([
-        "pull", "--config", hmemSyncConfig(hmemPath),
-        "--hmem-path", hmemPath,
-        "--server-url", s.serverUrl, "--token", s.token,
-      ]);
-      if (result.error) process.stderr.write(`hmem-sync pull error (${s.name ?? s.serverUrl}): ${result.error.message}\n`);
-    }
+  // v2 path: use bridge
+  const newCfg = getNewSyncConfig(hmemPath);
+  if (newCfg) {
+    const { importFromStaging } = await import("./sync-bridge.js");
+    const result = await spawnAsyncHmemSync(["pull", "--file", newCfg.activeFile]);
+    if (result.error) process.stderr.write(`hmem-sync pull error (v2): ${result.error.message}\n`);
+    await importFromStaging(newCfg.stagingPath, hmemPath);
   } else {
-    const result = await spawnAsyncHmemSync(["pull", "--config", hmemSyncConfig(hmemPath), "--hmem-path", hmemPath]);
-    if (result.error) process.stderr.write(`hmem-sync pull error: ${result.error.message}\n`);
+    const servers = getSyncServers(hmemConfig);
+    if (servers.length > 0) {
+      for (const s of servers) {
+        if (!s.serverUrl || !s.token) continue;
+        const result = await spawnAsyncHmemSync([
+          "pull", "--config", hmemSyncConfig(hmemPath),
+          "--hmem-path", hmemPath,
+          "--server-url", s.serverUrl, "--token", s.token,
+        ]);
+        if (result.error) process.stderr.write(`hmem-sync pull error (${s.name ?? s.serverUrl}): ${result.error.message}\n`);
+      }
+    } else {
+      const result = await spawnAsyncHmemSync(["pull", "--config", hmemSyncConfig(hmemPath), "--hmem-path", hmemPath]);
+      if (result.error) process.stderr.write(`hmem-sync pull error: ${result.error.message}\n`);
+    }
   }
 
   try {
@@ -241,24 +273,47 @@ export async function syncPull(hmemPath: string): Promise<Array<{id: string, tit
 
 export async function syncPullThenPush(hmemPath: string): Promise<void> {
   if (!hmemSyncEnabled(hmemPath)) return;
-  const servers = getSyncServers(hmemConfig);
-  if (servers.length > 0) {
-    for (const s of servers) {
-      if (!s.serverUrl || !s.token) continue;
-      await spawnAsyncHmemSync([
-        "pull", "--config", hmemSyncConfig(hmemPath),
-        "--hmem-path", hmemPath,
-        "--server-url", s.serverUrl, "--token", s.token,
-      ]);
-    }
+  // v2 path: use bridge
+  const newCfg = getNewSyncConfig(hmemPath);
+  if (newCfg) {
+    const { importFromStaging } = await import("./sync-bridge.js");
+    const result = await spawnAsyncHmemSync(["pull", "--file", newCfg.activeFile]);
+    if (result.error) process.stderr.write(`hmem-sync pull error (v2): ${result.error.message}\n`);
+    await importFromStaging(newCfg.stagingPath, hmemPath);
   } else {
-    await spawnAsyncHmemSync(["pull", "--config", hmemSyncConfig(hmemPath), "--hmem-path", hmemPath]);
+    const servers = getSyncServers(hmemConfig);
+    if (servers.length > 0) {
+      for (const s of servers) {
+        if (!s.serverUrl || !s.token) continue;
+        await spawnAsyncHmemSync([
+          "pull", "--config", hmemSyncConfig(hmemPath),
+          "--hmem-path", hmemPath,
+          "--server-url", s.serverUrl, "--token", s.token,
+        ]);
+      }
+    } else {
+      await spawnAsyncHmemSync(["pull", "--config", hmemSyncConfig(hmemPath), "--hmem-path", hmemPath]);
+    }
   }
   lastPullAt = Date.now();
 }
 
 export function syncPush(hmemPath: string): void {
   if (!hmemSyncEnabled(hmemPath)) return;
+  // v2 path: use bridge (export is async, so we fire-and-forget with a floating promise)
+  const newCfg = getNewSyncConfig(hmemPath);
+  if (newCfg) {
+    const stagingPath = newCfg.stagingPath;
+    const activeFile = newCfg.activeFile;
+    import("./sync-bridge.js").then(({ exportToStaging }) =>
+      exportToStaging(hmemPath, stagingPath)
+    ).then(() => {
+      spawnDetachedHmemSync(["push", "--file", activeFile]);
+    }).catch((err: unknown) => {
+      process.stderr.write(`hmem-sync push export error (v2): ${err instanceof Error ? err.message : String(err)}\n`);
+    });
+    return;
+  }
   const servers = getSyncServers(hmemConfig);
   if (servers.length > 0) {
     for (const s of servers) {
@@ -295,6 +350,18 @@ export async function reserveId(hmemPath: string, id: string): Promise<boolean> 
 
 export async function syncPushSync(hmemPath: string): Promise<boolean> {
   if (!hmemSyncEnabled(hmemPath)) return true;
+  // v2 path: use bridge
+  const newCfg = getNewSyncConfig(hmemPath);
+  if (newCfg) {
+    const { exportToStaging } = await import("./sync-bridge.js");
+    await exportToStaging(hmemPath, newCfg.stagingPath);
+    const result = await spawnAsyncHmemSync(["push", "--file", newCfg.activeFile]);
+    if (result.status === 3) return false;
+    if (result.status !== 0 && result.status !== null) {
+      process.stderr.write(`syncPushSync error (v2): status=${result.status} ${result.stderr || ""}\n`);
+    }
+    return true;
+  }
   const servers = getSyncServers(hmemConfig);
   const targets = servers.length > 0
     ? servers.filter(s => s.serverUrl && s.token).map(s => ({ url: s.serverUrl!, token: s.token! }))
