@@ -77,7 +77,7 @@ Switch projects mid-session? The O-entry switches too. Start a new session on a 
 
 ### Haiku Background Checkpoints
 
-Every N exchanges (configurable, default 20), a Haiku subagent wakes up in the background. It reads the recent conversation, extracts lessons learned, errors encountered, and decisions made, then writes them to long-term memory — with full MCP tool access. Your main agent is never interrupted.
+Every N exchanges (configurable, default 5), a Haiku subagent wakes up in the background. It reads the recent conversation, extracts lessons learned, errors encountered, and decisions made, then writes them to long-term memory — with full MCP tool access. Your main agent is never interrupted.
 
 The checkpoint also writes a **handoff note** to the project: "Here's what was done, here's what's in progress, here's the next step." The next agent — on any device, any provider — picks up exactly where you left off.
 
@@ -87,7 +87,6 @@ Sessions are meaningless. Projects are everything.
 
 - O-entries are linked to the active project, not the session
 - Checkpoint counters count project exchanges, not session messages
-- 10 messages on your laptop + 10 on your server = checkpoint fires on message 20
 - `load_project` shows recent conversations with full context — across all devices
 
 ### Skills System
@@ -265,7 +264,7 @@ Edit `~/.cursor/mcp.json`, `~/.codeium/windsurf/mcp_config.json`, or `.vscode/mc
     "maxCharsPerLevel": [200, 2500, 10000, 25000, 50000],
     "maxDepth": 5,
     "checkpointMode": "auto",
-    "checkpointInterval": 20,
+    "checkpointInterval": 5,
     "recentOEntries": 10,
     "maxTitleChars": 50,
     "prefixes": { "X": "Custom" }
@@ -282,7 +281,7 @@ Edit `~/.cursor/mcp.json`, `~/.codeium/windsurf/mcp_config.json`, or `.vscode/mc
 | Key | Default | What it does |
 |-----|---------|-------------|
 | `checkpointMode` | `"remind"` | `"auto"` = Haiku writes L/D/E in background. `"remind"` = prompts the main agent |
-| `checkpointInterval` | `20` | Exchanges between checkpoints. `0` = disabled |
+| `checkpointInterval` | `5` | Exchanges between checkpoints. `0` = disabled |
 | `recentOEntries` | `10` | How many recent sessions to show in `load_project` |
 | `prefixes` | built-in | Add custom entry types |
 
