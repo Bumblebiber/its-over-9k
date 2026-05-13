@@ -30,7 +30,7 @@
     "_comment_load_project": "Which L2 sections load_project expands. withBody: show L3 title+body (e.g. Overview). withChildren: list all L3 titles (e.g. Bugs, Roadmap).",
     "loadProjectExpand": {
       "withBody": [1],
-      "withChildren": [6, 8]
+      "withChildren": [6, 8, 10, 16]
     },
 
     "_comment_bulk_v2": "Fine-tune which entries get expanded in bulk reads. Percentage settings override fixed counts when set. Remove to use built-in defaults.",
