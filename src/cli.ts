@@ -109,6 +109,33 @@ switch (command) {
     break;
   }
 
+  case "setup": {
+    const { runSetup } = await import("./cli-sync-setup.js");
+    await runSetup({ join: process.argv.includes("--join") });
+    break;
+  }
+
+  case "sync": {
+    const subCmd = process.argv[3];
+    if (subCmd === "push") {
+      const { syncPush } = await import("./cli-sync-push.js");
+      await syncPush();
+    } else if (subCmd === "pull") {
+      const { syncPull } = await import("./cli-sync-pull.js");
+      await syncPull();
+    } else if (subCmd === "status") {
+      const { syncStatus } = await import("./cli-sync-status.js");
+      await syncStatus();
+    } else if (subCmd === "setup") {
+      const { runSetup } = await import("./cli-sync-setup.js");
+      await runSetup({ join: process.argv.includes("--join") });
+    } else {
+      console.error("Usage: hmem sync <push|pull|status|setup>");
+      process.exit(1);
+    }
+    break;
+  }
+
   default:
     console.log(`hmem — Humanlike Memory for AI Agents
 
