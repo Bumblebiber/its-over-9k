@@ -1,0 +1,10 @@
+{
+  "eval_id": 2,
+  "eval_name": "checkpoint-strategy-lookup",
+  "prompt": "Was hatten wir nochmal zur Checkpoint-Strategie beschlossen? Irgendwas mit automatisch vs. manuell.",
+  "assertions": [
+    { "id": "finds_relevant_entry", "description": "Agent finds at least one relevant entry about checkpointMode (auto vs remind)" },
+    { "id": "tries_english_variant", "description": "Agent tries English variant (checkpoint, checkpointMode, auto) if German search returns nothing" },
+    { "id": "summarizes", "description": "Agent summarizes findings in prose, not raw ID dump" }
+  ]
+}

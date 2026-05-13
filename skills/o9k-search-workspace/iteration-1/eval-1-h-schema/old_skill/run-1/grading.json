@@ -1,0 +1,21 @@
+{
+  "run_id": "eval-1-h-schema-old_skill",
+  "summary": { "pass_rate": 1.0, "passed": 3, "failed": 0, "total": 3 },
+  "expectations": [
+    {
+      "text": "Agent finds or references R0025",
+      "passed": true,
+      "evidence": "Step 4: Agent lists all R-entries by title (titles_only=true) and spots R0025: 'H-Entry Schema: Standard-Struktur für Human-Context-Einträge', then reads it fully."
+    },
+    {
+      "text": "Agent tries at least 2 different search terms before giving up or succeeding",
+      "passed": true,
+      "evidence": "6 searches before finding: 'H-Standardschema H-Entry Schema', 'Schema Dokumentation Entry-Format Standardschema', 'H-Schema Standardschema', 'Entry Schema Format Felder', 'H-Entry Human Schema Struktur', then R-prefix listing."
+    },
+    {
+      "text": "Agent does NOT report 'nichts gefunden' after a single null result",
+      "passed": true,
+      "evidence": "Agent kept trying multiple variations after each null result — no premature giveup."
+    }
+  ]
+}

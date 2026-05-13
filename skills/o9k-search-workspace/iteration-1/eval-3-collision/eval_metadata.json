@@ -1,0 +1,10 @@
+{
+  "eval_id": 3,
+  "eval_name": "o-entry-collision-decision",
+  "prompt": "Finde den Eintrag über O-Entry Kollisionen beim Multi-Agent-Betrieb. Da gab's eine Entscheidung wie wir das lösen.",
+  "assertions": [
+    { "id": "finds_relevant", "description": "Agent finds at least one relevant entry about multi-agent ID collision or O-entry conflict" },
+    { "id": "tries_compound_split", "description": "Agent tries splitting compound terms or using English equivalents (collision, conflict, multi-agent)" },
+    { "id": "no_single_attempt", "description": "Agent makes more than one search attempt" }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "run_id": "eval-2-checkpoint-old_skill",
+  "expectations": [
+    {
+      "text": "Agent finds at least one relevant entry about checkpoints (D- or L- or config entry)",
+      "passed": true,
+      "evidence": "Found D0127 (checkpointMode: remind vs auto — the core decision), D0129, D0134, L0131, P0048 sub-entries. D0127.3 is the most directly relevant entry for 'automatisch vs. manuell'."
+    },
+    {
+      "text": "Agent tries English variant (checkpoint, checkpointMode) if German search fails",
+      "passed": true,
+      "evidence": "Step 1: tried 'checkpoint strategy automatic manual' after German fails. Step 2: tried bare 'checkpoint' → 40 hits."
+    },
+    {
+      "text": "Agent summarizes findings rather than dumping raw IDs",
+      "passed": true,
+      "evidence": "Output has clear two-mode summary (remind vs auto), current config state, rolling compression details — well-structured narrative, not a raw dump."
+    }
+  ]
+}

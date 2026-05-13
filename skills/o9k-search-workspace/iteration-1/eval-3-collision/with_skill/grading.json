@@ -1,0 +1,20 @@
+{
+  "run_id": "eval-3-collision-with_skill",
+  "expectations": [
+    {
+      "text": "Agent finds at least one relevant entry about multi-agent ID collision or O-entry conflict",
+      "passed": true,
+      "evidence": "Found P0048.8.9 'Multi-agent ID-collision prototype' and sub-nodes P0048.8.9.2/3/4, plus P0048.4.6.3.7 stub — comprehensive coverage."
+    },
+    {
+      "text": "Agent tries splitting compound terms or using English equivalents (collision, conflict, multi-agent)",
+      "passed": true,
+      "evidence": "Attempts 2-4 used: 'O-Entry collision multi-agent', 'O-Entry conflict concurrent agent', 'collision conflict O-entry write parallel', 'multi-agent concurrent write conflict', 'multi agent session collision resolution' — thorough compound split + synonym variation."
+    },
+    {
+      "text": "Agent makes more than one search attempt",
+      "passed": true,
+      "evidence": "6 distinct search attempts before breakthrough at attempt 5 ('multi-agent' broad search → 19 results)."
+    }
+  ]
+}

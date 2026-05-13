@@ -1,0 +1,21 @@
+{
+  "run_id": "eval-1-h-schema-with_skill",
+  "summary": { "pass_rate": 1.0, "passed": 3, "failed": 0, "total": 3 },
+  "expectations": [
+    {
+      "text": "Agent finds or references R0025",
+      "passed": true,
+      "evidence": "Step 3 and 4: Agent runs R-prefix search, finds 'R0025 ✓ H-Entry Schema: Standard-Struktur für Human-Context-Einträge', then reads full R0025 content."
+    },
+    {
+      "text": "Agent tries at least 2 different search terms before giving up or succeeding",
+      "passed": true,
+      "evidence": "3 distinct searches before finding R0025: (1) 'H-Standardschema H-Schema Standard', (2) 'H-entry schema' [English variant], (3) prefix=R search=H."
+    },
+    {
+      "text": "Agent does NOT report 'nichts gefunden' after a single null result",
+      "passed": true,
+      "evidence": "After first null result, agent immediately tried English variant 'H-entry schema' — no premature giveup."
+    }
+  ]
+}

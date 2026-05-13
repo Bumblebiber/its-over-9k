@@ -1,0 +1,21 @@
+{
+  "run_id": "eval-2-checkpoint-with_skill",
+  "summary": { "pass_rate": 1.0, "passed": 3, "failed": 0, "total": 3 },
+  "expectations": [
+    {
+      "text": "Agent finds at least one relevant entry about checkpoints (D- or L- or config entry)",
+      "passed": true,
+      "evidence": "Found D0129, D0134, L0131, P0048.4.6.1.14, P0048.1.3.3.2 — all directly relevant to checkpoint strategy."
+    },
+    {
+      "text": "Agent tries English variant (checkpoint, checkpointMode) if German search fails",
+      "passed": true,
+      "evidence": "Step 2: after 'Checkpoint-Strategie automatisch manuell' fails, immediately tries 'checkpoint strategy automatic manual', then bare 'checkpoint' — clear language switching."
+    },
+    {
+      "text": "Agent summarizes findings rather than dumping raw IDs",
+      "passed": true,
+      "evidence": "Output includes a formatted summary table (Primärmodus, Frühere Schwelle, Ausführung, Fallback, Konfigurierbar) plus narrative explanation — not a raw ID dump."
+    }
+  ]
+}

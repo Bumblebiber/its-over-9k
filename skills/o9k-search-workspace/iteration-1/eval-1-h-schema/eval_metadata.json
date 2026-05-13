@@ -1,0 +1,10 @@
+{
+  "eval_id": 1,
+  "eval_name": "h-schema-variation-search",
+  "prompt": "Gibt es irgendwo in hmem ein definiertes H-Standardschema? Ich glaube da war mal was dokumentiert.",
+  "assertions": [
+    { "id": "finds_r0025", "description": "Agent finds or references R0025 (H-Entry Schema)" },
+    { "id": "tries_variations", "description": "Agent tries at least 2 different search terms before succeeding or giving up" },
+    { "id": "no_premature_giveup", "description": "Agent does NOT report 'nichts gefunden' after a single null result" }
+  ]
+}
