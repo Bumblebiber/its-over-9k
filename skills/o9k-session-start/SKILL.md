@@ -1,6 +1,6 @@
 ---
 name: o9k-session-start
-description: Load project context at session start via load_project. Includes recent O-Entry summaries automatically. Run at the beginning of every Cortex session.
+description: Load project context at session start via load_project. Includes recent O-Entry summaries and a pending-work scan (uncommitted changes, stashes, worktrees, unmerged branches) so paused work doesn't get forgotten across week-long gaps. Run at the beginning of every Cortex session.
 ---
 
 # o9k-session-start
@@ -19,7 +19,54 @@ Replace P00XX with the actual project ID (e.g., P0048).
 load_project returns the project brief, recent O-Entry summaries, rules, and lessons.
 Do NOT call read_memory separately. load_project is the only activation action.
 
-## STEP 2: Noise Check
+## STEP 2: Pending-work check (git repo state)
+
+**Sessions resume after days or weeks.** Work paused on a feature branch, in a worktree, in a stash, or just uncommitted in the tree can silently rot if nobody re-surfaces it. The user is counting on you to remember — that's the entire point of starting from hmem instead of conversation history. Surface pending work *before* you do anything else substantive, so the user can decide whether to resume it or close it out.
+
+### Find the repo
+
+Look in the load_project output for a filesystem path — usually under `.1.4 Environment` ("Repo /home/.../<name>") or in `.2 Codebase`. If no repo is documented, or the path has no `.git` directory, skip this step silently. Not every project is a code repo (concept projects, document workflows, etc.).
+
+### Run the checks
+
+From the repo root:
+
+```bash
+git status --porcelain                                                    # uncommitted/untracked
+git stash list                                                            # WIP stashes
+git worktree list                                                         # worktrees
+git for-each-ref --format='%(refname:short) %(committerdate:relative)' \
+    refs/heads/ | grep -v '^main\b\|^master\b'                            # local branches != main
+git branch --no-merged main 2>/dev/null || git branch --no-merged master  # branches not in main yet
+```
+
+Run them in parallel. Cross-reference: a branch listed by `for-each-ref` that is *also* in `--no-merged` has real unmerged commits — those matter most.
+
+### Surface findings to the user
+
+Only report when something is actually pending. If everything is clean, say nothing — don't pad the output with "no pending work".
+
+Use this format (German when the user speaks German, English otherwise):
+
+```
+⚠ Offene Arbeit im Repo:
+  Worktrees:
+    .worktrees/<name> — Branch <branch>, letzter Commit <relative date>
+  Stashes:
+    stash@{0}: <message> (<relative date>)
+  Unmerged Branches:
+    <branch> — <N> Commits voraus, letzter Commit <relative date>
+  Uncommitted auf <current branch>:
+    <file>, <file>, ...
+
+Weiter dran arbeiten oder aufräumen?
+```
+
+**Never auto-delete, auto-commit, or auto-merge anything.** The user decides. Your job is to surface, not to clean. A worktree from three weeks ago might be an abandoned experiment, or the half-finished feature the user has been meaning to ship — you can't tell from the outside, so you ask.
+
+If the user's first instruction obviously supersedes pending work (e.g. "ignore the worktree, I'm doing X now"), respect that and don't badger.
+
+## STEP 3: Noise Check
 
 **Do this immediately after load_project, before any other work.**
 
@@ -33,7 +80,7 @@ Scan the output for:
 
 Fix all of the above immediately. Do not note and defer.
 
-## STEP 3: Calibrate explanation depth
+## STEP 4: Calibrate explanation depth
 
 Read H0003 (IT Skills) — the scale is 1–9:
 - **7–9 = Expert**: use technical language directly, no padding, no basics
@@ -42,7 +89,7 @@ Read H0003 (IT Skills) — the scale is 1–9:
 
 Apply this calibration for the entire session. When explaining something in a domain, check the matching H0003 skill first.
 
-## STEP 4: O-Entry routing check
+## STEP 5: O-Entry routing check
 
 **This step is critical.** Every `load_project` call changes which O-entry receives session exchanges. If you called `load_project` on any project other than your working project — even briefly, even for administrative reasons (reconcile, curation, migration) — those exchanges were misrouted to the wrong O-entry.
 
@@ -75,7 +122,7 @@ The UserPromptSubmit hook injects the following into every session start:
 
 ## OUTPUT
 
-After both steps, output exactly:
+After all steps, output exactly:
 
 [CORTEX READY]
 Project: <name from load_project>
