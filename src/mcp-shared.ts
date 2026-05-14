@@ -66,16 +66,26 @@ let lastPullAt = 0;
 const PULL_COOLDOWN_MS = 30_000;
 
 function getNewSyncConfig(hmemPath: string): { activeFile: string; stagingPath: string } | null {
-  const cfgPath = path.join(path.dirname(hmemPath), "config.json");
-  if (!fs.existsSync(cfgPath)) return null;
-  try {
-    const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8")) as { active_file?: string };
-    if (!cfg.active_file) return null;
-    return {
-      activeFile: cfg.active_file,
-      stagingPath: path.join(path.dirname(hmemPath), `${cfg.active_file}.hmem`),
-    };
-  } catch { return null; }
+  // Check hmem dir, HMEM_PROJECT_DIR, and ~/.hmem/ (where v2 sync config lives)
+  const dirs = [path.dirname(hmemPath)];
+  const projectDir = process.env["HMEM_PROJECT_DIR"];
+  if (projectDir && !dirs.includes(projectDir)) dirs.push(projectDir);
+  const homeHmemDir = path.join(os.homedir(), ".hmem");
+  if (!dirs.includes(homeHmemDir)) dirs.push(homeHmemDir);
+
+  for (const dir of dirs) {
+    const cfgPath = path.join(dir, "config.json");
+    if (!fs.existsSync(cfgPath)) continue;
+    try {
+      const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8")) as { active_file?: string };
+      if (!cfg.active_file) continue;
+      return {
+        activeFile: cfg.active_file,
+        stagingPath: path.join(dir, `${cfg.active_file}.hmem`),
+      };
+    } catch { continue; }
+  }
+  return null;
 }
 
 function hmemSyncEnabled(hmemPath: string): boolean {
@@ -331,6 +341,8 @@ export function syncPush(hmemPath: string): void {
 
 export async function reserveId(hmemPath: string, id: string): Promise<boolean> {
   if (!hmemSyncEnabled(hmemPath)) return true;
+  // v2 sync uses server-side conflict resolution — no client-side ID reservation needed
+  if (getNewSyncConfig(hmemPath)) return true;
   const servers = getSyncServers(hmemConfig);
   const targets = servers.length > 0
     ? servers.filter(s => s.serverUrl && s.token).map(s => ({ url: s.serverUrl!, token: s.token! }))

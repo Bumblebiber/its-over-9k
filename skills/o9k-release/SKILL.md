@@ -4,7 +4,8 @@ description: >
   Pre-publish checklist for o9k-mcp releases. Ensures all skills are updated,
   version is bumped, tests pass, and nothing is forgotten. Use before every
   npm publish of o9k-mcp — when the user says "publish", "release", "publishen",
-  "neue Version", or when you're about to run npm publish on the hmem repo.
+  "push", "push a release", "release pushen", "neue Version", or when you're
+  about to run npm publish on the hmem repo.
 ---
 
 # /o9k-release — Release Checklist

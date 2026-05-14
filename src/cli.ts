@@ -99,6 +99,32 @@ switch (command) {
     break;
   }
 
+  case "export-staging": {
+    const { exportToStaging } = await import("./sync-bridge.js");
+    const hmemPath = args[1];
+    const stagingPath = args[2];
+    if (!hmemPath || !stagingPath) {
+      console.error("Usage: hmem export-staging <hmem-path> <staging-path>");
+      process.exit(1);
+    }
+    await exportToStaging(hmemPath, stagingPath);
+    console.log(`✓ Exported ${hmemPath} → ${stagingPath}`);
+    break;
+  }
+
+  case "import-staging": {
+    const { importFromStaging } = await import("./sync-bridge.js");
+    const hmemPath = args[1];
+    const stagingPath = args[2];
+    if (!hmemPath || !stagingPath) {
+      console.error("Usage: hmem import-staging <staging-path> <hmem-path>");
+      process.exit(1);
+    }
+    await importFromStaging(stagingPath, hmemPath);
+    console.log(`✓ Imported ${stagingPath} → ${hmemPath}`);
+    break;
+  }
+
   case "version":
   case "--version":
   case "-v": {
