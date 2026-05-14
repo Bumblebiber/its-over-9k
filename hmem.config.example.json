@@ -16,9 +16,19 @@
     "_comment_access": "Top-N most-accessed entries always receive expanded treatment in bulk reads. Set to 0 to disable.",
     "accessCountTopN": 5,
 
-    "_comment_checkpoint": "Auto-save reminder every N messages (0 = off). checkpointMode: 'remind' injects an additionalContext reminder, 'auto' spawns a Haiku subagent that saves directly.",
+    "_comment_checkpoint": "Auto-save every N messages. checkpointMode: 'remind' injects a reminder, 'auto' runs a background agent that saves directly. The agent uses a direct API loop — configure provider + model below.",
     "checkpointInterval": 5,
-    "checkpointMode": "remind",
+    "checkpointMode": "auto",
+    "checkpointProvider": "anthropic",
+    "checkpointModel": "claude-haiku-4-5-20251001",
+
+    "_comment_checkpoint_openai": "For OpenAI-compatible providers (DeepSeek, Groq, etc.): set provider to 'openai', supply a baseURL, and set checkpointApiKeyEnv to the env var holding your key.",
+    "_example_checkpoint_openai": {
+      "checkpointProvider": "openai",
+      "checkpointModel": "deepseek-chat",
+      "checkpointBaseUrl": "https://api.deepseek.com/v1",
+      "checkpointApiKeyEnv": "DEEPSEEK_API_KEY"
+    },
 
     "_comment_o_entries": "O-entries (session logs) injected per load_project and per bulk read. Keep bulkReadOEntries at 0 to avoid noise when selecting a project.",
     "recentOEntries": 10,

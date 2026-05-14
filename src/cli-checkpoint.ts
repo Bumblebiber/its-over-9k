@@ -15,57 +15,11 @@
  */
 
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import { execFileSync, execSync } from "node:child_process";
 import { HmemStore } from "./hmem-store.js";
 import { loadHmemConfig } from "./hmem-config.js";
 import { currentSessionId } from "./session-state.js";
-
-/** Build a minimal MCP config JSON for the subagent (hmem only). */
-function buildMcpConfig(projectDir: string, hmemPath: string): string {
-  // Find the hmem-mcp entry point
-  let hmemServerPath: string;
-  try {
-    hmemServerPath = execSync("which hmem", { encoding: "utf8" }).trim();
-    // Resolve symlink to find the actual JS file
-    const realPath = fs.realpathSync(hmemServerPath);
-    hmemServerPath = path.join(path.dirname(realPath), "mcp-server.js");
-    if (!fs.existsSync(hmemServerPath)) {
-      // Fallback: look in the dist directory relative to the resolved path
-      hmemServerPath = path.join(path.dirname(path.dirname(realPath)), "dist", "mcp-server.js");
-    }
-  } catch {
-    // Fallback: global npm path
-    hmemServerPath = path.join(
-      process.env.HOME || "/home",
-      ".nvm/versions/node",
-      process.version,
-      "lib/node_modules/hmem-mcp/dist/mcp-server.js"
-    );
-  }
-
-  const nodePath = process.execPath;
-  const config = {
-    mcpServers: {
-      hmem: {
-        command: nodePath,
-        args: [hmemServerPath],
-        env: {
-          HMEM_PROJECT_DIR: projectDir,
-          HMEM_PATH: hmemPath,
-          HMEM_NO_SESSION: "1",
-        },
-      },
-    },
-  };
-
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "hmem-checkpoint-"));
-  fs.chmodSync(tmpDir, 0o700);
-  const tmpPath = path.join(tmpDir, "mcp-config.json");
-  fs.writeFileSync(tmpPath, JSON.stringify(config), "utf8");
-  return tmpPath;
-}
+import { runCheckpointAgent } from "./cli-checkpoint-agent.js";
 
 export async function checkpoint(): Promise<void> {
   const projectDir = process.env.HMEM_PROJECT_DIR;
@@ -76,8 +30,6 @@ export async function checkpoint(): Promise<void> {
 
   const config = loadHmemConfig(path.dirname(hmemPath));
   const store = new HmemStore(hmemPath, config);
-
-  let mcpConfigPath = "";
 
   try {
     // 1. Get active project and its O-entry (prefer env from log-exchange, fallback to DB)
@@ -144,11 +96,7 @@ export async function checkpoint(): Promise<void> {
     const projectName = activeProject.title.split("|")[0].trim();
     const projectId = activeProject.id;
 
-    // Close store before spawning subagent
-    store.close();
-
-    // 7. Build MCP config and prompt
-    mcpConfigPath = buildMcpConfig(projectDir, hmemPath);
+    // 7. Build prompt
 
     const formattedExchanges = batchExchanges.map((ex, i) => {
       // Strip XML channel tags from Telegram messages before passing to Haiku
@@ -285,43 +233,30 @@ Do ALL exchanges belong to ${projectName}?
 Check against the project list above. If an exchange belongs elsewhere, call:
 move_nodes(node_ids=["<exchange_id>"], target_o_id="O00XX")
 
+### 8. Update O-entry project state (${oId})
+1. read_memory(id="${oId}") — read the CURRENT body first
+2. Synthesize: keep what's still true, drop what's outdated, add what changed this session
+3. update_memory(id="${oId}", content="<fresh replacement, max 4 sentences>")
+
+The result must be a REPLACEMENT, not an addition. Cap at 4 sentences total regardless of how much is in the old body.
+Content: current project status, what just shipped/changed, top open item or next step.
+Written for someone picking up cold — concrete specifics, no jargon.
+Skip if this session was purely admin/infra with no meaningful project-level change.
+This body is injected verbatim into every load_project briefing.
+
 ## Rules:
 - read_memory() FIRST to see current state
 - Match language of existing entries
 - Tags: 3-5 per entry, lowercase with #
 - Only save what's valuable in 6 months`;
 
-    // 8. Spawn Haiku with MCP access
-    const allowedTools = [
-      "mcp__hmem__read_memory",
-      "mcp__hmem__write_memory",
-      "mcp__hmem__append_memory",
-      "mcp__hmem__update_memory",
-      "mcp__hmem__list_projects",
-      "mcp__hmem__move_nodes",
-    ].join(" ");
-    const disallowedTools = "mcp__hmem__flush_context";
-
-    try {
-      const output = execFileSync("claude", [
-        "-p", "--model", "haiku",
-        "--mcp-config", mcpConfigPath,
-        "--allowedTools", allowedTools,
-        "--disallowedTools", disallowedTools,
-        "--dangerously-skip-permissions",
-      ], { input: prompt, encoding: "utf8", timeout: 120_000 }).trim();
-      console.log(`[hmem checkpoint] Haiku: ${output.substring(0, 300)}`);
-    } catch (e: any) {
-      const stdout = e.stdout?.toString()?.substring(0, 200) || "";
-      console.error(`[hmem checkpoint] Failed (exit ${e.status}): ${stdout}`);
-    }
+    // 8. Run checkpoint agent (direct API loop, no subprocess)
+    await runCheckpointAgent(prompt, store, config);
+    console.log(`[hmem checkpoint] Done (${config.checkpointProvider}/${config.checkpointModel})`);
 
   } catch (e) {
     console.error(`[hmem checkpoint] ${e}`);
   } finally {
-    if (mcpConfigPath) {
-      try { fs.unlinkSync(mcpConfigPath); } catch {}
-      try { fs.rmdirSync(path.dirname(mcpConfigPath)); } catch {}
-    }
+    store.close();
   }
 }

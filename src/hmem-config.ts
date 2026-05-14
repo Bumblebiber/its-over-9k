@@ -94,6 +94,14 @@ export interface HmemConfig {
    * "auto" = spawn a Haiku subagent that saves directly (no user interaction).
    */
   checkpointMode: "remind" | "auto";
+  /** LLM provider for auto-checkpoint agent. Default: "anthropic". */
+  checkpointProvider: "anthropic" | "openai";
+  /** Model ID for checkpoint agent. Default: "claude-haiku-4-5-20251001". */
+  checkpointModel: string;
+  /** Base URL for OpenAI-compatible APIs (DeepSeek, Groq, etc.). */
+  checkpointBaseUrl?: string;
+  /** Env var name to read API key from. Default: ANTHROPIC_API_KEY / OPENAI_API_KEY. */
+  checkpointApiKeyEnv?: string;
   /**
    * Number of recent O-entries (session logs) to inject on load_project.
    * Set to 0 to disable. Default: 10.
@@ -232,6 +240,8 @@ export const DEFAULT_CONFIG: HmemConfig = {
   prefixDescriptions: { ...DEFAULT_PREFIX_DESCRIPTIONS },
   checkpointInterval: 5,
   checkpointMode: "remind" as const,
+  checkpointProvider: "anthropic" as const,
+  checkpointModel: "claude-haiku-4-5-20251001",
   recentOEntries: 10,
   bulkReadOEntries: 0,
   contextTokenThreshold: 100_000,
@@ -364,7 +374,8 @@ export function saveHmemConfig(projectDir: string, config: HmemConfig): void {
 
 /** Known memory config keys — used to detect unified vs flat format. */
 const MEMORY_KEYS = new Set(["maxL1Chars", "maxLnChars", "maxCharsPerLevel", "maxDepth",
-  "defaultReadLimit", "prefixes", "prefixDescriptions", "bulkReadV2", "maxTitleChars", "maxNodeChars", "accessCountTopN", "recentOEntries", "bulkReadOEntries", "contextTokenThreshold", "loadProjectExpand", "schemas", "globalLoad"]);
+  "defaultReadLimit", "prefixes", "prefixDescriptions", "bulkReadV2", "maxTitleChars", "maxNodeChars", "accessCountTopN", "recentOEntries", "bulkReadOEntries", "contextTokenThreshold", "loadProjectExpand", "schemas", "globalLoad",
+  "checkpointInterval", "checkpointMode", "checkpointProvider", "checkpointModel", "checkpointBaseUrl", "checkpointApiKeyEnv"]);
 
 /**
  * Load `hmem.config.json` from `projectDir`.
@@ -403,6 +414,10 @@ export function loadHmemConfig(projectDir: string): HmemConfig {
     if (typeof memoryRaw.maxNodeChars === "number" && memoryRaw.maxNodeChars >= 1000) cfg.maxNodeChars = memoryRaw.maxNodeChars;
     if (typeof memoryRaw.checkpointInterval === "number" && memoryRaw.checkpointInterval >= 0) cfg.checkpointInterval = memoryRaw.checkpointInterval;
     if (memoryRaw.checkpointMode === "remind" || memoryRaw.checkpointMode === "auto") cfg.checkpointMode = memoryRaw.checkpointMode;
+    if (memoryRaw.checkpointProvider === "anthropic" || memoryRaw.checkpointProvider === "openai") cfg.checkpointProvider = memoryRaw.checkpointProvider;
+    if (typeof memoryRaw.checkpointModel === "string" && memoryRaw.checkpointModel.length > 0) cfg.checkpointModel = memoryRaw.checkpointModel;
+    if (typeof memoryRaw.checkpointBaseUrl === "string") cfg.checkpointBaseUrl = memoryRaw.checkpointBaseUrl;
+    if (typeof memoryRaw.checkpointApiKeyEnv === "string") cfg.checkpointApiKeyEnv = memoryRaw.checkpointApiKeyEnv;
     if (typeof memoryRaw.recentOEntries === "number" && memoryRaw.recentOEntries >= 0) cfg.recentOEntries = memoryRaw.recentOEntries;
     if (typeof memoryRaw.bulkReadOEntries === "number" && memoryRaw.bulkReadOEntries >= 0) cfg.bulkReadOEntries = memoryRaw.bulkReadOEntries;
     if (typeof memoryRaw.contextTokenThreshold === "number" && memoryRaw.contextTokenThreshold >= 0) cfg.contextTokenThreshold = memoryRaw.contextTokenThreshold;
