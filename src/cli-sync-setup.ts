@@ -7,10 +7,12 @@ import Database from 'better-sqlite3'
 import { loadSyncConfig, saveSyncConfig, configDir } from './sync/config.js'
 import { HmemSyncClient, SyncApiError } from './sync/api.js'
 import { generateKeyMaterial, deriveKey, encrypt } from './sync/crypto.js'
-import { exportToStaging } from './sync-bridge.js'
+import { exportToStaging, importFromStaging } from './sync-bridge.js'
 import { syncPull } from './cli-sync-pull.js'
+import { resolveConflicts, LocalBlob } from './sync/conflict.js'
+import { decrypt } from './sync/crypto.js'
 import { randomUUID } from 'node:crypto'
-import { readFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 
 export function countLocalEntries(hmemPath: string): number {
   if (!existsSync(hmemPath)) return 0
@@ -39,6 +41,103 @@ export function clearLocalTables(hmemPath: string): void {
   } finally {
     db.close()
   }
+}
+
+interface MergeOpts {
+  hmemPath: string
+  fileId: string
+  passphrase: string
+  salt: string
+  client: HmemSyncClient
+  configDirPath: string
+}
+
+export async function mergeWithRename(opts: MergeOpts): Promise<{ renamedCount: number }> {
+  const stagingPath = join(opts.configDirPath, `${opts.fileId}.hmem`)
+
+  console.log('  Exporting local memory to staging...')
+  await exportToStaging(opts.hmemPath, stagingPath)
+
+  console.log('  Pulling server blobs...')
+  const response = await opts.client.pull(opts.fileId, undefined)
+  const key = deriveKey(opts.passphrase, opts.salt)
+
+  let decryptedServerBlobs: LocalBlob[]
+  try {
+    decryptedServerBlobs = response.blobs.map((b) => ({
+      ...b,
+      data: b.deleted_at ? b.data : decrypt(b.data, key),
+    })) as LocalBlob[]
+  } catch {
+    throw new Error('Decryption failed — wrong passphrase?')
+  }
+
+  const stagingRaw = JSON.parse(await readFile(stagingPath, 'utf8')) as LocalBlob[]
+
+  const syncedMap = new Map<number, LocalBlob>()
+  const localOnly: LocalBlob[] = []
+  for (const b of stagingRaw) {
+    if (typeof b.id === 'number') syncedMap.set(b.id, b)
+    else localOnly.push(b)
+  }
+  for (const b of decryptedServerBlobs) {
+    if (typeof b.id !== 'number') continue
+    if (b.deleted_at) syncedMap.delete(b.id)
+    else syncedMap.set(b.id, b)
+  }
+
+  const serverRootIds = new Set<string>()
+  for (const b of syncedMap.values()) {
+    const pid = b.client_proposed_id
+    if (typeof pid === 'string') {
+      const m = pid.match(/^([A-Z]\d{4})/)
+      if (m) serverRootIds.add(m[1])
+    }
+  }
+
+  const { blobs: resolvedLocal, renamedCount, renameMap } = resolveConflicts(serverRootIds, localOnly)
+  if (renamedCount > 0) {
+    console.log(`  ✓ Renamed ${renamedCount} colliding local entries:`)
+    for (const [oldId, newId] of Object.entries(renameMap)) {
+      console.log(`      ${oldId} → ${newId}`)
+    }
+  }
+
+  const merged = [...syncedMap.values(), ...resolvedLocal]
+  await writeFile(stagingPath, JSON.stringify(merged, null, 2))
+
+  const backup = `${opts.hmemPath}.before-sync.${Date.now()}.hmem`
+  copyFileSync(opts.hmemPath, backup)
+  console.log(`  ✓ Backed up local memory to ${backup}`)
+  clearLocalTables(opts.hmemPath)
+  await importFromStaging(stagingPath, opts.hmemPath)
+  console.log('  ✓ Imported merged state into local memory')
+
+  await exportToStaging(opts.hmemPath, stagingPath)
+  const finalBlobs = JSON.parse(await readFile(stagingPath, 'utf8')) as LocalBlob[]
+  const toPush = finalBlobs.filter((b) => typeof b.id !== 'number')
+
+  if (toPush.length > 0) {
+    const BATCH = 500
+    let total = 0
+    for (let i = 0; i < toPush.length; i += BATCH) {
+      const batch = toPush.slice(i, i + BATCH).map((b) => ({
+        proposed_id: b.client_proposed_id ?? String(b.id ?? randomUUID()),
+        data: encrypt(b.data, key),
+        device_id: hostname(),
+        updated_at: b.updated_at ?? new Date().toISOString(),
+      }))
+      const res = await opts.client.push({
+        file_id: opts.fileId,
+        idempotency_key: randomUUID(),
+        blobs: batch,
+      })
+      total += res.mappings.length
+    }
+    console.log(`  ✓ Pushed ${total} local blobs to server`)
+  }
+
+  return { renamedCount }
 }
 
 function isSQLite(filePath: string): boolean {
@@ -197,8 +296,14 @@ export async function runSetup(opts: { join?: boolean }) {
       await syncPull({ passphrase: passphraseAnswer })
       console.log('  ✓ Local replaced with server data')
     } else {
-      await syncPull({ passphrase: passphraseAnswer })
-      await uploadLocal()
+      await mergeWithRename({
+        hmemPath,
+        fileId,
+        passphrase: passphraseAnswer,
+        salt,
+        client,
+        configDirPath: configDir(),
+      })
     }
   } else if (hmemPath && !opts.join) {
     const upload = (await ask('\n  Upload existing memory to server? [Y/n]: ')).trim().toLowerCase()
