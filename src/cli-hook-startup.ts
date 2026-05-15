@@ -249,7 +249,7 @@ export async function hookStartup(): Promise<void> {
       "STEP 1 (silent \u2014 no output yet): Load context.\n" +
       "  - If the user\u2019s message names a specific project (e.g. \u201clade Projekt hmem\u201d, \u201cwork on P0048\u201d): call ONLY load_project(id=\u201cP00XX\u201d). Do NOT also call read_memory().\n" +
       "  - Otherwise: call read_memory() (no parameters).\n\n" +
-      "STEP 2: Open your reply with a short greeting in the user\u2019s preferred language and name (infer both from the H-entries below \u2014 e.g. German + \u201cBen\u201d). One line, friendly, no padding. Include the sync state as a colored dot read from the `--- hmem-sync ---` block below:\n" +
+      "STEP 2: Open your reply with a short greeting in the user\u2019s preferred language and name. Read the H-entries below carefully \u2014 they specify both the language AND the preferred form of address (and any greeting words to avoid). One line, friendly, no padding. Include the sync state as a colored dot read from the `--- hmem-sync ---` block below:\n" +
       "  - `\u2713 Linked \u2026` \u2192 \ud83d\udfe2\n" +
       "  - `\u26a0 \u2026` \u2192 \ud83d\udfe1\n" +
       "  - `\u2717 Not linked` \u2192 \ud83d\udd34\n" +

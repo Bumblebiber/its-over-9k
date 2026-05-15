@@ -159,30 +159,24 @@ The UserPromptSubmit hook injects the following into every session start:
 
 The hook injects a first-message directive that drives the greeting. Follow it.
 
-**Format (one short line, user's preferred language, no padding):**
+**Format (one short line, user's preferred language and name, no padding):**
 
-When the user named a project in their first message:
+Schema (placeholders shown — never copy literally; pull real values from H-entries):
 ```
-Moin Ben 🟢 — lade P0054.
-```
-
-When the user did NOT name a project, follow the greeting with a project list and a question:
-```
-Moin Ben 🟢. Letzte Projekte:
-  • P0048 — its-over-9k
-  • P0054 — MAIMO-RPG
-  • P0042 — OpenCode Fork TUI
-  • P0051 — BookCast
-  • P0058 — Excel VBA Plaintext Workflow
-An welchem möchtest du weiterarbeiten?
+<greeting> <name> <dot> — <action>.                            ← project named
+<greeting> <name> <dot>. <list-intro>:                         ← no project named
+  • Pxxxx — <title>
+  ...
+<follow-up question>
 ```
 
-**Dot mapping (from the auto-injected `--- hmem-sync ---` block):**
-- `✓ Linked …` → 🟢
-- `⚠ …` → 🟡
-- `✗ Not linked` → 🔴
-- No block present → omit the dot
-
-**Language and name:** infer from the H-entries (H0005, H0007). German → "Moin Ben" / "Hi Ben". English → "Hey Ben" / "Hi Ben".
+**Pulling the right values:**
+- **Language** — H0005 specifies it (German native, English fluent). Match the user's first message.
+- **Address form** — H0007 specifies the preferred name AND any greeting words to avoid. Follow it literally.
+- **Dot** — read from the `--- hmem-sync ---` block:
+  - `✓ Linked …` → 🟢
+  - `⚠ …` → 🟡
+  - `✗ Not linked` → 🔴
+  - No block present → omit the dot.
 
 **No `[CORTEX READY]` block.** The greeting IS the ready signal. After it, either proceed with the task (if project named) or wait for the user's answer.
