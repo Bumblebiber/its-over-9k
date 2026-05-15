@@ -173,10 +173,10 @@ Schema (placeholders shown — never copy literally; pull real values from H-ent
 **Pulling the right values:**
 - **Language** — H0005 specifies it (German native, English fluent). Match the user's first message.
 - **Address form** — H0007 specifies the preferred name AND any greeting words to avoid. Follow it literally.
-- **Dot** — read from the `--- hmem-sync ---` block:
+- **Dot** — read from the `--- hmem-sync ---` block (always present since v1.2.9):
   - `✓ Linked …` → 🟢
   - `⚠ …` → 🟡
-  - `✗ Not linked` → 🔴
-  - No block present → omit the dot.
+  - `✗ Not linked` or `✗ Not configured` → 🔴
+  The dot is mandatory — never omit it. The user needs to know whether memories propagate.
 
 **No `[CORTEX READY]` block.** The greeting IS the ready signal. After it, either proceed with the task (if project named) or wait for the user's answer.

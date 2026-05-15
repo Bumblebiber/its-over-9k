@@ -46,9 +46,13 @@ function detectsProjectIntent(prompt: unknown): boolean {
 
 function buildSyncStatus(): string {
   const configPath = path.join(os.homedir(), ".hmem", "config.json");
-  if (!fs.existsSync(configPath)) return "";
+  if (!fs.existsSync(configPath)) {
+    return "\n\n--- hmem-sync ---\n✗ Not configured on this device — memories stay local, no cross-device sync. Run `hmem-sync login` then `hmem-sync setup` to enable.";
+  }
   let cfg: any;
-  try { cfg = JSON.parse(fs.readFileSync(configPath, "utf8")); } catch { return ""; }
+  try { cfg = JSON.parse(fs.readFileSync(configPath, "utf8")); } catch {
+    return "\n\n--- hmem-sync ---\n✗ Config file unreadable — sync inactive. Check ~/.hmem/config.json.";
+  }
 
   const server = cfg.server || "https://hmem-sync.io";
   const linked = !!(cfg.session_token || cfg.api_key);
@@ -252,8 +256,8 @@ export async function hookStartup(): Promise<void> {
       "STEP 2: Open your reply with a short greeting in the user\u2019s preferred language and name. Read the H-entries below carefully \u2014 they specify both the language AND the preferred form of address (and any greeting words to avoid). One line, friendly, no padding. Include the sync state as a colored dot read from the `--- hmem-sync ---` block below:\n" +
       "  - `\u2713 Linked \u2026` \u2192 \ud83d\udfe2\n" +
       "  - `\u26a0 \u2026` \u2192 \ud83d\udfe1\n" +
-      "  - `\u2717 Not linked` \u2192 \ud83d\udd34\n" +
-      "  - No block present \u2192 omit the dot.\n" +
+      "  - `\u2717 Not linked` or `\u2717 Not configured` \u2192 \ud83d\udd34\n" +
+      "  The dot is mandatory \u2014 the `--- hmem-sync ---` block is always present.\n" +
       (hasIntent
         ? "  The user already named a project \u2014 proceed straight to the task after the greeting line.\n"
         : "  The user did NOT name a project. After the greeting, list the 5 entries from `--- Recent projects ---` below as bullet points and ask which one to continue with.\n") +
