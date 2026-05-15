@@ -155,21 +155,34 @@ The UserPromptSubmit hook injects the following into every session start:
 - **Recent projects** — 5 most recently updated P-entries
 - **hmem-sync status** — `--- hmem-sync ---` block with link state. Only present if `~/.hmem/config.json` exists.
 
-## OUTPUT
+## OUTPUT — natural greeting
 
-After all steps, output exactly:
+The hook injects a first-message directive that drives the greeting. Follow it.
 
-[CORTEX READY]
-Project: <name from load_project>
-Sync: <dot> <status line>
-Context loaded. Ready.
-[/CORTEX READY]
+**Format (one short line, user's preferred language, no padding):**
 
-**Sync line — read from the auto-injected `--- hmem-sync ---` block and map:**
-- `✓ Linked …` → `🟢 connected (<server>, last sync <ago>)`
-- `⚠ Linked … never synced` → `🟡 linked, never synced — run \`hmem-sync pull\``
-- `⚠ Authenticated … no active file` → `🟡 no active file — run \`hmem-sync setup\``
-- `✗ Not linked` → `🔴 not connected — writes stay local`
-- No `--- hmem-sync ---` block present → omit the `Sync:` line entirely
+When the user named a project in their first message:
+```
+Moin Ben 🟢 — lade P0054.
+```
 
-Then wait for the user's first message.
+When the user did NOT name a project, follow the greeting with a project list and a question:
+```
+Moin Ben 🟢. Letzte Projekte:
+  • P0048 — its-over-9k
+  • P0054 — MAIMO-RPG
+  • P0042 — OpenCode Fork TUI
+  • P0051 — BookCast
+  • P0058 — Excel VBA Plaintext Workflow
+An welchem möchtest du weiterarbeiten?
+```
+
+**Dot mapping (from the auto-injected `--- hmem-sync ---` block):**
+- `✓ Linked …` → 🟢
+- `⚠ …` → 🟡
+- `✗ Not linked` → 🔴
+- No block present → omit the dot
+
+**Language and name:** infer from the H-entries (H0005, H0007). German → "Moin Ben" / "Hi Ben". English → "Hey Ben" / "Hi Ben".
+
+**No `[CORTEX READY]` block.** The greeting IS the ready signal. After it, either proceed with the task (if project named) or wait for the user's answer.

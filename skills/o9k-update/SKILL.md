@@ -481,6 +481,21 @@ The `MIGRATIONS` array of `ALTER TABLE` statements is now tracked in `schema_ver
 
 ---
 
+## Step 2n: v1.2.4 — Natural session-start greeting
+
+**Only relevant when upgrading from < v1.2.4**
+
+`hmem hook-startup` now drives a natural-language greeting on the first message of every session:
+
+1. **Silent context load** — `load_project` if the user named one, else `read_memory()`.
+2. **One-line greeting** in the user's preferred language (from H-entries), with name and a 🟢/🟡/🔴 sync dot.
+3. **Conditional project list** — if the first message did NOT mention a project (regex: `lade Projekt`, `load project`, `P\d{4}`, `aktiviere`, `wechsel zu`, `switch to project`, `work on P…`, `open project`), the greeting is followed by the 5 most recent projects and a "Welches?" question.
+4. **Then** the agent handles the user's actual message.
+
+Replaces the old `[CORTEX READY]` block output from `o9k-session-start`. No config needed — automatic on next session.
+
+---
+
 ## Step 2m: v1.2.3 — hmem-sync link status in session-start context
 
 **Only relevant when upgrading from < v1.2.3**

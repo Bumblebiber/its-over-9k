@@ -37,6 +37,13 @@ function formatAgo(ms: number): string {
   return `${d}d ago`;
 }
 
+function detectsProjectIntent(prompt: unknown): boolean {
+  if (typeof prompt !== "string" || !prompt) return false;
+  if (/\bP\d{4}\b/i.test(prompt)) return true;
+  const p = prompt.toLowerCase();
+  return /\b(lade\s+projekt|load\s+project|aktiviere\s+(?:projekt\s+)?\S|wechsel\s+(?:zu|auf)|switch\s+to\s+project|work\s+on\s+p\d|open\s+project)\b/.test(p);
+}
+
 function buildSyncStatus(): string {
   const configPath = path.join(os.homedir(), ".hmem", "config.json");
   if (!fs.existsSync(configPath)) return "";
@@ -218,13 +225,27 @@ export async function hookStartup(): Promise<void> {
     }
 
     const syncStatus = buildSyncStatus();
+    const hasIntent = detectsProjectIntent(input?.prompt);
+
+    const greetingDirective =
+      "IMPORTANT: This is the first message of the session.\n\n" +
+      "STEP 1 (silent \u2014 no output yet): Load context.\n" +
+      "  - If the user\u2019s message names a specific project (e.g. \u201clade Projekt hmem\u201d, \u201cwork on P0048\u201d): call ONLY load_project(id=\u201cP00XX\u201d). Do NOT also call read_memory().\n" +
+      "  - Otherwise: call read_memory() (no parameters).\n\n" +
+      "STEP 2: Open your reply with a short greeting in the user\u2019s preferred language and name (infer both from the H-entries below \u2014 e.g. German + \u201cBen\u201d). One line, friendly, no padding. Include the sync state as a colored dot read from the `--- hmem-sync ---` block below:\n" +
+      "  - `\u2713 Linked \u2026` \u2192 \ud83d\udfe2\n" +
+      "  - `\u26a0 \u2026` \u2192 \ud83d\udfe1\n" +
+      "  - `\u2717 Not linked` \u2192 \ud83d\udd34\n" +
+      "  - No block present \u2192 omit the dot.\n" +
+      (hasIntent
+        ? "  The user already named a project \u2014 proceed straight to the task after the greeting line.\n"
+        : "  The user did NOT name a project. After the greeting, list the 5 entries from `--- Recent projects ---` below as bullet points and ask which one to continue with.\n") +
+      "\nSTEP 3: Handle the user\u2019s actual message (or, if step 2 ended with a question, wait for their answer).";
 
     process.stdout.write(JSON.stringify({
       hookSpecificOutput: {
         hookEventName: "UserPromptSubmit",
-        additionalContext: "IMPORTANT: This is the first message of the session. Load your memory context silently \u2014 do not mention it to the user.\n\n" +
-          "- If the user\u2019s message names a specific project (e.g. \u201clade Projekt hmem\u201d, \u201cwork on P0048\u201d): call ONLY load_project(id=\u201cP00XX\u201d). Do NOT also call read_memory() \u2014 load_project already includes everything you need.\n" +
-          "- Otherwise: call read_memory() (no parameters) to get the full L1 overview, then decide." +
+        additionalContext: greetingDirective +
           deviceNote +
           humanContext +
           recentProjects +
