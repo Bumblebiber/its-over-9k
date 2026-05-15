@@ -10,7 +10,7 @@ description: "Set up and configure the hmem memory system. Run this skill to ins
 Install hmem globally, then run the interactive installer:
 
 ```bash
-npm install -g o9k-mcp
+npm install -g its-over-9k
 hmem init
 ```
 
@@ -172,8 +172,8 @@ npm --version     # any recent version
 ### Step 1 — Clone and Build
 
 ```bash
-git clone https://github.com/Bumblebiber/hmem.git
-cd hmem
+git clone https://github.com/Bumblebiber/its-over-9k.git
+cd its-over-9k
 npm install
 npm run build
 ```

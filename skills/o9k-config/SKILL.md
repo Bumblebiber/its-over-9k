@@ -200,7 +200,7 @@ On Windows, hook execution is fragile out of the box. Two issues bite every new 
         "hooks": [
           {
             "type": "command",
-            "command": "node C:/Users/<you>/AppData/Roaming/npm/node_modules/o9k-mcp/dist/cli.js hook-startup",
+            "command": "node C:/Users/<you>/AppData/Roaming/npm/node_modules/its-over-9k/dist/cli.js hook-startup",
             "shell": "powershell"
           }
         ]
@@ -212,7 +212,7 @@ On Windows, hook execution is fragile out of the box. Two issues bite every new 
         "hooks": [
           {
             "type": "command",
-            "command": "node C:/Users/<you>/AppData/Roaming/npm/node_modules/o9k-mcp/dist/cli.js log-exchange",
+            "command": "node C:/Users/<you>/AppData/Roaming/npm/node_modules/its-over-9k/dist/cli.js log-exchange",
             "shell": "powershell"
           }
         ]
@@ -224,7 +224,7 @@ On Windows, hook execution is fragile out of the box. Two issues bite every new 
         "hooks": [
           {
             "type": "command",
-            "command": "node C:/Users/<you>/AppData/Roaming/npm/node_modules/o9k-mcp/dist/cli.js context-inject",
+            "command": "node C:/Users/<you>/AppData/Roaming/npm/node_modules/its-over-9k/dist/cli.js context-inject",
             "shell": "powershell"
           }
         ]
@@ -233,7 +233,7 @@ On Windows, hook execution is fragile out of the box. Two issues bite every new 
   },
   "statusLine": {
     "type": "command",
-    "command": "node C:/Users/<you>/AppData/Roaming/npm/node_modules/o9k-mcp/dist/cli.js statusline",
+    "command": "node C:/Users/<you>/AppData/Roaming/npm/node_modules/its-over-9k/dist/cli.js statusline",
     "shell": "powershell"
   }
 }

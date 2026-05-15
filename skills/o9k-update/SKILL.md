@@ -1,11 +1,28 @@
 ---
 name: o9k-update
-description: "Post-update checklist for o9k-mcp and o9k-sync. Run after npm update or when hmem detects a version change. Covers skill sync, entry migration, schema enforcement, O-entry curation, and smoke tests. Use when the user says 'update hmem', 'hmem updaten', or when the startup version-check detects a new version."
+description: "Post-update checklist for its-over-9k (formerly o9k-mcp) and o9k-sync. Run after npm update or when hmem detects a version change. Covers skill sync, entry migration, schema enforcement, O-entry curation, and smoke tests. Use when the user says 'update hmem', 'hmem updaten', or when the startup version-check detects a new version."
 ---
 
 # /o9k-update — Post-Update Checklist
 
-Run this after updating o9k-mcp or o9k-sync. Every step is important — do not skip steps.
+Run this after updating its-over-9k or o9k-sync. Every step is important — do not skip steps.
+
+> **Package naming note:** The npm package is `its-over-9k` (formerly `o9k-mcp`,
+> formerly `hmem`). The installed CLI is still `hmem`, the MCP server tools still
+> use the `hmem` prefix, and the GitHub repo is now `Bumblebiber/its-over-9k`.
+> If `npm view o9k-mcp ...` returns a 404, that's expected — the package was
+> renamed. Always use the current package name (`its-over-9k`) for npm commands.
+>
+> **Version mapping:** The rename also reset the version line:
+>
+> | Old (`o9k-mcp` / `hmem`) | New (`its-over-9k`) |
+> |--------------------------|---------------------|
+> | up to 7.4.x              | 1.0.0 (initial release post-rename) |
+> | n/a                      | 1.1.x, 1.2.x — current line |
+>
+> Steps 2d–2l below describe migrations only relevant when upgrading from the
+> legacy 5.x/6.x/7.x line. **Skip them if your installed version is 1.x** — they
+> are already baked into the rename baseline.
 
 ---
 
@@ -14,9 +31,9 @@ Run this after updating o9k-mcp or o9k-sync. Every step is important — do not 
 Determine what changed:
 
 ```bash
-hmem --version                    # current installed version
-npm view o9k-mcp version         # latest on npm
-npm view o9k-mcp versions --json # all versions
+hmem --version                            # current installed version (e.g. "hmem 1.2.1")
+npm view its-over-9k version              # latest on npm
+npm view its-over-9k versions --json      # all versions
 ```
 
 Read the changelog for the version range:
@@ -24,7 +41,7 @@ Read the changelog for the version range:
 cd ~/projects/hmem && git log --oneline <old-tag>..HEAD  # if local repo exists
 ```
 
-Or check GitHub releases: `gh release list -R Bumblebiber/hmem --limit 5`
+Or check GitHub releases: `gh release list -R Bumblebiber/its-over-9k --limit 5`
 
 **If already on latest:** Tell the user and skip to Step 7 (smoke test).
 
@@ -108,7 +125,7 @@ Commands must NOT contain `VAR=value` prefixes like `HMEM_PATH=C:/... node ...`.
         "hooks": [
           {
             "type": "command",
-            "command": "node C:/Users/<you>/AppData/Roaming/npm/node_modules/o9k-mcp/dist/cli.js log-exchange",
+            "command": "node C:/Users/<you>/AppData/Roaming/npm/node_modules/its-over-9k/dist/cli.js log-exchange",
             "shell": "powershell"
           }
         ]
@@ -137,6 +154,12 @@ Check if the user has customized this in `hmem.config.json`. If not, inform them
 Section 16 = Rules — include it so project-specific agent directives are visible on every `load_project`.
 
 ---
+
+## Legacy migration steps (Step 2d–2l)
+
+The following sub-steps apply **only when upgrading from the pre-rename `o9k-mcp`
+line (≤ 7.4.x)**. If `hmem --version` reports a 1.x version, the migrations are
+already applied at install time — skip directly to Step 3.
 
 ## Step 2d: HMEM_PATH Migration (v6.0.0+)
 
@@ -223,7 +246,7 @@ Leave it **disabled by default** — only activate via `/mcp` when running `/o9k
 o9k-curate --version   # should print 7.0.0
 ```
 
-If `o9k-curate` is not found: `npm update -g o9k-mcp` (postinstall sometimes skips bin links).
+If `o9k-curate` is not found: `npm update -g its-over-9k` (postinstall sometimes skips bin links).
 
 **2. Set up the o9k-using-hmem session hook**
 
@@ -248,7 +271,7 @@ After the next session restart, `o9k-using-hmem` meta-rules will be in context a
 The statusline now shows which device the session is running on (using an I-entry):
 
 ```
-Strato Server  |  P0048 o9k-mcp  |  3/5  |  5h: 34%/w: 17%
+Strato Server  |  P0048 its-over-9k  |  3/5  |  5h: 34%/w: 17%
 ```
 
 - Shows the I-entry title (e.g., "Strato Server"), no ID prefix
@@ -316,7 +339,7 @@ The UserPromptSubmit hook now injects richer context on the **first message of e
 
 ### Windows example config on GitHub
 
-settings.windows.example.json is now in the Bumblebiber/hmem repository. If you are on Windows, refer to it as the canonical example for hook and statusline configuration with "shell": "powershell".
+settings.windows.example.json is now in the Bumblebiber/its-over-9k repository. If you are on Windows, refer to it as the canonical example for hook and statusline configuration with "shell": "powershell".
 
 ---
 
@@ -608,7 +631,7 @@ Fill in relevant directives per device — examples:
 
 **Note:** If `append_memory` returns "uses a fixed schema — cannot add new L2 nodes directly"
 even with "Rules" as the first line, the running MCP server is older than v7.0.2. Update
-first (`npm update -g o9k-mcp`), then restart Claude Code, then add the Rules nodes.
+first (`npm update -g its-over-9k`), then restart Claude Code, then add the Rules nodes.
 
 ---
 
@@ -713,19 +736,40 @@ Tell the user what was done. **Always remind to restart** if an actual update wa
 installed and the user hasn't restarted yet.
 
 ```
-o9k-mcp updated: v5.1.2 → v5.1.4
+its-over-9k updated: v1.1.0 → v1.2.1
 
 Changes applied:
 - Skills synced (2 new, 3 updated)
 - 5 P-entries checked against R0009 schema (2 fixed)
 - 12 O-entries curated (4 titles fixed, 3 summaries added)
 - Smoke test passed ✓
-
-New features in this version:
-- Rolling checkpoint summaries
-- Skill-dialog exchange filtering
-- hmem --version reads from package.json
 ```
+
+---
+
+## Step 10: Surface Any Problems as GitHub Issues
+
+If anything friction-y happened during this update — wrong package name in
+the skill, broken migration step, confusing version mismatch, stale MCP config
+that wasn't detected, a tool returning unexpected output, anything — tell the
+user to file it (or offer to draft the issue yourself):
+
+> 👉 https://github.com/Bumblebiber/its-over-9k/issues
+
+A good issue includes: installed version (`hmem --version`), OS, the exact
+command that failed and its output, and what you expected. The faster these
+land in the tracker, the faster the next release fixes them.
+
+Also worth running once after the update:
+
+```bash
+hmem doctor
+```
+
+This scans `~/.claude.json` for stale or deprecated hmem MCP entries (e.g. paths
+from another device that no longer exist on this one, or env vars left over
+from the pre-v6.0 `HMEM_PROJECT_DIR` + `HMEM_AGENT_ID` syntax). It reports
+findings only — never auto-modifies host configs.
 
 ---
 
@@ -734,7 +778,7 @@ New features in this version:
 This skill can be triggered automatically. At session startup, if the hmem MCP server detects that the installed version differs from the last-seen version stored in the config, it appends a notice to the first `read_memory()` response:
 
 ```
-⚠ o9k-mcp updated: v5.1.2 → v5.1.4. Run /o9k-update to apply post-update steps.
+⚠ its-over-9k updated: v1.1.0 → v1.2.1. Run /o9k-update to apply post-update steps.
 ```
 
 The agent should then invoke this skill automatically or ask the user if they want to run it.

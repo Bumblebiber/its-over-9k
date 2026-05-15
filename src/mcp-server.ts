@@ -2180,7 +2180,8 @@ server.tool(
         }
       } catch { /* ignore */ }
       log(`set_active_device: ${id} (${title})`);
-      return { content: [{ type: "text" as const, text: `Active device set to: ${id} ${title}` }] };
+      const text = title === id ? `Active device set to: ${id}` : `Active device set to: ${title} (${id})`;
+      return { content: [{ type: "text" as const, text }] };
     } catch (e) {
       return { content: [{ type: "text" as const, text: `ERROR: ${safeError(e)}` }], isError: true };
     }

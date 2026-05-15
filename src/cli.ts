@@ -99,6 +99,12 @@ switch (command) {
     break;
   }
 
+  case "doctor": {
+    const { doctor } = await import("./cli-doctor.js");
+    await doctor();
+    break;
+  }
+
   case "export-staging": {
     const { exportToStaging } = await import("./sync-bridge.js");
     const hmemPath = args[1];
@@ -173,6 +179,7 @@ Usage:
   hmem context-inject Output compressed context for re-injection after /clear
   hmem deactivate     Clear active project for current session (called by SessionStart[clear] hook)
   hmem setup-hook     Add hmem-using-hmem SessionStart hook to Claude Code settings
+  hmem doctor         Detect stale or deprecated hmem MCP entries in host configs
   hmem delete <ID>    Permanently delete an entry (curator use only, not synced)
   hmem checkpoint     Extract knowledge from recent exchanges via Haiku (background)
   hmem hook-startup   UserPromptSubmit hook — counter, checkpoint reminders (cross-platform)

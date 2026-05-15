@@ -1,16 +1,16 @@
 ---
 name: o9k-release
 description: >
-  Pre-publish checklist for o9k-mcp releases. Ensures all skills are updated,
+  Pre-publish checklist for its-over-9k releases. Ensures all skills are updated,
   version is bumped, tests pass, and nothing is forgotten. Use before every
-  npm publish of o9k-mcp — when the user says "publish", "release", "publishen",
+  npm publish of its-over-9k — when the user says "publish", "release", "publishen",
   "push", "push a release", "release pushen", "neue Version", or when you're
-  about to run npm publish on the hmem repo.
+  about to run npm publish on the its-over-9k repo.
 ---
 
 # /o9k-release — Release Checklist
 
-Run this checklist before every `npm publish` of o9k-mcp. Every release touches code, skills, config, and documentation — this skill ensures nothing falls through the cracks.
+Run this checklist before every `npm publish` of its-over-9k. Every release touches code, skills, config, and documentation — this skill ensures nothing falls through the cracks.
 
 ---
 
@@ -119,7 +119,7 @@ git push
 
 ## Step 9: Post-Publish
 
-1. Verify on npm: `npm view o9k-mcp version`
+1. Verify on npm: `npm view its-over-9k version`
 2. Update Overview version node: `update_memory(id="P0048.1.1", content="vX.Y.Z released (YYYY-MM-DD)")`. If no version node exists yet, create one: `append_memory(id="P0048.1", title="vX.Y.Z released (YYYY-MM-DD)")`
 3. Sync to devices: `o9k-sync push` (if applicable)
 4. Update hmem P-entry protocol: `append_memory(id="P0048.7", content="\tHandoff: vX.Y.Z released...")`

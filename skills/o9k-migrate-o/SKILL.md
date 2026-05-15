@@ -123,11 +123,11 @@ rm "$AGENT_DIR/DEVELOPER.hmem"
 
 # 2. Pull from server — MUST specify --o9k-path explicitly!
 # Without it, o9k-sync writes to ~/.hmem/memory.hmem (wrong file).
-# o9k-mcp reads from Agents/DEVELOPER/DEVELOPER.hmem — they must match.
+# its-over-9k reads from Agents/DEVELOPER/DEVELOPER.hmem — they must match.
 o9k-sync pull --o9k-path "$AGENT_DIR/DEVELOPER.hmem" --force
 ```
 
-**IMPORTANT: Always use `--o9k-path`** when pulling after a DB delete. Without it, o9k-sync auto-detects `~/.hmem/memory.hmem` as the target, but o9k-mcp reads from `Agents/DEVELOPER/DEVELOPER.hmem`. This mismatch causes "No memories found" after pull.
+**IMPORTANT: Always use `--o9k-path`** when pulling after a DB delete. Without it, o9k-sync auto-detects `~/.hmem/memory.hmem` as the target, but its-over-9k reads from `Agents/DEVELOPER/DEVELOPER.hmem`. This mismatch causes "No memories found" after pull.
 
 Do this on every device/agent that syncs with the server. After pulling, verify with `read_memory()` that the O-entries have the correct IDs.
 
