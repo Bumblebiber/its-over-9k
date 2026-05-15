@@ -7,6 +7,10 @@
  * Supports: Anthropic (native), OpenAI-compatible (OpenAI, DeepSeek, Groq, etc.)
  */
 
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { execFileSync, execSync } from "node:child_process";
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { HmemStore } from "./hmem-store.js";
@@ -196,16 +200,93 @@ async function runOpenAILoop(prompt: string, store: HmemStore, config: HmemConfi
   }
 }
 
+// ── claude -p subprocess fallback (for Max/OAuth users without API key) ────────
+
+function buildMcpConfig(projectDir: string, hmemPath: string): string {
+  let hmemServerPath: string;
+  try {
+    hmemServerPath = execSync("which hmem", { encoding: "utf8" }).trim();
+    const realPath = fs.realpathSync(hmemServerPath);
+    hmemServerPath = path.join(path.dirname(realPath), "mcp-server.js");
+    if (!fs.existsSync(hmemServerPath)) {
+      hmemServerPath = path.join(path.dirname(path.dirname(realPath)), "dist", "mcp-server.js");
+    }
+  } catch {
+    hmemServerPath = path.join(
+      process.env.HOME || "/home",
+      ".nvm/versions/node", process.version,
+      "lib/node_modules/hmem-mcp/dist/mcp-server.js"
+    );
+  }
+
+  const mcpConfig = {
+    mcpServers: {
+      hmem: {
+        command: process.execPath,
+        args: [hmemServerPath],
+        env: { HMEM_PROJECT_DIR: projectDir, HMEM_PATH: hmemPath, HMEM_NO_SESSION: "1" },
+      },
+    },
+  };
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "hmem-checkpoint-"));
+  fs.chmodSync(tmpDir, 0o700);
+  const tmpPath = path.join(tmpDir, "mcp-config.json");
+  fs.writeFileSync(tmpPath, JSON.stringify(mcpConfig), "utf8");
+  return tmpPath;
+}
+
+async function runClaudeSubprocess(prompt: string, hmemPath: string, model: string): Promise<void> {
+  const projectDir = path.dirname(hmemPath);
+  const mcpConfigPath = buildMcpConfig(projectDir, hmemPath);
+  try {
+    execFileSync("claude", [
+      "-p", "--model", model,
+      "--mcp-config", mcpConfigPath,
+      "--allowedTools", "mcp__hmem__update_memory mcp__hmem__write_memory mcp__hmem__append_memory mcp__hmem__read_memory mcp__hmem__move_nodes mcp__hmem__list_projects",
+      "--dangerously-skip-permissions",
+    ], { input: prompt, encoding: "utf8", timeout: 120_000 });
+  } finally {
+    try { fs.unlinkSync(mcpConfigPath); } catch {}
+    try { fs.rmdirSync(path.dirname(mcpConfigPath)); } catch {}
+  }
+}
+
+function hasClaudeBinary(): boolean {
+  try { execSync("which claude", { stdio: "ignore" }); return true; } catch { return false; }
+}
+
 // ── Public entry point ────────────────────────────────────────────────────────
 
 export async function runCheckpointAgent(
   prompt: string,
   store: HmemStore,
   config: HmemConfig,
+  hmemPath?: string,
 ): Promise<void> {
-  if (config.checkpointProvider === "openai") {
-    await runOpenAILoop(prompt, store, config);
+  const apiKeyEnv = config.checkpointApiKeyEnv
+    ?? (config.checkpointProvider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY");
+  const apiKey = process.env[apiKeyEnv];
+
+  if (apiKey) {
+    // Direct API loop — works for any harness with an explicit provider + API key configured
+    if (config.checkpointProvider === "openai") {
+      await runOpenAILoop(prompt, store, config);
+    } else {
+      await runAnthropicLoop(prompt, store, config);
+    }
+  } else if (hmemPath && hasClaudeBinary()) {
+    // Subprocess fallback — only available when claude CLI is installed (Claude Code users)
+    store.close();
+    await runClaudeSubprocess(prompt, hmemPath, config.checkpointModel);
   } else {
-    await runAnthropicLoop(prompt, store, config);
+    throw new Error(
+      "[hmem checkpoint] No checkpoint provider configured.\n" +
+      "Add to hmem.config.json → memory:\n" +
+      '  "checkpointProvider": "anthropic"  (or "openai")\n' +
+      '  "checkpointModel": "claude-haiku-4-5-20251001"\n' +
+      '  "checkpointApiKeyEnv": "ANTHROPIC_API_KEY"  (env var name holding your key)\n' +
+      "OpenCode/Pi users: set the env var your harness uses for its API key."
+    );
   }
 }

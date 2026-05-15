@@ -46,7 +46,87 @@ export async function checkpoint(): Promise<void> {
     const batchSize = config.checkpointInterval || 5;
     const latestFullBatch = store.getLatestFullBatch(oId, batchSize);
 
-    if (!latestFullBatch) return;
+    // Determine current session node to exclude from orphan search
+    const latestSession = store.getChildNodes(oId)
+      .filter(n => n.depth === 2)
+      .sort((a, b) => b.seq - a.seq)[0];
+    const currentSessionNodeId = latestFullBatch?.sessionId ?? latestSession?.id ?? null;
+
+    // Find orphaned batches from previous short sessions (cap=2)
+    const orphanedBatches = store.getOrphanedBatches(oId, currentSessionNodeId);
+
+    if (!latestFullBatch && orphanedBatches.length === 0) return;
+
+    // Orphan-only path: no full batch but orphaned batches exist
+    if (!latestFullBatch) {
+      const pName = activeProject.title.split("|")[0].trim();
+      const pId = activeProject.id;
+      const pList = store.listProjects().map(p => `  ${p.id} ${p.title}`).join("\n");
+
+      const orphanSections = orphanedBatches.map((ob, i) => {
+        const exs = store.getOEntryExchangesV2(oId, 20, { sessionScope: [ob.sessionId] });
+        const batchExs = exs.filter(ex => ex.nodeId.startsWith(ob.batchId + "."));
+        if (batchExs.length === 0) return null;
+
+        const formatted = batchExs.map((ex, j) => {
+          let user = ex.userText.replace(/<channel[^>]*>\s*/g, "").replace(/<\/channel>\s*/g, "").trim();
+          let agent = (ex.agentText ?? "").replace(/<[^>]+>/g, "").trim();
+          user = user.length > 800 ? user.substring(0, 800) + "..." : user;
+          agent = agent.length > 1200 ? agent.substring(0, 1200) + "..." : agent;
+          return `--- Exchange ${j + 1} (${ex.nodeId}) ---\nUSER: ${user}\nAGENT: ${agent}`;
+        }).join("\n\n");
+
+        const listing = batchExs.map(ex => `  ${ex.nodeId}: "${ex.title}"`).join("\n");
+
+        for (const ex of batchExs) {
+          if (ex.userText.includes("Base directory for this skill:")) {
+            store.addTag(ex.nodeId, "#skill-dialog");
+          }
+        }
+
+        return `=== Batch ${i + 1}: ${ob.batchId} | Session ${ob.sessionId} (${ob.sessionDate}) — "${ob.sessionTitle}" ===
+Current exchange titles:
+${listing}
+
+${formatted}`;
+      }).filter(Boolean);
+
+      if (orphanSections.length === 0) return;
+
+      const orphanPrompt = `You are a checkpoint agent for "${pName}" (${pId}).
+Process ${orphanSections.length} orphaned batch(es) — prior sessions too short for a regular checkpoint.
+
+== All Projects ==
+${pList}
+
+${orphanSections.join("\n\n")}
+
+## Tasks for EACH batch above (Tasks 1, 2, 5, 6 only):
+
+### 1. Title each exchange
+For each: update_memory(id="<nodeId>", content="Descriptive title, max 50 chars, match conversation language")
+GOOD: "Fix: cleanTitle strips separators" | BAD: "Projekt laden" or "ok"
+
+### 2. Write rolling summary for each batch
+update_memory(id="<batchId>", content="Summary: 2-5 sentences covering this batch. Match conversation language.")
+
+### 5. Tag exchanges
+For each exchange, add ONE tag if applicable: #skill-dialog, #irrelevant, #planning, #debugging, #admin, #meta, #repetition
+
+### 6. Update each session title and summary
+update_memory(id="<sessionId>", content="Short session title, max 60 chars\\n> 2-5 sentences. Key decisions, outcomes. Written for someone picking up cold.")
+
+## Rules:
+- Match language of existing entries
+- Tags: lowercase with #
+- Do NOT extract L/E/D entries (skip Task 3)
+- Do NOT update P-entry (skip Task 4)`;
+
+      await runCheckpointAgent(orphanPrompt, store, config);
+      console.log(`[hmem checkpoint] Orphan batches processed: ${orphanSections.length} (${config.checkpointProvider}/${config.checkpointModel})`);
+      return;
+    }
+
     const batchId = latestFullBatch.id;
     const sessionId = latestFullBatch.sessionId;
 
@@ -250,13 +330,13 @@ This body is injected verbatim into every load_project briefing.
 - Tags: 3-5 per entry, lowercase with #
 - Only save what's valuable in 6 months`;
 
-    // 8. Run checkpoint agent (direct API loop, no subprocess)
-    await runCheckpointAgent(prompt, store, config);
+    // 8. Run checkpoint agent
+    await runCheckpointAgent(prompt, store, config, hmemPath);
     console.log(`[hmem checkpoint] Done (${config.checkpointProvider}/${config.checkpointModel})`);
 
   } catch (e) {
     console.error(`[hmem checkpoint] ${e}`);
   } finally {
-    store.close();
+    try { store.close(); } catch {}
   }
 }

@@ -1750,22 +1750,6 @@ server.tool(
           }
         } catch { /* findContext may fail on empty/new entries */ }
 
-        // Inject R-entries (rules) — only project-specific rules (linked to this project)
-        const ruleEntries = hmemStore.read({
-          prefix: "R",
-          depth: 2,
-        }).filter(r => !r.obsolete && !r.irrelevant && Array.isArray(r.links) && r.links.includes(id));
-        if (ruleEntries.length > 0) {
-          lines.push("");
-          lines.push("  --- Rules ---");
-          lines.push("");
-          for (const r of ruleEntries) {
-            lines.push(`    ${r.id}  ${cleanTitle(r.title)}`);
-            if (r.level_1 && r.level_1 !== r.title) {
-              lines.push(`      ${r.level_1}`);
-            }
-          }
-        }
 
         // Inject recent O-entries linked to THIS project
         // Purpose: seamless continuation of the previous session's conversation

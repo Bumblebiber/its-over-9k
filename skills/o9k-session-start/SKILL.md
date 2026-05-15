@@ -66,7 +66,41 @@ Weiter dran arbeiten oder aufräumen?
 
 If the user's first instruction obviously supersedes pending work (e.g. "ignore the worktree, I'm doing X now"), respect that and don't badger.
 
-## STEP 3: Noise Check
+## STEP 3: Next Steps & offene Tasks
+
+Surface what's on deck so the user doesn't have to hunt for it.
+
+### Next Steps lesen
+
+Suche im load_project-Output unter `.8 Roadmap` nach einem Eintrag mit Titel "Next Steps". Lies ihn:
+
+```
+read_memory(id: "P00XX.8.YY")   ← Node mit Titel "Next Steps"
+```
+
+Falls kein "Next Steps"-Node existiert, überspringe diesen Schritt stillschweigend.
+
+### T-Entries prüfen
+
+Im load_project-Output sind unter `Links:` die verlinkten T-Entries aufgelistet. Vergleiche: Welche T-Entries tauchen **nicht** im Next-Steps-Inhalt auf? Das sind abweichende offene Tasks.
+
+### Ausgabe
+
+Zeige Next Steps immer (auch wenn leer). Abweichende Tasks nur wenn vorhanden.
+
+```
+📋 Next Steps:
+  • Item 1
+  • Item 2
+
+📌 Offene Tasks (nicht in Next Steps):
+  T0033: hmem-sync SaaS monetization
+  T0042: Config-Konsolidierung
+```
+
+**Keine Interpretation, kein Priorisieren** — nur anzeigen, was drin steht.
+
+## STEP 4: Noise Check
 
 **Do this immediately after load_project, before any other work.**
 
@@ -80,7 +114,7 @@ Scan the output for:
 
 Fix all of the above immediately. Do not note and defer.
 
-## STEP 4: Calibrate explanation depth
+## STEP 5: Calibrate explanation depth
 
 Read H0003 (IT Skills) — the scale is 1–9:
 - **7–9 = Expert**: use technical language directly, no padding, no basics
@@ -89,7 +123,7 @@ Read H0003 (IT Skills) — the scale is 1–9:
 
 Apply this calibration for the entire session. When explaining something in a domain, check the matching H0003 skill first.
 
-## STEP 5: O-Entry routing check
+## STEP 6: O-Entry routing check
 
 **This step is critical.** Every `load_project` call changes which O-entry receives session exchanges. If you called `load_project` on any project other than your working project — even briefly, even for administrative reasons (reconcile, curation, migration) — those exchanges were misrouted to the wrong O-entry.
 

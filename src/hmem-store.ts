@@ -3557,6 +3557,37 @@ export class HmemStore {
   }
 
   /**
+   * Find orphaned batches — L3 nodes with no checkpoint summary, from sessions other than
+   * excludeSessionId, that have at least one L4 exchange. Returns up to cap, oldest first.
+   */
+  getOrphanedBatches(
+    oId: string,
+    excludeSessionId: string | null,
+    cap = 2
+  ): Array<{ batchId: string; sessionId: string; sessionTitle: string; sessionDate: string }> {
+    const excludeClause = excludeSessionId ? " AND mn.parent_id != ?" : "";
+    const params: (string | number)[] = [oId];
+    if (excludeSessionId) params.push(excludeSessionId);
+    params.push(cap);
+
+    return this.db.prepare(
+      `SELECT mn.id AS batchId, mn.parent_id AS sessionId,
+              s.title AS sessionTitle,
+              substr(s.created_at, 1, 10) AS sessionDate
+       FROM memory_nodes mn
+       JOIN memory_nodes s ON s.id = mn.parent_id
+       WHERE mn.root_id = ? AND mn.depth = 3
+         AND (mn.content IS NULL OR mn.content = '' OR mn.content = mn.title)
+         AND (s.content IS NULL OR s.content = '' OR s.content = s.title)
+         ${excludeClause}
+         AND (SELECT COUNT(*) FROM memory_nodes c
+              WHERE c.parent_id = mn.id AND c.depth = 4) > 0
+       ORDER BY mn.created_at ASC
+       LIMIT ?`
+    ).all(...params) as Array<{ batchId: string; sessionId: string; sessionTitle: string; sessionDate: string }>;
+  }
+
+  /**
    * Get the previous batch (L3) sibling within the same session, excluding a given batch.
    * Returns the batch's id, content, and title.
    */
