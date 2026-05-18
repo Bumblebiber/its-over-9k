@@ -592,75 +592,50 @@ export default async function (pi: ExtensionAPI) {
 
   // ── 4. session_before_compact: context-inject + deactivate + checkpoint ──
   pi.on("session_before_compact", async () => {
-    lastLogTime = Date.now();
     // Run checkpoint to summarize any remaining unsummarized exchanges
     spawnCheckpoint(piSessionKey);
     await runHmem(["context-inject"], "{}", 10_000).catch(() => {});
     await runHmem(["deactivate"], "{}", 5_000).catch(() => {});
   });
 
-  // ── 5. agent_end: log exchange after every agent response ──────────────
-  pi.on("agent_end", async (event) => {
-    console.error(`[pi-hmem] agent_end fired, piSessionKey=${piSessionKey}`);
-    // Debounce: skip if session_before_compact just ran
-    if (Date.now() - lastLogTime < 5_000) {
-      console.error(`[pi-hmem] agent_end SKIPPED: debounce (lastLogTime=${lastLogTime})`);
-      return;
-    }
+  // ── 5. before_agent_start: capture the user's message for exchange logging ──
+  let lastUserMessage = "";
+  pi.on("before_agent_start", async (event) => {
+    lastUserMessage = event.prompt || "";
+  });
+
+  // ── 6. turn_end: log the exchange (captured user msg + assistant response) ──
+  pi.on("turn_end", async (event) => {
+    if (!lastUserMessage) return;
+    if (Date.now() - lastLogTime < 3_000) return; // debounce: skip rapid multi-turn loops
     lastLogTime = Date.now();
 
-    const messages = event.messages;
+    const assistantMsg = event.message;
+    if (!assistantMsg) return;
+    // AgentMessage is Message | CustomAgentMessages — content access needs any cast
+    const assistantText = extractText((assistantMsg as unknown as Record<string, unknown>).content);
+    if (!assistantText || assistantText.length < 2) return;
 
-    const lastUser = [...messages].reverse().find((m) => m.role === "user");
-    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+    const userText = lastUserMessage;
+    lastUserMessage = ""; // consume it — one exchange per user message
 
-    const userText = extractText(lastUser?.content ?? "");
-    const assistantText = extractText(lastAssistant?.content ?? "");
-
-    console.error(`[pi-hmem] agent_end: userText.length=${userText.length}, assistantText.length=${assistantText.length}`);
-
-    if (!userText || !assistantText) {
-      console.error(`[pi-hmem] agent_end SKIPPED: missing user or assistant text`);
-      return;
-    }
-
-    // Skip internal hook/manual commands (shouldn't happen in pi, but be safe)
-    if (userText.length < 2) {
-      console.error(`[pi-hmem] agent_end SKIPPED: userText too short`);
-      return;
-    }
-
-    const input = JSON.stringify({
-      last_user_message: userText,
-      last_assistant_message: assistantText,
-      session_id: piSessionKey,
-    });
-    console.error(`[pi-hmem] agent_end calling hmem log-exchange with session_id=${piSessionKey}`);
-
-    const result = await runHmem(
+    await runHmem(
       ["log-exchange"],
-      input,
+      JSON.stringify({
+        last_user_message: userText,
+        last_assistant_message: assistantText,
+        session_id: piSessionKey,
+      }),
       10_000
-    ).catch((e) => {
-      console.error(`[pi-hmem] agent_end runHmem FAILED: ${e}`);
-      return "";
-    });
+    ).catch(() => {});
 
-    console.error(`[pi-hmem] agent_end result: "${result.substring(0, 100)}"`);
-
-    // If batch is full, spawn checkpoint subagent (matching Claude Code auto mode)
-    if (result.includes('"decision":"block"') || result.includes("Batch")) {
-      console.error(`[pi-hmem] agent_end spawning checkpoint`);
+    // If batch is full, spawn checkpoint subagent (every 5 turns)
+    if (turnCount > 0 && turnCount % 5 === 0) {
       spawnCheckpoint(piSessionKey);
     }
   });
 
-  // ── 5b. turn_end: debug probe to verify the event fires ──
-  pi.on("turn_end", async (event) => {
-    console.error(`[pi-hmem] turn_end fired, turnIndex=${event.turnIndex}, hasMessage=${!!event.message}`);
-  });
-
-  // ── 6. session_shutdown: title untitled O-entries ─────────────────────
+  // ── 7. session_shutdown: title untitled O-entries ─────────────────────
   pi.on("session_shutdown", async () => {
     // Best-effort: title O-entries that are still "unassigned"
     await titleUntitledOEntries().catch(() => {});
