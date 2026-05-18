@@ -531,6 +531,49 @@ server.tool(
   }
 );
 
+// ---- Tool: delete ----
+server.tool(
+  "hmem_curate_delete",
+  "Permanently delete a memory entry or sub-node by ID. " +
+    "For root entries: deletes the entire entry with all sub-nodes and tags. " +
+    "For sub-nodes: deletes only that node and its subtree.\n\n" +
+    "⚠️ IRREVERSIBLE — no undo. Use with caution.",
+  {
+    id: z.string().describe(
+      "ID to delete, e.g. 'L0042' (root entry) or 'P0048.10' (sub-node)"
+    ),
+  },
+  async ({ id }) => {
+    try {
+      const store = new HmemStore(HMEM_PATH, hmemConfig);
+      try {
+        let deleted: boolean;
+        if (id.includes(".")) {
+          deleted = store.deleteNode(id);
+        } else {
+          deleted = store.delete(id);
+        }
+        if (!deleted) {
+          return {
+            content: [{ type: "text" as const, text: `Not found: ${id}` }],
+            isError: true,
+          };
+        }
+        return {
+          content: [{ type: "text" as const, text: `Deleted: ${id}` }],
+        };
+      } finally {
+        store.close();
+      }
+    } catch (e) {
+      return {
+        content: [{ type: "text" as const, text: `ERROR: ${safeError(e)}` }],
+        isError: true,
+      };
+    }
+  }
+);
+
 // ---- Start ----
 async function main() {
   const transport = new StdioServerTransport();
