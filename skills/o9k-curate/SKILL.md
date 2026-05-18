@@ -1,6 +1,6 @@
 ---
 name: o9k-curate
-description: Curate hmem memory — your own or a foreign .hmem file. Systematically review entries, mark obsolete/irrelevant/favorite, fix titles, consolidate duplicates. Use when asked to "aufräumen", "clean up memory", "curate", "Speicher bereinigen", "tidy up", or when memory_health() shows issues.
+description: "Curate an .hmem file (your own or foreign) — mark obsolete/irrelevant, fix titles, consolidate duplicates. Use on 'aufräumen', 'clean up memory', 'tidy up', or when memory_health() flags issues."
 ---
 
 # hmem Curation

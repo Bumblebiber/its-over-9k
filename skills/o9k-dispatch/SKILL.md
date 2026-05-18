@@ -1,6 +1,6 @@
 ---
 name: o9k-dispatch
-description: "Dispatch an isolated sub-agent for a specific task. Sub-agent receives only the task definition, returns only the result in [RESULT]...[/RESULT] format. ALWAYS use for: searching (codebases, files, skills, texts, plans, specs, docs — any 'does X exist?' or 'find Y' question); calculations; writing isolated sections. If the task is 'look something up', 'check if there's a plan', 'search for X', 'find the spec' — dispatch, never search yourself."
+description: "Dispatch an isolated sub-agent that returns only [RESULT]...[/RESULT]. Use for any search, lookup, 'does X exist?', 'find Y', calculation, or isolated writing — never do these inline when dispatch fits."
 ---
 
 # o9k-dispatch

@@ -1,6 +1,6 @@
 ---
 name: o9k-activate
-description: Activate a project mid-session via load_project, then check for and fix misrouted O-entry exchanges. Use whenever the user says "aktiviere Projekt X", "lade Projekt X", "load project X", "wechsel zu Projekt X", or switches project context during a session. ALSO use when you are about to call load_project mid-session for any reason — even if the user didn't explicitly ask to switch projects.
+description: "Switch active project mid-session via load_project, then fix any misrouted O-entry exchanges. Use when the user says 'aktiviere/lade Projekt X', 'switch to project Y', or whenever you'd otherwise call load_project mid-session."
 ---
 
 # o9k-activate

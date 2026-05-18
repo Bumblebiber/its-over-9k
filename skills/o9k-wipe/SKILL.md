@@ -1,12 +1,6 @@
 ---
 name: o9k-wipe
-description: >
-  Prepare for conversation context clear (/clear): save high-value knowledge, update project
-  Next Steps, then instruct user to type /clear for automatic context restoration.
-  Invoke when the user wants to clear the conversation window — not when deleting data/entries.
-  Triggers: "/wipe", "clear context", "wipe context", "context is full/too big/getting large",
-  "prepare for /clear", "start fresh", "context cleanup", approaching token limit.
-  Do NOT invoke for: deleting hmem entries, clearing terminal output, cleaning up nodes/duplicates.
+description: "Prep for /clear: save high-value knowledge and update project Next Steps, then prompt the user to clear. Use on /wipe, 'clear/wipe context', 'context is full', or 'start fresh'. Not for deleting hmem entries, clearing terminal output, or cleaning up nodes."
 ---
 
 # Wipe — Prepare & Clear Context

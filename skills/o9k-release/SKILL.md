@@ -1,16 +1,24 @@
 ---
 name: o9k-release
-description: >
-  Pre-publish checklist for its-over-9k releases. Ensures all skills are updated,
-  version is bumped, tests pass, and nothing is forgotten. Use before every
-  npm publish of its-over-9k — when the user says "publish", "release", "publishen",
-  "push", "push a release", "release pushen", "neue Version", or when you're
-  about to run npm publish on the its-over-9k repo.
+description: "Pre-publish checklist for its-over-9k: skills synced, version bumped, tests green, nothing forgotten. Use before npm publish or when the user says 'release', 'publish', 'push a release', or 'neue Version'."
 ---
 
 # /o9k-release — Release Checklist
 
 Run this checklist before every `npm publish` of its-over-9k. Every release touches code, skills, config, and documentation — this skill ensures nothing falls through the cracks.
+
+---
+
+## Step 0: Get Explicit Permission (R0027)
+
+**Always pause before proceeding.** Even when the user invoked this skill, get explicit go-ahead for *this specific release*. Don't infer approval from prior context — "apply the changes" is not "publish".
+
+Show the user:
+- Current version → target version
+- Bump type (patch / minor / major) and the reason
+- Short summary of what's changing (1-3 bullets)
+
+Then ask: "Soll ich publishen?" / "OK to release?" — wait for an explicit yes. If the user pauses, defers, or says "noch nicht", stop and do not run any further steps. The fact that the user asked you to *prepare* a release is not permission to *ship* it.
 
 ---
 

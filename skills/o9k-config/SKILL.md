@@ -1,6 +1,6 @@
 ---
 name: o9k-config
-description: "View and change hmem memory settings, hooks, sync, and checkpoint configuration. Use this skill whenever the user types /o9k-config, asks to change memory settings, adjust parameters, tune bulk-read behavior, configure auto-checkpoints, manage o9k-sync, or troubleshoot memory-related issues. Also trigger when the user asks things like 'how often does auto-save fire', 'why is my context so large', 'change checkpoint to auto', 'how many tokens does startup cost', or 'set up sync'."
+description: "View and change hmem memory settings, hooks, sync, and checkpoints. Use on /o9k-config, or when the user asks why context is huge, how to change auto-save, how often checkpoints fire, or how to set up sync."
 ---
 
 # o9k-config — View and Change Settings

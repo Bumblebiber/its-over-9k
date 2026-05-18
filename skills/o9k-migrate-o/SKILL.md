@@ -1,11 +1,6 @@
 ---
 name: o9k-migrate-o
-description: >
-  Migrate O-entries to the new project-bound 5-level structure (v5.3+).
-  Each O-entry gets permanently bound to its P-entry by matching sequence numbers (O0048 <-> P0048).
-  Run this once after updating to v5.3. Use when the user says "migrate O-entries", "O-Eintraege migrieren",
-  "hmem migrate", or when o9k-update detects that the O-entry structure needs migration.
-  Also use proactively if you notice O-entries are still using the old flat format (L2->L4->L5 without L3 batches).
+description: "Migrate O-entries to the v5.3+ project-bound 5-level structure (each O00XX bound to its P00XX). Use on 'migrate O-entries', when o9k-update flags a structure migration, or when you notice O-entries still in the old flat L2→L4→L5 format."
 ---
 
 # /o9k-migrate-o — O-Entry Migration to Project-Bound Structure

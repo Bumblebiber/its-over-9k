@@ -1,14 +1,6 @@
 ---
 name: o9k-new-error
-description: >
-  Create a new error/bug entry (E-entry) in hmem. Use this skill whenever:
-  the user wants to log a bug, document an error, file a bug report, track a
-  problem ("Bug loggen", "Fehler eintragen", "E-Entry anlegen", "log this error",
-  "track this bug", "document this problem", "in hmem festhalten als Fehler");
-  OR you are about to call write_memory with prefix="E"; OR a bug or unexpected
-  behavior has been found and should be persisted in long-term memory.
-  Never write E-entries manually without this skill — the format is strict and
-  the auto-scaffold handles structure automatically.
+description: "Create a new E-entry (bug/error) in hmem with the strict 5-level scaffold. Use when the user wants to log a bug, file a report, or document an error ('Bug loggen', 'log this error', 'Fehler eintragen'), or before any write_memory with prefix='E'."
 ---
 
 # /o9k-new-error — New Error Entry

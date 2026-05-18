@@ -1,6 +1,6 @@
 ---
 name: o9k-search
-description: Search hmem memory for things referenced without an ID. Trigger when user refers to past conversations ("letzte Woche", "gestern", "remember when", "we talked about"), mentions proper names unknown this session, uses definite articles assuming shared context ("der Bug mit X", "the issue we had"), or seems to assume you know something. Also trigger when looking up documentation, definitions, schemas, or rules stored in hmem (e.g. "Gibt es ein Schema für X?", "was haben wir zu Y beschlossen?", "finde den Eintrag zu Z"). If you think "the user assumes I know this" or "this might be documented in hmem" — search first, ask second. Do NOT trigger for explicit ID lookups like "read P0048".
+description: "Search hmem when the user references something without an ID — past conversations ('letzte Woche', 'remember when'), unknown proper names, definite articles assuming shared context ('the bug we had', 'das Schema von gestern'), or asks whether a schema/rule/decision is documented. Search first, ask second. Skip for explicit ID lookups like 'read P0048'."
 ---
 
 # hmem Search

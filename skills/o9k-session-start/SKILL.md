@@ -1,6 +1,6 @@
 ---
 name: o9k-session-start
-description: Load project context at session start via load_project. Includes recent O-Entry summaries and a pending-work scan (uncommitted changes, stashes, worktrees, unmerged branches) so paused work doesn't get forgotten across week-long gaps. Run at the beginning of every Cortex session.
+description: "Load project at session start via load_project, surface pending work (uncommitted changes, stashes, worktrees, unmerged branches), show Next Steps + open T-tasks. Run at the beginning of every Cortex session."
 ---
 
 # o9k-session-start

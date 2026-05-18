@@ -1,17 +1,6 @@
 ---
 name: o9k-write
-description: >
-  Complete protocol for writing to hmem long-term memory. Covers tree navigation
-  (find correct insertion point before writing), prefix selection (L/E/D/P/N/R/I/H/...),
-  hashtag assignment, title/body formatting, deduplication, and append-vs-write decisions.
-  Do NOT call write_memory or append_memory directly without this skill — skipping the
-  protocol creates duplicates and misplaced entries.
-
-  Invoke whenever you are about to persist anything: lessons learned, bug fixes,
-  architecture decisions, project state, user preferences, E-entries, N-entries, or
-  P-entry updates. Also invoke when the user says "remember this", "save this",
-  "don't forget", "store this", "write that down", "add to memory", "create an E-entry",
-  "log this", or invokes /o9k-write.
+description: "Hmem write protocol — picks prefix (L/E/D/P/N/R/I/H…), tree location, and tags, and detects duplicates before persisting. Use before any write_memory or append_memory call (skipping it creates duplicates and misplaced entries), or when the user says 'remember this', 'save this', 'log this', or invokes /o9k-write."
 ---
 
 # How to use write_memory

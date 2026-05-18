@@ -1,6 +1,6 @@
 ---
 name: o9k-setup
-description: "Set up and configure the hmem memory system. Run this skill to install hmem, initialize the MCP server, deploy skill files, and register auto-memory hooks for Claude Code, Gemini CLI, or OpenCode. Covers first-time setup ('set up memory', 'initialize hmem', 'first-time setup', 'install hmem'), manual installation, and post-setup verification."
+description: "First-time install of hmem: MCP server, skill files, and auto-memory hooks for Claude Code, Gemini CLI, or OpenCode. Use on 'set up memory', 'install hmem', 'initialize hmem', or 'first-time setup'."
 ---
 
 # hmem Setup

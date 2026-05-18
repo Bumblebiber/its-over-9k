@@ -1,10 +1,6 @@
 ---
 name: o9k-sync-setup
-description: >
-  Set up o9k-sync for cross-device memory synchronization. Use when the user wants to
-  sync memories between devices, says "sync einrichten", "setup sync", "o9k-sync",
-  or when /o9k-config detects o9k-sync is not installed.
-  Covers first-device setup, additional-device restore, and MCP auto-sync configuration.
+description: "Set up o9k-sync for cross-device memory sync. Use on 'sync einrichten', 'setup sync', or when /o9k-config detects o9k-sync is missing. Covers first-device setup, additional-device restore, and MCP auto-sync."
 ---
 
 # o9k-sync Setup

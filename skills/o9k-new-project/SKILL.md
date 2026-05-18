@@ -1,14 +1,6 @@
 ---
 name: o9k-new-project
-description: >
-  Create a new project (P-entry) in hmem. Use this skill whenever: the user
-  asks to create/add/set up a new project in hmem ("neues Projekt", "new project",
-  "Projekt anlegen", "add project", "P-Entry erstellen", "in hmem aufnehmen",
-  "track this project", "create an entry for"); OR you are about to call
-  write_memory with prefix="P"; OR any agent is told to register or document
-  a project in memory. Never create P-entries manually — this skill handles
-  schema enforcement, section setup, and O-entry linking automatically.
-  Uses the create_project MCP tool.
+description: "Create a new P-entry (project) in hmem via create_project — handles schema, section setup, and O-entry linking. Use when the user asks to add/register/track a new project ('neues Projekt', 'P-Entry erstellen'), or before any write_memory with prefix='P'."
 ---
 
 # /o9k-new-project — New Project Entry

@@ -1,6 +1,6 @@
 ---
 name: o9k-read
-description: "Load long-term memory from hmem. Use when: user types /o9k-read or says 'load memory', 'check your memory', 'what do you remember', 'show me the project', 'continue where we left off', 'was weißt du über...'; starting work with no L1 summaries in context; after /compact or context reset to reload knowledge; before significant work to anchor with prior context; user asks about a specific project, error, or topic visible in L1 summaries; user says 'pick up where we left off', 'resume', 'Woran haben wir gearbeitet', 'Was war der letzte Stand'. Calls read_memory() or load_project() immediately. Also covers search, prefix filter, context_for, stale detection, find_related, memory_stats, memory_health. For cross-project context (reading a second project without switching the active one), use read_project() — e.g. when working on MAIMO but needing hmem API context."
+description: "Load long-term memory from hmem via read_memory or load_project. Use when starting fresh with no L1 summaries, after /compact, when the user asks 'what do you remember', 'continue where we left off', 'was war der letzte Stand', or about a project/topic visible in L1 summaries. Covers search, prefix filter, find_related, stale detection, and cross-project read_project()."
 ---
 
 # Load Memory — Choose Your Path
