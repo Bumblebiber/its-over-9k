@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- **Hermes Agent statusline integration.** New `hmem-statusline.sh` hook script displays project, device, O-node (`→ O0048.118`), and checkpoint counter (`1/5`) in Hermes CLI's status bar — matching the Claude Code statusline format. The `o9k-startup.sh` hook now caches session ID for O-node resolution.
+
 ### Fixed
 - **Hook `o9k-startup.sh` sync indicator never shown.** The pre-LLM hook computed a 🟢/🔴 sync dot but never included it in the injected context string. Also: `o9k-sync` binary doesn't exist — switched to `hmem sync status`; grep pattern `✓ Linked` didn't match actual `Online: yes` output.
 
