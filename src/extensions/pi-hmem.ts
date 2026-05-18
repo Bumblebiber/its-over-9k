@@ -53,6 +53,9 @@ function spawnCheckpoint(sessionFile: string | null): void {
   try {
     const env: Record<string, string> = { ...process.env as Record<string, string> };
     if (sessionFile) env.HMEM_PI_SESSION = sessionFile;
+    // Mark the harness so cli-checkpoint-agent routes to the configured provider
+    // (DeepSeek/OpenAI) rather than the Claude Code `claude -p` path.
+    env.HMEM_HARNESS = "pi";
     // Use explicit any-typed options to bypass Node v24 execFile overload issue
     const opts: any = { detached: true, stdio: "ignore", env };
     const child = execFile("hmem", ["checkpoint"], opts);

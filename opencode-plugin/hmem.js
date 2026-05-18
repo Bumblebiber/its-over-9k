@@ -33,19 +33,22 @@ const isWindows = process.platform === "win32";
 
 function spawnHmem(args, stdinJson) {
   try {
+    // Mark the harness so cli-checkpoint-agent routes to the configured provider
+    // (DeepSeek/etc) rather than the Claude Code `claude -p` path.
+    const env = { ...process.env, HMEM_HARNESS: "opencode" };
     // Bug 2: On Windows, npm global installs expose "hmem.ps1" / "hmem.cmd" wrappers
     // that Node's spawn cannot execute without shell: true.
     const options = isWindows
       ? {
           stdio: ["pipe", "ignore", "ignore"],
-          env: process.env,
+          env,
           shell: true,
           windowsHide: true,
         }
       : {
           detached: true,
           stdio: ["pipe", "ignore", "ignore"],
-          env: process.env,
+          env,
         };
     const child = spawn("hmem", args, options);
     if (stdinJson) {

@@ -256,37 +256,95 @@ function hasClaudeBinary(): boolean {
   try { execSync("which claude", { stdio: "ignore" }); return true; } catch { return false; }
 }
 
+// ── Harness detection ─────────────────────────────────────────────────────────
+
+export type Harness = "claude-code" | "codex" | "opencode" | "pi" | "hermes" | "unknown";
+
+/**
+ * Detect which AI harness invoked us. Honors explicit HMEM_HARNESS override first
+ * (plugins/extensions should set this when they spawn `hmem checkpoint`); falls
+ * back to env-var signatures the harnesses set themselves.
+ */
+export function detectHarness(): Harness {
+  const explicit = process.env.HMEM_HARNESS?.toLowerCase();
+  if (explicit === "claude-code" || explicit === "codex" || explicit === "opencode" ||
+      explicit === "pi" || explicit === "hermes") {
+    return explicit;
+  }
+  if (process.env.CLAUDECODE || process.env.CLAUDE_CODE_SESSION_ID) return "claude-code";
+  if (process.env.CODEX_SESSION_ID || process.env.CODEX_API_KEY) return "codex";
+  return "unknown";
+}
+
 // ── Public entry point ────────────────────────────────────────────────────────
 
+/**
+ * Harness-aware provider routing:
+ *   - Claude Code → Haiku via `claude -p` subprocess (uses Max OAuth, no API key)
+ *   - Codex      → gpt-5.4-mini via OpenAI API (uses OPENAI_API_KEY)
+ *   - OpenCode / Pi / Hermes / unknown → user's configured provider (hmem.config.json)
+ *
+ * The harness routing takes precedence over the configured provider — Claude Code
+ * users explicitly want Haiku-via-OAuth (covered by Max), not their DeepSeek key.
+ */
 export async function runCheckpointAgent(
   prompt: string,
   store: HmemStore,
   config: HmemConfig,
   hmemPath?: string,
 ): Promise<void> {
+  const harness = detectHarness();
+  console.error(`[hmem checkpoint] harness=${harness} hmemPath=${hmemPath ? "set" : "unset"} claudeBin=${hasClaudeBinary()}`);
+
+  // 1. Claude Code → Haiku via `claude -p` (Max OAuth, no API key needed)
+  if (harness === "claude-code" && hmemPath && hasClaudeBinary()) {
+    console.error(`[hmem checkpoint] → routing to claude -p (Haiku via Max OAuth)`);
+    store.close();
+    await runClaudeSubprocess(prompt, hmemPath, "claude-haiku-4-5-20251001");
+    return;
+  }
+
+  // 2. Codex → gpt-5.4-mini via OpenAI API
+  if (harness === "codex") {
+    const codexConfig: HmemConfig = {
+      ...config,
+      checkpointProvider: "openai",
+      checkpointModel: "gpt-5.4-mini",
+      checkpointApiKeyEnv: "OPENAI_API_KEY",
+      checkpointBaseUrl: undefined,
+    };
+    await runOpenAILoop(prompt, store, codexConfig);
+    return;
+  }
+
+  // 3. OpenCode / Pi / Hermes / unknown → user's configured provider
   const apiKeyEnv = config.checkpointApiKeyEnv
     ?? (config.checkpointProvider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY");
   const apiKey = process.env[apiKeyEnv];
 
   if (apiKey) {
-    // Direct API loop — works for any harness with an explicit provider + API key configured
+    console.error(`[hmem checkpoint] → routing to ${config.checkpointProvider} API (${config.checkpointModel})`);
     if (config.checkpointProvider === "openai") {
       await runOpenAILoop(prompt, store, config);
     } else {
       await runAnthropicLoop(prompt, store, config);
     }
-  } else if (hmemPath && hasClaudeBinary()) {
-    // Subprocess fallback — only available when claude CLI is installed (Claude Code users)
+    return;
+  }
+
+  // 4. Last-resort: claude -p subprocess if Claude binary is on PATH (zero-config Claude Max)
+  if (hmemPath && hasClaudeBinary()) {
     store.close();
     await runClaudeSubprocess(prompt, hmemPath, config.checkpointModel);
-  } else {
-    throw new Error(
-      "[hmem checkpoint] No checkpoint provider configured.\n" +
-      "Add to hmem.config.json → memory:\n" +
-      '  "checkpointProvider": "anthropic"  (or "openai")\n' +
-      '  "checkpointModel": "claude-haiku-4-5-20251001"\n' +
-      '  "checkpointApiKeyEnv": "ANTHROPIC_API_KEY"  (env var name holding your key)\n' +
-      "OpenCode/Pi users: set the env var your harness uses for its API key."
-    );
+    return;
   }
+
+  throw new Error(
+    `[hmem checkpoint] No checkpoint provider available for harness=${harness}.\n` +
+    "Configure one in hmem.config.json → memory:\n" +
+    '  "checkpointProvider": "anthropic"  (or "openai")\n' +
+    '  "checkpointModel": "claude-haiku-4-5-20251001"\n' +
+    '  "checkpointApiKeyEnv": "ANTHROPIC_API_KEY"  (env var name holding your key)\n' +
+    "Or install `claude` CLI for the Claude Max zero-config fallback."
+  );
 }

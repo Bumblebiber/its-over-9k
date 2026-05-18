@@ -89,12 +89,17 @@ def _spawn_checkpoint() -> None:
     if not _HMEM_BIN:
         return
     try:
+        # Mark the harness so cli-checkpoint-agent routes to the configured provider
+        # (DeepSeek/OpenAI) rather than the Claude Code `claude -p` path.
+        import os
+        env = {**os.environ, "HMEM_HARNESS": "hermes"}
         subprocess.Popen(
             [_HMEM_BIN, "checkpoint"],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
+            env=env,
         )
     except Exception as exc:
         logger.debug("hmem checkpoint spawn failed: %s", exc)
