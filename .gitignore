@@ -4,7 +4,7 @@ dist/
 !example.hmem
 *.tmp
 .env
-skills/hmem-release/
 .worktrees/
+skills/*-workspace/
 __pycache__/
 *.pyc

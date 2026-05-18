@@ -36,7 +36,7 @@ You've tried workarounds — CLAUDE.md files, custom prompts, manually pasting c
 ```
 You:    "Load project"
 Agent:  [calls load_project("P0048") — 3000 tokens]
-Agent:  "v7.4.1, TypeScript/SQLite/npm. 3 open bugs, 8 roadmap items.
+Agent:  "v1.2.9, TypeScript/SQLite/npm. 3 open bugs, 8 roadmap items.
          Last session: rebrand complete, rename_id bug fixed (89 changes).
          Next: O-Entry Auto-Purge. What's the focus today?"
 ```
@@ -97,7 +97,31 @@ its-over-9k ships with a complete **skills layer** — structured behavior files
 npx hmem update-skills    # Pull latest skills to your AI tool's skill directory
 ```
 
-Skills are versioned and updated independently. Your agents get smarter without reinstalling.
+Skills are versioned and updated independently. Your agents get smarter without reinstalling. 21 skills ship by default:
+
+| Skill | Triggers when… |
+|-------|----------------|
+| `o9k-session-start` | Every session start — loads project + surfaces pending git work, open tasks, misrouted O-entries |
+| `o9k-using-hmem` | Meta-skill loaded at session start; defines mandatory memory habits |
+| `o9k-read` | Reading from long-term memory (search, prefix filter, find_related, cross-project read) |
+| `o9k-write` | Writing to hmem — picks prefix, tree location, tags, detects duplicates |
+| `o9k-search` | User references something without an ID ("the bug we had", "letzte Woche") |
+| `o9k-new-project` | Creating a P-entry — handles schema, sections, O-entry linking |
+| `o9k-new-error` | Creating an E-entry with the strict 5-level scaffold |
+| `o9k-activate` | Switching active project mid-session, plus fixing misrouted exchanges |
+| `o9k-context` | Loading specific context when load_project output isn't enough |
+| `o9k-recall` | Dispatching a Haiku sub-agent to search hmem |
+| `o9k-dispatch` | Dispatching an isolated sub-agent for any search/lookup/calculation |
+| `o9k-curate` | Cleaning up an .hmem file (mark obsolete, fix titles, consolidate dupes) |
+| `o9k-migrate-o` | Migrating O-entries to the project-bound 5-level structure |
+| `o9k-consolidate` | Merging session checkpoint summaries into one final O-entry summary |
+| `o9k-wipe` | Prep for `/clear` — save high-value knowledge, update Next Steps |
+| `o9k-config` | View/change memory settings, hooks, sync, checkpoints |
+| `o9k-setup` | First-time install of hmem for Claude Code / Gemini CLI / OpenCode |
+| `o9k-sync-setup` | Set up `hmem-sync` for cross-device sync |
+| `o9k-update` | Update flow — runs `npm update -g`, syncs skills, applies migrations |
+| `o9k-release` | Pre-publish checklist for its-over-9k itself |
+| `o9k-subagent` | Template for sub-agents dispatched by `o9k-dispatch` |
 
 ### Company Memory
 
@@ -113,7 +137,15 @@ const store = openCompanyMemory('/path/to/project');
 its-over-9k ships as a fully documented TypeScript SDK — import `HmemStore` directly into your own agents, tools, or automation pipelines:
 
 ```typescript
-import { HmemStore, openCompanyMemory, searchMemory, loadHmemConfig } from 'its-over-9k';
+import {
+  HmemStore, openCompanyMemory, resolveHmemPath,
+  loadHmemConfig, saveHmemConfig, DEFAULT_CONFIG, DEFAULT_PREFIXES, formatPrefixList,
+  searchMemory,
+} from 'its-over-9k';
+import type {
+  AgentRole, MemoryEntry, MemoryNode, HmemConfig,
+  SearchResult, SearchOptions, SearchScope,
+} from 'its-over-9k';
 
 const store = new HmemStore('/path/to/agent.hmem');
 const results = searchMemory('/path/to/project', 'auth token bug', { maxResults: 5 });
@@ -121,7 +153,14 @@ const results = searchMemory('/path/to/project', 'auth token bug', { maxResults:
 
 ---
 
-## MCP Tools (12)
+## MCP Tools
+
+its-over-9k ships **two** MCP servers:
+
+- **`hmem`** (daily-use, 13 tools) — read, write, search, project lifecycle.
+- **`hmem-curate`** (maintenance, 11 tools) — bulk edits, schema migrations, backup/restore. Activate only when curating.
+
+### `hmem` — daily-use server (13)
 
 | Tool | What it does |
 |------|-------------|
@@ -136,24 +175,104 @@ const results = searchMemory('/path/to/project', 'auth token bug', { maxResults:
 | `create_project` | Scaffold a new project entry with standard schema |
 | `list_projects` | List all projects with status summary |
 | `flush_context` | Persist current session context to long-term memory |
+| `move_nodes` | Move a subtree under a different parent (also in curate server) |
 | `set_active_device` | Register and switch between devices |
+
+### `hmem-curate` — maintenance server (11)
+
+| Tool | What it does |
+|------|-------------|
+| `memory_stats` | Per-prefix counts, total tokens, favorites, hashtags, stale-list |
+| `memory_health` | Find broken links, orphan tags, empty entries, dangling chains |
+| `export_memory` | Export the full .hmem to a portable JSON snapshot |
+| `import_memory` | Import a JSON snapshot back into a .hmem (destructive) |
+| `update_many` | Bulk-patch a set of entries (irrelevant, tags, body, etc.) |
+| `tag_bulk` | Add/remove a tag across many entries |
+| `tag_rename` | Rename a tag globally across all entries |
+| `move_memory` | Move an entire entry to a new ID slot |
+| `move_nodes` | Move a subtree under a different parent (also in main server) |
+| `rename_id` | Rename an entry's ID; rewrites all inbound links |
+| `reset_memory_cache` | Invalidate the in-memory L1 cache (after raw SQL writes) |
+
+Register both servers in your MCP client config to use them. See [Manual setup](#manual-setup).
+
+---
+
+## CLI Commands
+
+After `npm install -g its-over-9k`, the `hmem` binary is on PATH.
+
+### User-facing
+
+| Command | Purpose |
+|---------|---------|
+| `hmem init` | Interactive installer for AI tools (Claude Code, OpenCode, Gemini CLI, Cursor, Windsurf, Cline). Flags: `--global` / `--local` / `--tools <list>` / `--dir <path>` / `--no-example` |
+| `hmem update-skills` | Copy/sync bundled skill files to detected AI tools (called automatically on `npm install`) |
+| `hmem doctor` | Detect stale or deprecated hmem MCP entries in host configs |
+| `hmem stats` | Memory statistics + per-project token estimates + 🔴 4k threshold flagging |
+| `hmem setup-hook` | Re-add the SessionStart hook to Claude Code settings (if removed) |
+| `hmem version` | Show version |
+
+### Hook drivers (called by AI tools, not by hand)
+
+| Command | Wired into | What it does |
+|---------|-----------|--------------|
+| `hmem hook-startup` | UserPromptSubmit | First-message context injection (memory overview, project list, sync status). Periodic checkpoint reminders. Reads JSON from stdin |
+| `hmem log-exchange` | Stop (sync) | Append the latest exchange to the active O-entry |
+| `hmem checkpoint` | Stop (async) | Background Haiku/DeepSeek call — extracts lessons, errors, decisions; updates project handoff note |
+| `hmem context-inject` | SessionStart[clear] | Inject project + rules context after `/clear` |
+| `hmem deactivate` | SessionStart[clear] | Clear active project for current session |
+| `hmem statusline` | statusLine | Render Claude Code statusline (device · active project · checkpoint counter). Reads JSON from stdin |
+
+### Curation
+
+| Command | Purpose |
+|---------|---------|
+| `hmem delete <ID>` | Permanently delete an entry (curator only, never synced) |
+| `hmem migrate-o-entries` | Migrate O-entries to the current project-bound schema |
+| `hmem summarize-session <id>` | Generate a summary node for a session |
+
+### Sync (requires `hmem-sync` installed)
+
+| Command | Purpose |
+|---------|---------|
+| `hmem sync push` | Push local memory to the sync server |
+| `hmem sync pull` | Pull latest memory from the sync server |
+| `hmem sync status` | Show server URL · auth state · last-sync timestamp |
+| `hmem sync setup [--join]` | Interactive passphrase + device setup |
+
+### Backup / migration
+
+| Command | Purpose |
+|---------|---------|
+| `hmem export-staging <hmem> <json>` | Export `.hmem` SQLite to a portable JSON staging file |
+| `hmem import-staging <json> <hmem>` | Import a JSON staging file back into a `.hmem` |
+
+`hmem serve` starts the MCP stdio server directly — your AI tool launches it automatically; you only run it by hand for debugging.
 
 ---
 
 ## Memory Categories
 
+Default prefixes (configurable via `prefixes` in `hmem.config.json`):
+
 | Prefix | Category | Example |
 |--------|----------|---------|
 | **P** | Project | `its-over-9k \| Active \| TS/SQLite/npm` |
 | **L** | Lesson | `HMEM_AGENT_ID must be set in hooks — resolveHmemPath falls back to wrong DB` |
+| **T** | Task | `T0033 hmem-sync SaaS monetization — recurring monthly tier design` |
 | **E** | Error | `158 spurious O-entries created when Haiku MCP lacked HMEM_NO_SESSION guard` |
 | **D** | Decision | `Project-based O-entries over session-based — sessions are meaningless` |
+| **M** | Milestone | `v1.0.0 — package renamed to its-over-9k, npm rebrand complete` |
+| **S** | Skill | `Skill: TypeScript debugging with source maps` |
+| **N** | Navigator | High-level navigation entry (table of contents for a topic) |
 | **H** | Human | `User Skill: TypeScript 9, Architecture 9, React 3` |
 | **R** | Rule | `Max one npm publish per day — batch changes` |
 | **O** | Original | Auto-recorded conversation history (every exchange, every device) |
-| **I** | Infra | `Strato Server \| Active \| Linux \| Ubuntu 22.04` |
+| **I** | Infrastructure | `Strato Server \| Active \| Linux \| Ubuntu 22.04` |
+| **C** | Convention | `Tag scheme: lowercase, prefer existing tags before inventing` |
 
-Custom prefixes via `hmem.config.json`.
+Add custom prefixes (e.g. `A` for App, `F` for Function reference) by listing them under `prefixes` in `hmem.config.json` — they show up in `read_memory({ prefix: "X" })` filters automatically.
 
 ---
 

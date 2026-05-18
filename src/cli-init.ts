@@ -823,7 +823,9 @@ export function updateSkills(): void {
   }
 
   const skillNames = fs.readdirSync(bundledSkillsDir).filter(
-    name => fs.statSync(path.join(bundledSkillsDir, name)).isDirectory()
+    name =>
+      fs.statSync(path.join(bundledSkillsDir, name)).isDirectory() &&
+      !name.endsWith("-workspace")
   );
 
   if (skillNames.length === 0) {
