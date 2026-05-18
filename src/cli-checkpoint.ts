@@ -16,10 +16,47 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { spawn } from "node:child_process";
 import { HmemStore } from "./hmem-store.js";
 import { loadHmemConfig } from "./hmem-config.js";
 import { currentSessionId } from "./session-state.js";
 import { runCheckpointAgent } from "./cli-checkpoint-agent.js";
+
+function syncReady(hmemPath: string): boolean {
+  if (!process.env.HMEM_SYNC_PASSPHRASE) return false;
+  try {
+    const cfgPath = path.join(path.dirname(hmemPath), "config.json");
+    if (!fs.existsSync(cfgPath)) return false;
+    const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8")) as {
+      api_key?: string;
+      active_file?: string;
+      files?: Record<string, { salt?: string; hmem_path?: string }>;
+    };
+    if (!cfg.api_key || !cfg.active_file) return false;
+    const fileCfg = cfg.files?.[cfg.active_file];
+    return !!(fileCfg?.salt && fileCfg?.hmem_path);
+  } catch { return false; }
+}
+
+async function runSyncChild(args: string[], label: string): Promise<void> {
+  await new Promise<void>((resolve) => {
+    const child = spawn(process.execPath, [process.argv[1], "sync", ...args], {
+      env: { ...process.env },
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+    let stderr = "";
+    child.stderr?.on("data", (d: Buffer) => { stderr += d.toString(); });
+    child.on("close", (code) => {
+      if (code !== 0) console.error(`[hmem checkpoint] sync ${label} exited ${code}: ${stderr.trim()}`);
+      resolve();
+    });
+    child.on("error", (err: Error) => {
+      console.error(`[hmem checkpoint] sync ${label} spawn failed: ${err.message}`);
+      resolve();
+    });
+  });
+}
 
 export async function checkpoint(): Promise<void> {
   const projectDir = process.env.HMEM_PROJECT_DIR;
@@ -27,6 +64,9 @@ export async function checkpoint(): Promise<void> {
 
   const hmemPath = process.env.HMEM_PATH!;
   if (!fs.existsSync(hmemPath)) process.exit(0);
+
+  const doSync = syncReady(hmemPath);
+  if (doSync) await runSyncChild(["pull"], "pull");
 
   const config = loadHmemConfig(path.dirname(hmemPath));
   const store = new HmemStore(hmemPath, config);
@@ -377,5 +417,6 @@ This body is injected verbatim into every load_project briefing.
     console.error(`[hmem checkpoint] ${e}`);
   } finally {
     try { store.close(); } catch {}
+    if (doSync) await runSyncChild(["push", "--skip-pull"], "push");
   }
 }

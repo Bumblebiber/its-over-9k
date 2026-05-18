@@ -151,7 +151,7 @@ switch (command) {
     const subCmd = process.argv[3];
     if (subCmd === "push") {
       const { syncPush } = await import("./cli-sync-push.js");
-      await syncPush();
+      await syncPush({ skipPull: process.argv.includes("--skip-pull") });
     } else if (subCmd === "pull") {
       const { syncPull } = await import("./cli-sync-pull.js");
       await syncPull();
