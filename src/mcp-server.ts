@@ -133,6 +133,22 @@ function trackTokens<T extends { content: { type: "text"; text: string }[]; isEr
   }
   if (result.isError) return result;
   const text = result.content.map(c => c.text).join("");
+  // Per-response size enforcement — prevents runaway tool output (e.g. 753k tokens)
+  const maxChars = hmemConfig.maxToolResponseChars;
+  if (maxChars > 0 && text.length > maxChars) {
+    const charsK = Math.round(text.length / 1000);
+    const limitK = Math.round(maxChars / 4000);
+    const truncated = text.substring(0, 200) + "…";
+    log(`RESPONSE BLOCKED: ${charsK}k chars (≈${Math.round(charsK/4)}k tokens) exceeds limit of ${maxChars} chars (≈${limitK}k tokens)`);
+    return {
+      content: [{
+        type: "text" as const,
+        text: `RESPONSE BLOCKED: Tool output too large (${charsK}k chars / ≈${Math.round(charsK/4)}k tokens, limit: ≈${limitK}k tokens).\n` +
+          `Use a more specific query. First 200 chars: "${truncated}"`,
+      }],
+      isError: true,
+    } as unknown as T;
+  }
   sessionCache.addTokens(text.length);
   // One-time version upgrade notice (shown once per session)
   if (versionUpgradeNotice) {

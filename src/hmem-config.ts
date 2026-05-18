@@ -120,6 +120,13 @@ export interface HmemConfig {
    */
   contextTokenThreshold: number;
   /**
+   * Per-response token limit. Tool responses exceeding this are rejected with an error.
+   * Prevents runaway tool output (e.g. read_memory with expand on a huge database).
+   * Measured in chars (≈ 4 chars per real token). Default: 36000 (≈ 9k tokens).
+   * Set to 0 to disable.
+   */
+  maxToolResponseChars: number;
+  /**
    * load_project display configuration: which L2 sections to expand.
    * withBody: L2 seq numbers whose L3 children show title + body (e.g. Overview)
    * withChildren: L2 seq numbers whose L3 children are all listed as titles (e.g. Bugs, Open Tasks)
@@ -245,6 +252,7 @@ export const DEFAULT_CONFIG: HmemConfig = {
   recentOEntries: 10,
   bulkReadOEntries: 0,
   contextTokenThreshold: 100_000,
+  maxToolResponseChars: 36_000,
   loadProjectExpand: {
     withBody: [1],       // .1 Overview: show L3 title + body
     withChildren: [6, 8], // .6 Bugs, .8 Open Tasks: list all L3 children as titles
@@ -375,7 +383,7 @@ export function saveHmemConfig(projectDir: string, config: HmemConfig): void {
 /** Known memory config keys — used to detect unified vs flat format. */
 const MEMORY_KEYS = new Set(["maxL1Chars", "maxLnChars", "maxCharsPerLevel", "maxDepth",
   "defaultReadLimit", "prefixes", "prefixDescriptions", "bulkReadV2", "maxTitleChars", "maxNodeChars", "accessCountTopN", "recentOEntries", "bulkReadOEntries", "contextTokenThreshold", "loadProjectExpand", "schemas", "globalLoad",
-  "checkpointInterval", "checkpointMode", "checkpointProvider", "checkpointModel", "checkpointBaseUrl", "checkpointApiKeyEnv"]);
+  "checkpointInterval", "checkpointMode", "checkpointProvider", "checkpointModel", "checkpointBaseUrl", "checkpointApiKeyEnv", "maxToolResponseChars"]);
 
 /**
  * Load `hmem.config.json` from `projectDir`.
@@ -421,6 +429,7 @@ export function loadHmemConfig(projectDir: string): HmemConfig {
     if (typeof memoryRaw.recentOEntries === "number" && memoryRaw.recentOEntries >= 0) cfg.recentOEntries = memoryRaw.recentOEntries;
     if (typeof memoryRaw.bulkReadOEntries === "number" && memoryRaw.bulkReadOEntries >= 0) cfg.bulkReadOEntries = memoryRaw.bulkReadOEntries;
     if (typeof memoryRaw.contextTokenThreshold === "number" && memoryRaw.contextTokenThreshold >= 0) cfg.contextTokenThreshold = memoryRaw.contextTokenThreshold;
+    if (typeof memoryRaw.maxToolResponseChars === "number" && memoryRaw.maxToolResponseChars >= 0) cfg.maxToolResponseChars = memoryRaw.maxToolResponseChars;
 
     // load_project expand config
     if (memoryRaw.loadProjectExpand && typeof memoryRaw.loadProjectExpand === "object") {
@@ -576,6 +585,7 @@ export function loadHmemConfig(projectDir: string): HmemConfig {
           checkpointMode: cfg.checkpointMode,
           recentOEntries: cfg.recentOEntries,
           contextTokenThreshold: cfg.contextTokenThreshold,
+    maxToolResponseChars: cfg.maxToolResponseChars,
         };
         if (raw.sync) migrated.sync = raw.sync;
         fs.writeFileSync(configPath, JSON.stringify(migrated, null, 2) + "\n", "utf-8");
