@@ -1,8 +1,9 @@
 # Changelog
 
-## [Unreleased]
+## [1.3.1] — 2026-05-18
 
 ### Added
+- **Statusline shows current O-sub-node ID per session.** The Stop-Hook now persists the resolved L2 O-sub-node ID (e.g. `O0048.116`) into the per-session marker after each exchange. `hmem statusline` reads it and appends `→ O0048.NNN` to the project tag so the active logging target is visible. Project switches mid-session invalidate the stale ID until the next Stop-Hook re-resolves under the new O-entry. New `SessionMarker.oSessionId` field — existing markers without it continue to work.
 - **Hermes Agent statusline integration.** New `hmem-statusline.sh` hook script displays project, device, O-node (`→ O0048.118`), and checkpoint counter (`1/5`) in Hermes CLI's status bar — matching the Claude Code statusline format. The `o9k-startup.sh` hook now caches session ID for O-node resolution.
 
 ### Fixed
