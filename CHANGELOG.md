@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- **Hook `o9k-startup.sh` sync indicator never shown.** The pre-LLM hook computed a 🟢/🔴 sync dot but never included it in the injected context string. Also: `o9k-sync` binary doesn't exist — switched to `hmem sync status`; grep pattern `✓ Linked` didn't match actual `Online: yes` output.
+
 ## [1.0.0] — 2026-05-11
 
 ### Breaking Changes
