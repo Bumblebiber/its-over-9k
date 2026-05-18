@@ -1,6 +1,6 @@
 ---
 name: o9k-session-start
-description: "Load project at session start via load_project, surface pending work (uncommitted changes, stashes, worktrees, unmerged branches), show Next Steps + open T-tasks. Run at the beginning of every Cortex session."
+description: "Mandatory entry point for every Cortex session — invoke at conversation start, after /clear, and after any load_project call, even when the UserPromptSubmit hook already activated a project. Loads the project briefing, then surfaces pending git work (uncommitted changes, stashes, worktrees, unmerged branches), shows Next Steps + open T-tasks from the Roadmap, and runs the O-entry routing check. The user counts on these steps to resurface stale work and open tasks at every session start — skipping them defeats the point of hmem-based session memory. Trigger phrases: 'lade Projekt X', 'load project Y', '/clear', 'bin zurück', 'wo waren wir', 'starte neu bei', any new session with an active P-entry."
 ---
 
 # o9k-session-start
@@ -10,14 +10,14 @@ Run at the beginning of any session where a Cortex project is active.
 
 ## STEP 1: Activate project
 
-Call load_project with the working project ID:
+**If the UserPromptSubmit hook already called load_project** (you'll see a project briefing block — `P00XX  Title | Status | Tech | Repo` followed by sections .1–.9 — in your recent context), the project is already active. Skip directly to STEP 2.
 
-load_project(id: "P00XX")
+**Otherwise:**
 
-Replace P00XX with the actual project ID (e.g., P0048).
+- If the user's message names a specific project (e.g. "lade Projekt hmem", "P0048", "work on its-over-9k"): call `load_project(id: "P00XX")` with that ID.
+- If the user did NOT name a project: do NOT load anything yet. After the greeting, list the 5 entries from the `--- Recent projects ---` block (always injected by the hook) as bullet points and ask which one to continue with. Once the user picks one, call `load_project(id: "P00XX")`.
 
-load_project returns the project brief, recent O-Entry summaries, rules, and lessons.
-Do NOT call read_memory separately. load_project is the only activation action.
+`load_project` returns the project brief, recent O-Entry summaries, rules, and lessons. Do NOT call `read_memory` separately. `load_project` is the only activation action.
 
 ## STEP 2: Pending-work check (git repo state)
 
