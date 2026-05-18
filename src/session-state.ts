@@ -18,12 +18,15 @@ export interface SessionMarker {
   pid: number;
   /** Written by 'hmem deactivate' after /clear — distinguishes explicit deactivation from default null */
   deactivated?: boolean;
+  /** L2 O-sub-node ID for this session (e.g. "O0048.114"). Set by Stop-Hook after first exchange. */
+  oSessionId?: string | null;
 }
 
 export interface SessionMarkerInput {
   projectId?: string | null;
   hmemPath?: string;
   deactivated?: boolean;
+  oSessionId?: string | null;
 }
 
 function safeHomedir(): string {
@@ -51,6 +54,11 @@ export function writeSessionMarker(sessionId: string, input: SessionMarkerInput)
     existing = JSON.parse(fs.readFileSync(file, "utf8")) as Partial<SessionMarker>;
   } catch { /* ignore */ }
 
+  // Project switch (e.g. mid-session load_project, deactivate) invalidates the
+  // O-sub-node ID — the next Stop-Hook will resolve it fresh under the new O-entry.
+  const projectChanged =
+    input.projectId !== undefined && input.projectId !== (existing.projectId ?? null);
+
   const marker: SessionMarker = {
     sessionId,
     projectId: input.projectId !== undefined ? input.projectId : (existing.projectId ?? null),
@@ -58,6 +66,9 @@ export function writeSessionMarker(sessionId: string, input: SessionMarkerInput)
     updatedAt: new Date().toISOString(),
     pid: process.pid,
     ...(input.deactivated !== undefined ? { deactivated: input.deactivated } : {}),
+    oSessionId: projectChanged
+      ? null
+      : (input.oSessionId !== undefined ? input.oSessionId : (existing.oSessionId ?? null)),
   };
 
   const tmp = `${file}.${process.pid}.tmp`;

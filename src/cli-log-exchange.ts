@@ -21,7 +21,7 @@ import { HmemStore } from "./hmem-store.js";
 import { loadHmemConfig } from "./hmem-config.js";
 import { resolveEnvDefaults } from "./cli-env.js";
 import { writeDiagnostic } from "./diagnostics.js";
-import { readSessionMarker } from "./session-state.js";
+import { readSessionMarker, writeSessionMarker } from "./session-state.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HMEM_BIN = path.resolve(__dirname, "../dist/cli.js");
@@ -218,9 +218,16 @@ export async function logExchange(): Promise<void> {
     }
 
     // Step 2: Resolve session (transcript_path tracking, or session_id in direct mode)
-    //         — internal DB session row keyed by a stable per-conversation identifier
+    //         — returns the L2 O-sub-node ID (e.g. "O0048.114")
     const sessionKey = input.transcript_path || `direct:${claudeSessionId ?? "global"}`;
     const internalSessionId = store.resolveSession(oId, sessionKey);
+
+    // Persist the L2 O-sub-node ID in the session marker so the statusline
+    // (and future hooks) can surface "Logging to O0048.114".
+    if (claudeSessionId) {
+      try { writeSessionMarker(claudeSessionId, { oSessionId: internalSessionId }); }
+      catch { /* never crash Stop hook over a marker write */ }
+    }
 
     // Step 3: Resolve batch (create new if full)
     const batchSize = hmemConfig.checkpointInterval || 5;

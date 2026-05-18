@@ -57,6 +57,7 @@ interface HmemStatus {
   device: string;        // "I0002 Strato Server" or "" (not set)
   exchanges: number;     // exchanges since last checkpoint
   interval: number;      // checkpoint interval (0 = disabled)
+  oSession: string;      // "O0048.114" or "" — set after first Stop-Hook exchange
 }
 
 function buildRateLimits(input: StatusInput): string {
@@ -102,7 +103,7 @@ function buildContextBar(input: StatusInput): string {
 }
 
 async function getHmemStatus(sessionId: string | undefined): Promise<HmemStatus> {
-  const empty: HmemStatus = { project: "", device: "", exchanges: 0, interval: 0 };
+  const empty: HmemStatus = { project: "", device: "", exchanges: 0, interval: 0, oSession: "" };
   const CACHE_FILE = cacheFile(sessionId);
 
   // Check cache
@@ -136,6 +137,9 @@ async function getHmemStatus(sessionId: string | undefined): Promise<HmemStatus>
       // Active project — per-session marker lookup
       const { readSessionMarker } = await import("./session-state.js");
       const marker = sessionId ? readSessionMarker(sessionId) : null;
+      // O-sub-node ID for this session (written by Stop-Hook after first exchange).
+      // Suppress when the session is explicitly deactivated (post-/clear).
+      const oSession = (marker && !marker.deactivated && marker.oSessionId) ? marker.oSessionId : "";
 
       let projRow: { id: string; title: string | null; level_1: string | null } | undefined;
       if (marker?.projectId) {
@@ -211,12 +215,12 @@ async function getHmemStatus(sessionId: string | undefined): Promise<HmemStatus>
 
           const interval = hmemConfig.checkpointInterval;
           exchanges = batchExchanges;
-          status = { project, device, exchanges, interval };
+          status = { project, device, exchanges, interval, oSession };
         } else {
-          status = { project, device, exchanges: 0, interval: hmemConfig.checkpointInterval };
+          status = { project, device, exchanges: 0, interval: hmemConfig.checkpointInterval, oSession };
         }
       } else {
-        status = { project, device, exchanges: 0, interval: hmemConfig.checkpointInterval };
+        status = { project, device, exchanges: 0, interval: hmemConfig.checkpointInterval, oSession };
       }
     } finally {
       db.close();
@@ -258,7 +262,8 @@ export async function statusline(): Promise<void> {
   }
 
   if (status.project) {
-    parts.push(`${C.cyan}${status.project}${C.reset}`);
+    const oTag = status.oSession ? ` ${C.gray}→${C.reset} ${C.cyan}${status.oSession}${C.reset}` : "";
+    parts.push(`${C.cyan}${status.project}${C.reset}${oTag}`);
   } else {
     parts.push(`${C.gray}no project${C.reset}`);
   }
