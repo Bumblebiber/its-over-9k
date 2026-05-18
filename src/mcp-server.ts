@@ -2204,6 +2204,24 @@ server.tool(
   }
 );
 
+// ---- Tool: reset_memory_cache ----
+server.tool(
+  "reset_memory_cache",
+  "Clear the session cache so all entries are treated as unseen again. " +
+    "The next bulk read will behave like the first read of a fresh session " +
+    "(full Fibonacci slots, no suppressed entries).\n\n" +
+    "Use when you need a clean slate — e.g., after a major topic change, " +
+    "after load_project says 'already active (loaded recently)', " +
+    "or when you suspect important entries were suppressed by the session filter.",
+  {},
+  async () => {
+    sessionCache.reset();
+    return {
+      content: [{ type: "text" as const, text: "Session cache cleared. The next read_memory() call will behave like a fresh session." }],
+    };
+  }
+);
+
 // ---- Output Formatting ----
 
 /**
