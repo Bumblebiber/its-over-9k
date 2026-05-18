@@ -533,7 +533,7 @@ server.tool(
 
 // ---- Tool: delete ----
 server.tool(
-  "hmem_curate_delete",
+  "delete",
   "Permanently delete a memory entry or sub-node by ID. " +
     "For root entries: deletes the entire entry with all sub-nodes and tags. " +
     "For sub-nodes: deletes only that node and its subtree.\n\n" +
