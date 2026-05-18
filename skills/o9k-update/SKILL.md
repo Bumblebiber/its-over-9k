@@ -525,6 +525,37 @@ The `MIGRATIONS` array of `ALTER TABLE` statements is now tracked in `schema_ver
 
 ---
 
+## Step 2q: Hermes Agent Hooks Deployment
+
+**Only relevant for Hermes Agent users.**
+
+Since v1.3.1, the repo ships `hermes-hooks/` with scripts for Hermes Agent
+statusline integration. After npm update, deploy them:
+
+```bash
+cp ~/projects/hmem/hermes-hooks/*.sh ~/.hermes/agent-hooks/
+chmod +x ~/.hermes/agent-hooks/*.sh
+```
+
+The hooks provide:
+- `o9k-startup.sh` — Sync-Status, Projekt-Liste, session_id-Cache (pre_llm_call)
+- `o9k-log-exchange.sh` — Exchange-Logging an hmem (post_llm_call)
+- `hmem-statusline.sh` — CC-Style Statusbar: Device | Projekt → O-Node | Counter
+
+**Hermes CLI Patch:** The statusline integration also requires a small patch
+to Hermes Agent's cli.py. Apply with:
+
+```bash
+cd ~/.hermes/hermes-agent
+git apply ~/projects/hmem/hermes-hooks/hermes-cli-hmem-statusline.patch
+```
+
+**Hermes config.yaml** must reference the hooks (see `/o9k-config` for the
+full configuration template). After applying the patch and deploying hooks,
+restart Hermes for changes to take effect.
+
+---
+
 ## Step 2p: v1.3.0 — reset_memory_cache in main server + harness-aware checkpoint
 
 **Only relevant when upgrading from < v1.3.0**

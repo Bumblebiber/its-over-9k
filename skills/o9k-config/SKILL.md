@@ -254,3 +254,68 @@ Two things to notice:
 | Hooks silently do nothing (no errors) | Wrong shell interpreting the command, or project not active for session logging | Verify `"shell": "powershell"`, call `load_project(id="P00XX")` every session |
 
 **Note on `load_project` per-session:** The `active` flag on a P-entry persists in the database, but the "currently active project for session logging" is a per-session attribute. After every Claude Code restart, the agent must call `load_project(id="P00XX")` again, or exchanges will be logged to O0000 (no-project fallback) instead of the project's O-entry. Consider adding this to your project briefing or session-start routine.
+
+## Hermes Agent Hook Configuration
+
+For Hermes Agent (not Claude Code), hmem integration is configured via
+`~/.hermes/config.yaml` hooks and the `hermes-hooks/` scripts shipped
+in the its-over-9k repo.
+
+### Required hooks
+
+```yaml
+hooks:
+  pre_llm_call:
+    - command: "~/.hermes/agent-hooks/o9k-startup.sh"
+      timeout: 10
+  post_llm_call:
+    - command: "~/.hermes/agent-hooks/o9k-log-exchange.sh"
+      timeout: 10
+  on_session_end:
+    - command: "/bin/bash -c 'exec hmem checkpoint'"
+      timeout: 120
+hooks_auto_accept: true
+```
+
+### Hook scripts
+
+| Script | Type | Purpose |
+|--------|------|---------|
+| `o9k-startup.sh` | pre_llm_call | 🟢/🔴 Sync-Status, Projekt-Liste, session_id-Cache für Statusline |
+| `o9k-log-exchange.sh` | post_llm_call | Exchange-Logging an aktiven O-Entry via `hmem log-exchange` |
+| `hmem-statusline.sh` | Statusbar | Device \| Projekt → O-Node \| Checkpoint-Counter |
+
+### Statusline (CC-Style in Hermes CLI)
+
+To show hmem info in Hermes' status bar (like Claude Code's statusline):
+
+1. Apply the CLI patch:
+   ```bash
+   cd ~/.hermes/hermes-agent
+   git apply ~/projects/hmem/hermes-hooks/hermes-cli-hmem-statusline.patch
+   ```
+
+2. Restart Hermes. The status bar will show:
+   ```
+   Strato Server | P0048 its-over-9k → O0048.118 | 3/5 | ⚕ model | ...
+   ```
+
+The statusline requires `hmem statusline` to be installed and the
+`o9k-startup.sh` hook to be active (for session_id caching).
+
+### Deployment
+
+On update or fresh install:
+```bash
+cp ~/projects/hmem/hermes-hooks/*.sh ~/.hermes/agent-hooks/
+chmod +x ~/.hermes/agent-hooks/*.sh
+```
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Statusleiste zeigt kein hmem | CLI-Patch nicht angewandt | `git apply hermes-cli-hmem-statusline.patch` |
+| O-Node fehlt in Statusbar | session_id-Cache nicht geschrieben | o9k-startup.sh hook prüfen |
+| 🔴 Sync offline | `hmem sync status` schlägt fehl | `hmem sync status` manuell testen |
+| Hook-Scripts werden nicht ausgeführt | hooks_auto_accept: false | Setze `hooks_auto_accept: true` in config.yaml |
