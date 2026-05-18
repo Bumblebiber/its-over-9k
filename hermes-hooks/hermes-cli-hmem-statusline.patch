@@ -1,0 +1,82 @@
+diff --git a/cli.py b/cli.py
+index 488d505b7..9d12a37f5 100644
+--- a/cli.py
++++ b/cli.py
+@@ -2821,6 +2821,22 @@ class HermesCLI:
+ 
+         return snapshot
+ 
++    def _get_hmem_status(self) -> Dict[str, str]:
++        """Call hmem-statusline.sh for project/device/O-node info."""
++        try:
++            import subprocess, json
++            script = os.path.expanduser("~/.hermes/agent-hooks/hmem-statusline.sh")
++            if not os.path.isfile(script):
++                return {}
++            result = subprocess.run(
++                ["bash", script], capture_output=True, text=True, timeout=3
++            )
++            if result.returncode == 0:
++                return json.loads(result.stdout)
++        except Exception:
++            pass
++        return {}
++
+     @staticmethod
+     def _status_bar_display_width(text: str) -> int:
+         """Return terminal cell width for status-bar text.
+@@ -3030,14 +3046,27 @@ class HermesCLI:
+             return []
+         try:
+             snapshot = self._get_status_bar_snapshot()
+-            # Use prompt_toolkit's own terminal width when running inside the
+-            # TUI — shutil.get_terminal_size() can return stale or fallback
+-            # values (especially on SSH) that differ from what prompt_toolkit
+-            # actually renders, causing the fragments to overflow to a second
+-            # line and produce duplicated status bar rows over long sessions.
+             width = self._get_tui_terminal_width()
+             duration_label = snapshot["duration"]
+ 
++            # --- hmem-Status (CC-Style: Device | Project → ONode | counter) ---
++            hmem = self._get_hmem_status()
++            hmem_prefix = ""
++            if hmem:
++                parts = []
++                if hmem.get("device"):
++                    parts.append(hmem["device"])
++                proj = hmem.get("project", "")
++                o_node = hmem.get("o_node", "")
++                if o_node:
++                    proj = f"{proj} → {o_node}"
++                if proj:
++                    parts.append(proj)
++                if hmem.get("counter"):
++                    parts.append(hmem["counter"])
++                if parts:
++                    hmem_prefix = " │ ".join(parts)
++
+             if width < 52:
+                 frags = [
+                     ("class:status-bar", " ⚕ "),
+@@ -3075,7 +3104,11 @@ class HermesCLI:
+ 
+                     bar_style = self._status_bar_context_style(percent)
+                     compressions = snapshot.get("compressions", 0)
+-                    frags = [
++                    frags = []
++                    if hmem_prefix:
++                        frags.append(("class:status-bar-strong", f" {hmem_prefix}"))
++                        frags.append(("class:status-bar-dim", " │ "))
++                    frags.extend([
+                         ("class:status-bar", " ⚕ "),
+                         ("class:status-bar-strong", snapshot["model_short"]),
+                         ("class:status-bar-dim", " │ "),
+@@ -3084,7 +3117,7 @@ class HermesCLI:
+                         (bar_style, self._build_context_bar(percent)),
+                         ("class:status-bar-dim", " "),
+                         (bar_style, percent_label),
+-                    ]
++                    ])
+                     if compressions:
+                         frags.append(("class:status-bar-dim", " │ "))
+                         frags.append((self._compression_count_style(compressions), f"🗜️ {compressions}"))
