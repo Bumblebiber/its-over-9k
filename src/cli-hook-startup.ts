@@ -171,14 +171,25 @@ export async function hookStartup(): Promise<void> {
         const db = new (Database as any)(hmemPath, { readonly: true });
         try {
           const hRows = db.prepare(
-            "SELECT id, title, level_1 FROM memories WHERE prefix='H' AND obsolete!=1 ORDER BY access_count DESC LIMIT 10"
-          ).all() as Array<{ id: string; title: string; level_1: string }>;
+            "SELECT id, title, level_1, pinned FROM memories WHERE prefix='H' AND obsolete!=1 ORDER BY pinned DESC, access_count DESC LIMIT 10"
+          ).all() as Array<{ id: string; title: string; level_1: string; pinned: number }>;
           if (hRows.length > 0) {
-            humanContext = "\n\n--- Human context (H-entries) ---\n" +
-              hRows.map((r) => {
-                const raw = r.title || r.level_1 || "";
-                return `${r.id}  ${raw.split("\n")[0]}`;
-              }).join("\n");
+            const l2Stmt = db.prepare(
+              "SELECT title, content FROM memory_nodes WHERE root_id=? AND depth=2 AND (irrelevant IS NULL OR irrelevant!=1) ORDER BY seq"
+            );
+            const lines: string[] = [];
+            for (const r of hRows) {
+              const raw = r.title || r.level_1 || "";
+              lines.push(`${r.id}  ${raw.split("\n")[0]}`);
+              if (r.pinned === 1) {
+                const l2 = l2Stmt.all(r.id) as Array<{ title: string | null; content: string | null }>;
+                for (const n of l2) {
+                  const text = (n.title ?? n.content ?? "").split("\n")[0];
+                  if (text) lines.push(`  • ${text}`);
+                }
+              }
+            }
+            humanContext = "\n\n--- Human context (H-entries) ---\n" + lines.join("\n");
           }
 
           if (deviceId) {

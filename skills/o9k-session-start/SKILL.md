@@ -123,6 +123,22 @@ Read H0003 (IT Skills) — the scale is 1–9:
 
 Apply this calibration for the entire session. When explaining something in a domain, check the matching H0003 skill first.
 
+## STEP 5b: H-Schema completeness check
+
+H0000 defines the canonical H-Slots (Identität, Online-ID, IT-Skills, Business-Skills, Arbeitsstil, Kontext, Präferenzen). The Identität-Slot is **PFLICHT** — without it the agent doesn't know name, language, or accepted greetings.
+
+**At session start, verify:**
+1. Read H0000 — it lists which H-IDs cover which slots
+2. For each `PFLICHT`-marked slot, check that the entry exists AND has L2 children (not just a stub)
+3. If a Pflicht-Slot is missing or empty: pause the greeting, ask the user the missing questions in one block, then `write_memory(prefix="H", pinned=true, ...)` to fill it
+
+**Questions to ask when Identität-Slot is empty:**
+- Wie soll ich dich ansprechen?
+- Welche Sprache bevorzugst du (Deutsch / Englisch / andere)?
+- Welche Begrüßungen sind OK, welche stören dich?
+
+Save answers immediately. Only proceed with the greeting after the slot is filled. This check runs once per session — if H0008 (Identität) is pinned and has children, the hook already injected its L2 content and you're done.
+
 ## STEP 6: O-Entry routing check
 
 **This step is critical.** Every `load_project` call changes which O-entry receives session exchanges. If you called `load_project` on any project other than your working project — even briefly, even for administrative reasons (reconcile, curation, migration) — those exchanges were misrouted to the wrong O-entry.
@@ -149,7 +165,7 @@ Move the misrouted session/batch node to the correct O-entry.
 ## What gets injected automatically (first message)
 
 The UserPromptSubmit hook injects the following into every session start:
-- **H-entries** — top 10 by access count (ID + title)
+- **H-entries** — top 10 by access count (ID + title). **Pinned H-entries also include their L2 children inline** (`  • <text>`) so canonical identity/preference info is visible without extra `read_memory` calls.
 - **Active device apps** — Apps list of the current I-entry (if device is set)
 - **Infrastructure favorites** — any I-entry with `favorite: true` (e.g. reMarkable, shared server). Mark with `update_memory(id="I00XX", favorite=true)`.
 - **Recent projects** — 5 most recently updated P-entries
@@ -159,12 +175,13 @@ The UserPromptSubmit hook injects the following into every session start:
 
 The hook injects a first-message directive that drives the greeting. Follow it.
 
-**Format (one short line, user's preferred language and name, no padding):**
+**Format (two lines, user's preferred language and name, no padding):**
 
 Schema (placeholders shown — never copy literally; pull real values from H-entries):
 ```
-<greeting> <name> <dot> — <action>.                            ← project named
-<greeting> <name> <dot>. <list-intro>:                         ← no project named
+<sync-status-line>
+<greeting> <name> — <action>.                                  ← project named
+<greeting> <name>. <list-intro>:                               ← no project named
   • Pxxxx — <title>
   ...
 <follow-up question>
@@ -172,11 +189,12 @@ Schema (placeholders shown — never copy literally; pull real values from H-ent
 
 **Pulling the right values:**
 - **Language** — H0005 specifies it (German native, English fluent). Match the user's first message.
-- **Address form** — H0007 specifies the preferred name AND any greeting words to avoid. Follow it literally.
-- **Dot** — read from the `--- hmem-sync ---` block (always present since v1.2.9):
-  - `✓ Linked …` → 🟢
-  - `⚠ …` → 🟡
-  - `✗ Not linked` or `✗ Not configured` → 🔴
-  The dot is mandatory — never omit it. The user needs to know whether memories propagate.
+- **Address form** — H0008 (Identität, pinned) is canonical: preferred name AND the explicit greeting whitelist/blacklist. Hook injects its L2 content directly, so the rules are visible without extra reads. Follow them literally — using a blacklisted greeting is a session-start failure.
+- **Sync-status line** — read from the `--- hmem-sync ---` block (always present since v1.2.9). Always a separate line above the greeting:
+  - `✓ Linked …` → `🟢 hmem-sync verbunden.`
+  - `⚠ …` → `🟡 hmem-sync: <kurze Statusbeschreibung>.`
+  - `✗ Not linked` → `🔴 hmem-sync nicht verbunden.`
+  - `✗ Not configured` → `🔴 hmem-sync nicht konfiguriert.`
+  Never inline the colored dot into the greeting itself. The status line is mandatory — the user needs to know whether memories propagate.
 
-**No `[CORTEX READY]` block.** The greeting IS the ready signal. After it, either proceed with the task (if project named) or wait for the user's answer.
+**No `[CORTEX READY]` block.** The two-line output IS the ready signal. After it, either proceed with the task (if project named) or wait for the user's answer.

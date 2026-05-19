@@ -19,6 +19,11 @@ interface DbRow {
   id: string;
   title: string;
   level_1?: string;
+  pinned?: number;
+}
+interface NodeRow {
+  title: string | null;
+  content: string | null;
 }
 interface CountRow {
   cnt: number;
@@ -181,13 +186,25 @@ async function buildStartupContext(): Promise<string> {
     try {
       const hRows = db
         .prepare(
-          "SELECT id, title, level_1 FROM memories WHERE prefix='H' AND obsolete!=1 ORDER BY access_count DESC LIMIT 10"
+          "SELECT id, title, level_1, pinned FROM memories WHERE prefix='H' AND obsolete!=1 ORDER BY pinned DESC, access_count DESC LIMIT 10"
         )
         .all() as DbRow[];
       if (hRows.length > 0) {
-        humanContext =
-          "\n\n--- Human context (H-entries) ---\n" +
-          hRows.map((r) => `${r.id}  ${(r.title || r.level_1 || "").split("\n")[0]}`).join("\n");
+        const l2Stmt = db.prepare(
+          "SELECT title, content FROM memory_nodes WHERE root_id=? AND depth=2 AND (irrelevant IS NULL OR irrelevant!=1) ORDER BY seq"
+        );
+        const lines: string[] = [];
+        for (const r of hRows) {
+          lines.push(`${r.id}  ${(r.title || r.level_1 || "").split("\n")[0]}`);
+          if (r.pinned === 1) {
+            const l2 = l2Stmt.all(r.id) as NodeRow[];
+            for (const n of l2) {
+              const text = (n.title ?? n.content ?? "").split("\n")[0];
+              if (text) lines.push(`  • ${text}`);
+            }
+          }
+        }
+        humanContext = "\n\n--- Human context (H-entries) ---\n" + lines.join("\n");
       }
 
       if (activeDeviceId) {
