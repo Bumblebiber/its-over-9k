@@ -16,6 +16,83 @@ if (pathIdx !== -1 && args[pathIdx + 1]) {
 
 const command = args[0];
 
+function printUsageTable(): void {
+  console.log(`hmem — Humanlike Memory for AI Agents
+
+Usage:
+  hmem serve                          Start the MCP server (stdio transport)
+  hmem init                           Install hmem for AI coding tools (interactive or with flags)
+  hmem update-skills                  Copy/update skill files to detected AI tools
+  hmem setup-hook                     Add hmem SessionStart hook to Claude Code settings
+  hmem doctor                         Detect stale or deprecated hmem MCP entries in host configs
+  hmem stats                          Show memory statistics + per-project token estimates
+  hmem version                        Show version
+
+Hook drivers (called by AI tool hooks, not directly by users):
+  hmem hook-startup                   UserPromptSubmit hook — counter, checkpoint reminders
+  hmem log-exchange                   Stop hook — log exchange to active O-entry
+  hmem context-inject                 SessionStart[clear] hook — re-inject project context
+  hmem deactivate                     SessionStart[clear] hook — clear active project
+  hmem statusline                     statusLine — generate Claude Code statusline (JSON on stdin)
+  hmem checkpoint                     Extract knowledge from recent exchanges (background)
+
+Curation:
+  hmem delete <ID>                    Permanently delete an entry (curator only, not synced)
+  hmem migrate-o-entries              Migrate O-entries to current schema
+  hmem summarize-session <id>         Generate summary node for a session
+
+Sync (requires hmem-sync installed):
+  hmem sync push                      Push local memory to sync server
+  hmem sync pull                      Pull latest memory from sync server
+  hmem sync status                    Show sync server + auth + last-sync state
+  hmem sync setup [--join]            Interactive sync-passphrase setup
+
+Backup / migration:
+  hmem export-staging <hmem> <json>   Export .hmem to JSON staging file
+  hmem import-staging <json> <hmem>   Import JSON staging back into .hmem
+
+Environment variables (for serve):
+  HMEM_PATH          Path to .hmem file (optional, auto-detected)
+  HMEM_PROJECT_DIR   Directory for config + company.hmem (derived from HMEM_PATH)
+  HMEM_AGENT_ROLE    Role: worker | al | pl | ceo (default: worker)
+
+Non-interactive init flags:
+  --global             System-wide install (default)
+  --local              Project-local install
+  --tools claude-code  Comma-separated tool list (default: all detected)
+  --dir /path          Memory directory (default: ~/.hmem)
+  --no-example         Skip example memory installation
+
+Examples:
+  npx hmem init                          # Interactive installer
+  npx hmem init --global                 # Non-interactive, all detected tools
+  npx hmem init --global --tools claude-code  # Non-interactive, Claude Code only
+  npx hmem update-skills                 # Update skills after npm update
+  HMEM_PROJECT_DIR=. npx hmem serve      # Start server in current directory`);
+}
+
+function printHelp(): void {
+  console.log(`🧠 hmem — Quick Tips
+
+  📦 Memory voll? (>100k Tokens)
+     /o9k-wipe  — saves high-value knowledge to hmem, then /clear.
+                  Run before context compaction kicks in.
+
+  🔄 Mehrere Geräte?
+     hmem sync setup  — Cross-device sync via passphrase.
+                        Passphrase stays device-local; server only sees ciphertext.
+
+  📜 Eigene Regeln festlegen?
+     In-session: say "merk dir als Regel: ..." / "remember as a rule: ..."
+       → stored as an R-entry, re-injected at every session start.
+
+  ✨ Neues Projekt registrieren?
+     In-session: say "neues Projekt XYZ" / "new project XYZ"
+       → o9k-new-project skill handles schema + O-entry linking.
+`);
+  printUsageTable();
+}
+
 switch (command) {
   case "serve":
     await import("./mcp-server.js");
@@ -147,6 +224,12 @@ switch (command) {
     break;
   }
 
+  case "help":
+  case "--help":
+  case "-h":
+    printHelp();
+    break;
+
   case "sync": {
     const subCmd = process.argv[3];
     if (subCmd === "push") {
@@ -169,57 +252,6 @@ switch (command) {
   }
 
   default:
-    console.log(`hmem — Humanlike Memory for AI Agents
-
-Usage:
-  hmem serve                          Start the MCP server (stdio transport)
-  hmem init                           Install hmem for AI coding tools (interactive or with flags)
-  hmem update-skills                  Copy/update skill files to detected AI tools
-  hmem setup-hook                     Add hmem SessionStart hook to Claude Code settings
-  hmem doctor                         Detect stale or deprecated hmem MCP entries in host configs
-  hmem stats                          Show memory statistics + per-project token estimates
-  hmem version                        Show version
-
-Hook drivers (called by AI tool hooks, not directly by users):
-  hmem hook-startup                   UserPromptSubmit hook — counter, checkpoint reminders
-  hmem log-exchange                   Stop hook — log exchange to active O-entry
-  hmem context-inject                 SessionStart[clear] hook — re-inject project context
-  hmem deactivate                     SessionStart[clear] hook — clear active project
-  hmem statusline                     statusLine — generate Claude Code statusline (JSON on stdin)
-  hmem checkpoint                     Extract knowledge from recent exchanges (background)
-
-Curation:
-  hmem delete <ID>                    Permanently delete an entry (curator only, not synced)
-  hmem migrate-o-entries              Migrate O-entries to current schema
-  hmem summarize-session <id>         Generate summary node for a session
-
-Sync (requires hmem-sync installed):
-  hmem sync push                      Push local memory to sync server
-  hmem sync pull                      Pull latest memory from sync server
-  hmem sync status                    Show sync server + auth + last-sync state
-  hmem sync setup [--join]            Interactive sync-passphrase setup
-
-Backup / migration:
-  hmem export-staging <hmem> <json>   Export .hmem to JSON staging file
-  hmem import-staging <json> <hmem>   Import JSON staging back into .hmem
-
-Environment variables (for serve):
-  HMEM_PATH          Path to .hmem file (optional, auto-detected)
-  HMEM_PROJECT_DIR   Directory for config + company.hmem (derived from HMEM_PATH)
-  HMEM_AGENT_ROLE    Role: worker | al | pl | ceo (default: worker)
-
-Non-interactive init flags:
-  --global             System-wide install (default)
-  --local              Project-local install
-  --tools claude-code  Comma-separated tool list (default: all detected)
-  --dir /path          Memory directory (default: ~/.hmem)
-  --no-example         Skip example memory installation
-
-Examples:
-  npx hmem init                          # Interactive installer
-  npx hmem init --global                 # Non-interactive, all detected tools
-  npx hmem init --global --tools claude-code  # Non-interactive, Claude Code only
-  npx hmem update-skills                 # Update skills after npm update
-  HMEM_PROJECT_DIR=. npx hmem serve      # Start server in current directory`);
+    printUsageTable();
     break;
 }

@@ -25,6 +25,11 @@ import { resolveEnvDefaults } from "./cli-env.js";
 import { loadHmemConfig } from "./hmem-config.js";
 import { writeSessionMarker, purgeStaleSessionMarkers, readSessionMarker, writePpidMapping, getParentPid, getActiveDevice } from "./session-state.js";
 
+export const TIP_BLOCK = `
+--- Tip ---
+Type \`! hmem help\` for quick tips and command reference.
+`;
+
 function formatAgo(ms: number): string {
   if (!Number.isFinite(ms) || ms < 0) return "unknown";
   const s = Math.floor(ms / 1000);
@@ -277,7 +282,8 @@ export async function hookStartup(): Promise<void> {
           deviceNote +
           humanContext +
           recentProjects +
-          syncStatus,
+          syncStatus +
+          TIP_BLOCK,
       },
     }));
   } else if (mode === "remind" && interval > 0 && count % interval === 0) {

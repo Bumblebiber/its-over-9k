@@ -170,6 +170,7 @@ The UserPromptSubmit hook injects the following into every session start:
 - **Infrastructure favorites** — any I-entry with `favorite: true` (e.g. reMarkable, shared server). Mark with `update_memory(id="I00XX", favorite=true)`.
 - **Recent projects** — 5 most recently updated P-entries
 - **hmem-sync status** — `--- hmem-sync ---` block with link state. Only present if `~/.hmem/config.json` exists.
+- **Tip block** — constant `--- Tip ---` line pointing users at `! hmem help`. The agent does NOT need to repeat this hint in its greeting output — the user already sees it in the injected context directly above the greeting.
 
 ## OUTPUT — natural greeting
 
