@@ -953,9 +953,13 @@ server.tool(
         if (sectionSchema) {
           if (!id.includes(".")) {
             // Appending directly to a root entry (e.g. id="P0048") would create a new L2 section.
-            // Block this if the schema has readonly sections — those sections are schema-controlled.
-            const hasReadonlySection = sectionSchema.sections.some(s => s.checkpointPolicy === "readonly");
-            if (hasReadonlySection) {
+            // Allow only schema-defined sections (validated above in schema enforcement).
+            // Unknown sections are blocked — schema is the source of truth.
+            const firstLine = content.split("\n")[0].trim();
+            const isKnownSection = sectionSchema.sections.some(
+              s => s.name.toLowerCase() === firstLine.toLowerCase()
+            );
+            if (!isKnownSection) {
               return {
                 content: [{ type: "text" as const, text:
                   `ERROR: Cannot add new sections to ${id}. Its L2 structure is schema-controlled.\n` +
