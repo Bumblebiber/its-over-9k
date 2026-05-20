@@ -494,6 +494,56 @@ The `--- Recent projects ---` block in the first-message injection now shows 5 m
 
 ---
 
+## Step 2r: v1.3.6 — Leaner session-start + load_project drill IDs + per-device skill opt-out
+
+**Only relevant when upgrading from ≤ v1.3.5.**
+
+### Rules block (post-/clear injection) now filters to pinned/favorite only
+
+The `## Rules:` listing emitted by the `SessionStart:clear` hook used to dump **every** non-obsolete R-entry — easily a dozen lines of always-on context. It now only shows R-entries with `pinned=true` or `favorite=true`.
+
+**Action:** If a rule must remain omnipresent in every session, pin it explicitly:
+```
+update_memory(id="R00XX", pinned=true)
+```
+On first run after upgrade, only previously-pinned rules (typically R0027, R0026, R0010 in a default setup) will surface.
+
+### First-message directive shortened
+
+The 10-line "STEP 1 / STEP 2 / STEP 3" block in `UserPromptSubmit` is now a single sentence (with a hasIntent branch). Saves ~5k tokens on every first message. The `o9k-session-start` skill still drives the actual session-start workflow.
+
+### load_project body sanitisation
+
+XML fragments from tool-call output (`</content>`, `<parameter ...>`, `<function_calls>`) that occasionally leak into stored memory are now stripped on display. Bodies in your hmem are not modified — only the rendered output is cleaned. If you previously saw garbled L2/L3 bodies in `load_project` output, they should now render cleanly.
+
+### Truncation markers include drill IDs
+
+`[+N]` cliffhangers in `load_project` are now `[+N → read PXXXX.Y.Z]` so the agent can drill directly without guessing the path.
+
+### `/o9k-new-rule` skill added
+
+Use it whenever adding a rule:
+```
+/o9k-new-rule
+```
+It enforces the cross-project (R-prefix) vs. project-specific (subnode under active project's Rules section) decision **before** writing — a check that the agent has gotten wrong before.
+
+### Per-device skill exclusion via `~/.hmem/skills-disabled`
+
+If certain bundled skills are clutter on a specific device (e.g. setup/migration skills you've already run), create `~/.hmem/skills-disabled` with one skill name per line:
+```
+o9k-setup
+o9k-migrate-o
+o9k-sync-setup
+```
+`hmem update-skills` now skips them and removes any previously-installed copies from `~/.claude/skills/`. The repo continues to ship all skills; only this device opts out. Lines starting with `#` are comments.
+
+### `o9k-release` skill covers hook artifacts
+
+The release checklist (Step 7b + Quick Reference) now explicitly audits `hermes-hooks/`, `plugins/hermes-hmem/`, and `scripts/hmem-*.sh` on every release. Previously, hook changes shipped silently with no verification step.
+
+---
+
 ## Step 2l: v7.4.0 — syncSecrets default flipped + non-blocking sync
 
 **Only needed when upgrading from < v7.4.0**
