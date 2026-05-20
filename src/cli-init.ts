@@ -815,6 +815,21 @@ export async function runInit(args: string[] = []): Promise<void> {
  * Copy bundled skill files to detected AI tool skill directories.
  * Overwrites existing skills with the version from the npm package.
  */
+/** Read per-device skill exclusion list from ~/.hmem/skills-disabled.
+ *  Format: one skill name per line; lines starting with `#` and empty lines ignored.
+ *  Listed skills are skipped during updateSkills() and removed from target dirs if present.
+ *  Other devices/users don't have this file → get all bundled skills as before. */
+function readDisabledSkills(): Set<string> {
+  const disabledFile = path.join(os.homedir(), ".hmem", "skills-disabled");
+  if (!fs.existsSync(disabledFile)) return new Set();
+  return new Set(
+    fs.readFileSync(disabledFile, "utf8")
+      .split("\n")
+      .map(l => l.trim())
+      .filter(l => l && !l.startsWith("#"))
+  );
+}
+
 export function updateSkills(): void {
   const bundledSkillsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "skills");
   if (!fs.existsSync(bundledSkillsDir)) {
@@ -822,10 +837,12 @@ export function updateSkills(): void {
     process.exit(1);
   }
 
+  const disabled = readDisabledSkills();
   const skillNames = fs.readdirSync(bundledSkillsDir).filter(
     name =>
       fs.statSync(path.join(bundledSkillsDir, name)).isDirectory() &&
-      !name.endsWith("-workspace")
+      !name.endsWith("-workspace") &&
+      !disabled.has(name)
   );
 
   if (skillNames.length === 0) {
@@ -851,7 +868,8 @@ export function updateSkills(): void {
     return;
   }
 
-  console.log(`Found ${skillNames.length} skills: ${skillNames.join(", ")}\n`);
+  const disabledNote = disabled.size > 0 ? ` (${disabled.size} disabled via ~/.hmem/skills-disabled: ${[...disabled].join(", ")})` : "";
+  console.log(`Found ${skillNames.length} skills${disabledNote}: ${skillNames.join(", ")}\n`);
 
   const bundledSet = new Set(skillNames);
   let totalCopied = 0;
@@ -876,6 +894,16 @@ export function updateSkills(): void {
       }
       totalCopied++;
       console.log(`  ✓ ${skillName}`);
+    }
+
+    // Remove disabled skills if previously installed (per-device opt-out)
+    for (const skillName of disabled) {
+      const dest = path.join(dir, skillName);
+      if (fs.existsSync(dest) && fs.statSync(dest).isDirectory()) {
+        fs.rmSync(dest, { recursive: true, force: true });
+        totalRemoved++;
+        console.log(`  × ${skillName} (disabled locally)`);
+      }
     }
 
     // Remove stale hmem-* skills that are no longer bundled
