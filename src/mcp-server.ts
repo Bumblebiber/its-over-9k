@@ -1493,10 +1493,31 @@ server.tool(
     }
   }
 );
+/** Strip tool-call XML fragments that leak into stored memory from agent tool output.
+ *  Matches accidental leftovers like `</content> <parameter name="links">[]` that occur
+ *  when a tool-call closing tag ends up in a write_memory body. Preserves regular text. */
+function cleanBody(t: string): string {
+  if (!t) return t;
+  // Cut at any of the tool-call XML markers we've observed leaking
+  const cutPoints = [
+    t.indexOf("</content>"),
+    t.indexOf("<parameter"),
+    t.indexOf("<function_calls>"),
+    t.indexOf("</function_calls>"),
+    t.indexOf("<invoke "),
+    t.indexOf("</invoke>"),
+  ].filter(i => i >= 0);
+  if (cutPoints.length > 0) {
+    t = t.substring(0, Math.min(...cutPoints));
+  }
+  return t.trimEnd();
+}
+
 /** Strip body (after \n>) and newlines from titles for compact display */
 function cleanTitle(t: string, max = 0): string {
   // Split at body separator — real newline+> or literal \n>
   let s = t.split(/\n>|\\n>/)[0];
+  s = cleanBody(s);
   s = s.replace(/[\t\r\n]/g, " ").replace(/  +/g, " ").trim();
   if (max > 0 && s.length > max) {
     s = s.substring(0, max).replace(/[,;:\s]+$/, "") + "…";
@@ -1660,7 +1681,7 @@ server.tool(
                     // L3 title + body
                     lines.push(`    ${gcId}  ${cleanTitle(gc.title || gc.content, 80)}`);
                     if (gc.content && gc.content !== gc.title) {
-                      for (const bodyLine of gc.content.split("\n")) {
+                      for (const bodyLine of cleanBody(gc.content).split("\n")) {
                         lines.push(`      ${bodyLine}`);
                       }
                     }
@@ -1674,11 +1695,11 @@ server.tool(
                       lines.push(`      ${lastSeg(l4.id)}  ${cleanTitle(l4.title || l4.content || "", 60)}`);
                     }
                   } else if (gc.child_count && gc.child_count > 0) {
-                    lines.push(`      [+${gc.child_count}]`);
+                    lines.push(`      [+${gc.child_count} → read ${gc.id}]`);
                   }
                 }
               } else if (child.child_count && child.child_count > 0) {
-                lines.push(`    [+${child.child_count}]`);
+                lines.push(`    [+${child.child_count} → read ${child.id}]`);
               }
             }
           } else {
@@ -1702,7 +1723,7 @@ server.tool(
                 if (childCount > 0) {
                   lines[lines.length - 1] += ` (${childCount} entries)`;
                 } else if (child.content && child.content !== child.title) {
-                  lines.push(`    ${child.content}`);
+                  lines.push(`    ${cleanBody(child.content)}`);
                 } else {
                   lines.pop();
                 }
@@ -1724,7 +1745,7 @@ server.tool(
                   if (expandBody) {
                     lines.push(`    ${gcId}  ${cleanTitle(gc.title || gc.content, 80)}`);
                     if (gc.content && gc.content !== gc.title) {
-                      for (const bodyLine of gc.content.split("\n")) {
+                      for (const bodyLine of cleanBody(gc.content).split("\n")) {
                         lines.push(`      ${bodyLine}`);
                       }
                     }
@@ -1737,11 +1758,11 @@ server.tool(
                       lines.push(`      ${lastSeg(l4.id)}  ${cleanTitle(l4.title || l4.content || "", 60)}`);
                     }
                   } else if (gc.child_count && gc.child_count > 0) {
-                    lines.push(`      [+${gc.child_count}]`);
+                    lines.push(`      [+${gc.child_count} → read ${gc.id}]`);
                   }
                 }
               } else if (child.child_count && child.child_count > 0) {
-                lines.push(`    [+${child.child_count}]`);
+                lines.push(`    [+${child.child_count} → read ${child.id}]`);
               }
             }
           }
