@@ -264,16 +264,9 @@ export async function hookStartup(): Promise<void> {
     const syncStatus = buildSyncStatus();
     const hasIntent = detectsProjectIntent(input?.prompt);
 
-    const greetingDirective =
-      "IMPORTANT: This is the first message of the session.\n\n" +
-      "STEP 1 (silent \u2014 no output yet): Load context.\n" +
-      "  - If the user\u2019s message names a specific project (e.g. \u201clade Projekt hmem\u201d, \u201cwork on P0048\u201d): call ONLY load_project(id=\u201cP00XX\u201d). Do NOT also call read_memory().\n" +
-      "  - Otherwise: call read_memory() (no parameters).\n\n" +
-      "STEP 2 (silent \u2014 no output yet): Invoke the `o9k-session-start` skill via the Skill tool. The skill handles the full session-start workflow: pending git work check (uncommitted, stashes, worktrees, unmerged branches), Next Steps + open T-tasks surfacing from the project's Roadmap, O-entry routing check, noise check, explanation-depth calibration, and the greeting format itself (one short line with sync-state dot from the `--- hmem-sync ---` block). The project is already loaded \u2014 the skill detects this and skips its activation step.\n\n" +
-      (hasIntent
-        ? "  The user already named a project \u2014 after the skill\u2019s output, proceed straight to the task.\n"
-        : "  The user did NOT name a project. The skill will list the 5 entries from `--- Recent projects ---` below as bullet points and ask which one to continue with.\n") +
-      "\nSTEP 3: Handle the user\u2019s actual message (or, if step 2 ended with a question, wait for their answer).";
+    const greetingDirective = hasIntent
+      ? "Session start. User named a project \u2014 call `load_project` for it, then invoke the `o9k-session-start` skill before responding."
+      : "Session start. User did not name a project. Invoke the `o9k-session-start` skill \u2014 it will list recent projects below and ask which to continue with.";
 
     process.stdout.write(JSON.stringify({
       hookSpecificOutput: {

@@ -75,11 +75,12 @@ export async function contextInject(): Promise<void> {
       lines.push(`  (full list: read_memory({prefix:"P", titles_only:true}))`);
     }
 
-    // 2. R-entries (rules) — compact, one line each
+    // 2. R-entries (rules) — only pinned [P] or favorite [♥] to keep startup compact.
+    // To make a rule appear here: update_memory(id="R00XX", pinned=true)
     const rules = store.read({ prefix: "R", depth: 1 })
-      .filter(r => !r.obsolete && !r.irrelevant);
+      .filter(r => !r.obsolete && !r.irrelevant && (r.pinned || r.favorite));
     if (rules.length > 0) {
-      lines.push("\n## Rules:");
+      lines.push("\n## Rules (pinned/favorited):");
       for (const r of rules) {
         const body = r.level_1 && r.level_1 !== r.title ? `\n> ${r.level_1}` : "";
         lines.push(`  ${r.id}  ${r.title}${body}`);
