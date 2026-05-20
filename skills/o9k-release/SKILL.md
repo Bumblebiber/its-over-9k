@@ -134,14 +134,33 @@ For each file changed in this release:
 3. **Apply the patch dry-run** if `hermes-cli-hmem-statusline.patch` changed: `cd ~/.hermes/hermes-agent && git apply --check ~/projects/hmem/hermes-hooks/hermes-cli-hmem-statusline.patch`
 4. **Mention hook changes in release notes** — users won't re-run the deployment steps unless prompted
 
-After publish, on this dev device (Hermes host):
+**Important:** hook BEHAVIOR can change even if the `.sh` files don't, because the scripts call `hmem hook-startup` / `hmem log-exchange` / `hmem statusline` — and any change to `cli-hook-startup.ts`, `cli-context-inject.ts`, or `cli-log-exchange.ts` shifts what those scripts produce. Audit by **behavior**, not just file mtime: if you touched any `cli-*hook*` / `cli-context-inject` / `cli-log-exchange` / `cli-statusline` source file, the Hermes hooks effectively changed.
+
+**Before publish — divergence check:** Compare deployed vs repo to catch local edits that never made it back:
 ```bash
-cp ~/projects/hmem/hermes-hooks/*.sh ~/.hermes/agent-hooks/ && chmod +x ~/.hermes/agent-hooks/*.sh
-# If the CLI patch changed:
-cd ~/.hermes/hermes-agent && git apply ~/projects/hmem/hermes-hooks/hermes-cli-hmem-statusline.patch
+for f in o9k-startup.sh o9k-log-exchange.sh hmem-statusline.sh; do
+  diff -q ~/projects/hmem/hermes-hooks/$f ~/.hermes/agent-hooks/$f
+done
+```
+If anything differs, decide: improvement (copy to repo before release) or accidental edit (restore from repo). Never publish with a known divergence — the npm version will overwrite Hermes-side improvements on other devices.
+
+**Deployment options on this dev device (Hermes host):**
+
+Option A — Symlink (recommended for dev devices): `~/.hermes/agent-hooks/*.sh` symlinked to `~/projects/hmem/hermes-hooks/*.sh`. Any repo change is instantly live; no redeploy step needed.
+```bash
+for f in o9k-startup.sh o9k-log-exchange.sh hmem-statusline.sh; do
+  ln -sf ~/projects/hmem/hermes-hooks/$f ~/.hermes/agent-hooks/$f
+done
 ```
 
-There is no `hmem deploy-hermes-hooks` command yet — if you find yourself doing this manually for the Nth time, consider adding one (and updating both skills + the rule "Code-Änderungen müssen beim Enduser ankommen" no longer requires manual steps).
+Option B — Copy (default for end users, isolates deployment): explicit `cp` and chmod each time.
+```bash
+cp ~/projects/hmem/hermes-hooks/*.sh ~/.hermes/agent-hooks/ && chmod +x ~/.hermes/agent-hooks/*.sh
+```
+
+If the CLI patch changed: `cd ~/.hermes/hermes-agent && git apply ~/projects/hmem/hermes-hooks/hermes-cli-hmem-statusline.patch`
+
+There is no `hmem deploy-hermes-hooks` command yet — if you find yourself doing this manually for the Nth time, consider adding one with a `--symlink` flag (would also satisfy P0048.16.1 — no manual steps for end users).
 
 ---
 

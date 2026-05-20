@@ -494,6 +494,31 @@ The `--- Recent projects ---` block in the first-message injection now shows 5 m
 
 ---
 
+## Step 2s: v1.3.7 — Hermes Agent `o9k-startup.sh` rewrite + Symlink deployment option
+
+**Only relevant for Hermes Agent users.**
+
+### `o9k-startup.sh` rewritten — minimal bootstrap, skill-driven session start
+
+The previous Hermes `o9k-startup.sh` duplicated session-start logic (H-entries, projects, sync status, greeting) that the `o9k-session-start` skill already handles better. The new version is a thin shim: sync-pull, write session-id cache for the statusline, inject a one-line directive that invokes the skill, then let the skill do everything else. Subagent calls now silent-pass-through. Long-session warnings added.
+
+**Action (Hermes hosts):**
+```bash
+cp ~/projects/hmem/hermes-hooks/o9k-startup.sh ~/.hermes/agent-hooks/o9k-startup.sh
+chmod +x ~/.hermes/agent-hooks/o9k-startup.sh
+```
+(or use the symlink option below to never deal with this again.)
+
+### Symlink deployment option
+
+`o9k-release` Step 7b now documents two deployment modes for `hermes-hooks/`:
+- **Copy** (default — explicit redeploy each update)
+- **Symlink** (`ln -sf ~/projects/hmem/hermes-hooks/$f ~/.hermes/agent-hooks/$f` per file — repo changes are instantly live, no redeploy needed)
+
+Symlinks are recommended on dev devices where the repo lives in a stable path. End users on `npm install -g its-over-9k` can symlink to `node_modules/its-over-9k/hermes-hooks/` if their global install path is stable across updates.
+
+---
+
 ## Step 2r: v1.3.6 — Leaner session-start + load_project drill IDs + per-device skill opt-out
 
 **Only relevant when upgrading from ≤ v1.3.5.**
