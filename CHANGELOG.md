@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.5] — 2026-05-20
+
+### Changed
+- **`hmem help` Quick Tips updated and unified to English.** Two new tips added: 📌 *Keep important entries visible every session* (pin entries so their L2 content re-injects at session start) and 🧹 *Curate / delete entries* (activate the `hmem-curate` MCP via `claude mcp add hmem-curate -s user -- npx hmem-curate`). Previously German headers + English bodies were a leftover mix; now consistently English.
+
+### Internal
+- **Deduplicated `safeHomedir()` into `src/utils.ts`.** Three drifted copies in `diagnostics.ts`, `session-state.ts`, and `hmem-store.ts` are now a single shared util. The store variant had silently lost the `process.env.HOME` override — fixed by the consolidation.
+- **Windows test-leak fix in `test/diagnostics.test.ts`.** Mock now sets `USERPROFILE` alongside `HOME` so `safeHomedir()`'s Win32 branch lands in the temp dir instead of the real user's diagnostics log.
+
 ## [1.3.1] — 2026-05-18
 
 ### Added
