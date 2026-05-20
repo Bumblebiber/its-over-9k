@@ -112,6 +112,39 @@ If the release introduces schema changes:
 
 ---
 
+## Step 7b: Hook Artifact Audit
+
+The npm package ships hook scripts that end users must redeploy after every update — and on this dev device (Strato), Hermes itself runs against the same hooks. If any of these files moved, changed args, or got new dependencies, the release skill is the last line of defence before users hit broken hooks.
+
+Files to audit on every release:
+
+| Path | Used by | Deployed via |
+|------|---------|--------------|
+| `hermes-hooks/o9k-startup.sh` | Hermes Agent (pre_llm_call) | manual `cp` to `~/.hermes/agent-hooks/` |
+| `hermes-hooks/o9k-log-exchange.sh` | Hermes Agent (post_llm_call) | manual `cp` to `~/.hermes/agent-hooks/` |
+| `hermes-hooks/hmem-statusline.sh` | Hermes Agent statusline | manual `cp` to `~/.hermes/agent-hooks/` |
+| `hermes-hooks/hermes-cli-hmem-statusline.patch` | Hermes CLI statusbar injection | `git apply` in `~/.hermes/hermes-agent` |
+| `plugins/hermes-hmem/` | Hermes hmem plugin (Python) | manual symlink + enable |
+| `scripts/hmem-session-inject.sh` | Claude Code SessionStart | `hmem init` / `hmem setup-hook` |
+| `scripts/hmem-statusline.sh` | Claude Code statusline | `hmem init` |
+
+For each file changed in this release:
+1. **Run it locally** if it's a shell script — syntax errors only surface at runtime
+2. **Confirm the deployment instruction in o9k-update is still accurate** — if a path moved or a flag changed, o9k-update is the user's only signal
+3. **Apply the patch dry-run** if `hermes-cli-hmem-statusline.patch` changed: `cd ~/.hermes/hermes-agent && git apply --check ~/projects/hmem/hermes-hooks/hermes-cli-hmem-statusline.patch`
+4. **Mention hook changes in release notes** — users won't re-run the deployment steps unless prompted
+
+After publish, on this dev device (Hermes host):
+```bash
+cp ~/projects/hmem/hermes-hooks/*.sh ~/.hermes/agent-hooks/ && chmod +x ~/.hermes/agent-hooks/*.sh
+# If the CLI patch changed:
+cd ~/.hermes/hermes-agent && git apply ~/projects/hmem/hermes-hooks/hermes-cli-hmem-statusline.patch
+```
+
+There is no `hmem deploy-hermes-hooks` command yet — if you find yourself doing this manually for the Nth time, consider adding one (and updating both skills + the rule "Code-Änderungen müssen beim Enduser ankommen" no longer requires manual steps).
+
+---
+
 ## Step 8: Commit & Publish
 
 ```bash
@@ -159,8 +192,14 @@ Never skip with "it's just a tiny patch" — undocumented patches are exactly th
 1. Verify on npm: `npm view its-over-9k version`
 2. Update Overview version node: `update_memory(id="P0048.1.1", content="vX.Y.Z released (YYYY-MM-DD)")`. If no version node exists yet, create one: `append_memory(id="P0048.1", title="vX.Y.Z released (YYYY-MM-DD)")`
 3. Sync to devices: `o9k-sync push` (if applicable)
-4. Update hmem P-entry protocol: `append_memory(id="P0048.7", content="\tHandoff: vX.Y.Z released...")`
-5. Notify user via Telegram if relevant
+4. **Redeploy hooks on this Hermes host** (if hook files changed in this release):
+   ```bash
+   cp ~/projects/hmem/hermes-hooks/*.sh ~/.hermes/agent-hooks/ && chmod +x ~/.hermes/agent-hooks/*.sh
+   # If hermes-cli patch changed: cd ~/.hermes/hermes-agent && git apply ~/projects/hmem/hermes-hooks/hermes-cli-hmem-statusline.patch
+   # If Claude Code hooks changed: hmem setup-hook  (re-installs ~/.claude/hooks/hmem-session-inject.sh)
+   ```
+5. Update hmem P-entry protocol: `append_memory(id="P0048.7", content="\tHandoff: vX.Y.Z released...")`
+6. Notify user via Telegram if relevant
 
 ---
 
@@ -177,6 +216,9 @@ Never skip with "it's just a tiny patch" — undocumented patches are exactly th
 | cli.ts (new commands) | **o9k-update** (new CLI commands for users), o9k-setup |
 | cli-checkpoint.ts | o9k-config (checkpoint docs), o9k-read (summary docs) |
 | cli-log-exchange.ts | o9k-setup (hook docs) |
+| `hermes-hooks/*` | **Step 7b** + o9k-update (deployment instructions) |
+| `plugins/hermes-hmem/*` | **Step 7b** + o9k-update |
+| `scripts/hmem-session-inject.sh`, `scripts/hmem-statusline.sh` | **Step 7b** + o9k-setup |
 | cli-context-inject.ts | o9k-wipe, **o9k-setup**, **o9k-update** |
 | cli-hook-startup.ts | **o9k-setup** (first-message context docs), **o9k-update** (user-visible behavior) |
 | Any new skill added | **o9k-update** (list of skills to sync) |
