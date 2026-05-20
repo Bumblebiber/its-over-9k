@@ -6,13 +6,16 @@ import { writeDiagnostic, diagnosticsLogPath } from "../src/diagnostics.js";
 
 const tmpHome = path.join(os.tmpdir(), `hmem-diag-${process.pid}`);
 const oldHome = process.env.HOME;
+const oldUserProfile = process.env.USERPROFILE;
 
 beforeEach(() => {
   process.env.HOME = tmpHome;
+  process.env.USERPROFILE = tmpHome;
   fs.mkdirSync(tmpHome, { recursive: true });
 });
 afterEach(() => {
   process.env.HOME = oldHome;
+  process.env.USERPROFILE = oldUserProfile;
   fs.rmSync(tmpHome, { recursive: true, force: true });
 });
 

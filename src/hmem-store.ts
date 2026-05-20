@@ -33,6 +33,7 @@ import path from "node:path";
 import type { HmemConfig } from "./hmem-config.js";
 import { DEFAULT_CONFIG, DEFAULT_PREFIX_DESCRIPTIONS } from "./hmem-config.js";
 import { readSessionMarker, writeSessionMarker } from "./session-state.js";
+import { safeHomedir } from "./utils.js";
 
 // ---- Types ----
 
@@ -5368,20 +5369,8 @@ export class HmemStore {
 
 
 /**
- * Resolve the path to the personal .hmem database file.
- * Priority: HMEM_PATH env var > CWD discovery > ~/.hmem/memory.hmem
- */
-/** Reliable home directory — on Windows, prefer USERPROFILE over os.homedir()
- *  because os.homedir() respects HOME env which may point to a network drive (H:\). */
-function safeHomedir(): string {
-  if (process.platform === "win32" && process.env.USERPROFILE) {
-    return process.env.USERPROFILE;
-  }
-  return os.homedir();
-}
-
-/**
  * Resolve the `.hmem` file path for the current agent.
+ * Priority: HMEM_PATH env var > CWD discovery > ~/.hmem/memory.hmem
  * Priority: `HMEM_PATH` env var → CWD discovery → `~/.hmem/agent.hmem`.
  * @param cwdOverride Override working directory for CWD discovery step.
  */

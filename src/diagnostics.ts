@@ -6,15 +6,10 @@
  */
 
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
+import { safeHomedir } from "./utils.js";
 
 const MAX_BYTES = 1024 * 1024;
-
-function safeHomedir(): string {
-  if (process.platform === "win32" && process.env.USERPROFILE) return process.env.USERPROFILE;
-  return process.env.HOME || os.homedir();
-}
 
 export function diagnosticsLogPath(): string {
   return path.join(safeHomedir(), ".hmem", "diagnostics.log");

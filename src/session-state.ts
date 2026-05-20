@@ -9,6 +9,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { safeHomedir } from "./utils.js";
 
 export interface SessionMarker {
   sessionId: string;
@@ -27,11 +28,6 @@ export interface SessionMarkerInput {
   hmemPath?: string;
   deactivated?: boolean;
   oSessionId?: string | null;
-}
-
-function safeHomedir(): string {
-  if (process.platform === "win32" && process.env.USERPROFILE) return process.env.USERPROFILE;
-  return process.env.HOME || os.homedir();
 }
 
 export function sessionMarkerDir(): string {
