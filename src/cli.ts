@@ -74,21 +74,30 @@ Examples:
 function printHelp(): void {
   console.log(`🧠 hmem — Quick Tips
 
-  📦 Memory voll? (>100k Tokens)
+  📦 Context full? (>100k tokens)
      /o9k-wipe  — saves high-value knowledge to hmem, then /clear.
                   Run before context compaction kicks in.
 
-  🔄 Mehrere Geräte?
+  🔄 Multiple devices?
      hmem sync setup  — Cross-device sync via passphrase.
                         Passphrase stays device-local; server only sees ciphertext.
 
-  📜 Eigene Regeln festlegen?
-     In-session: say "merk dir als Regel: ..." / "remember as a rule: ..."
+  📜 Define your own rules?
+     In-session: say "remember as a rule: ..."
        → stored as an R-entry, re-injected at every session start.
 
-  ✨ Neues Projekt registrieren?
-     In-session: say "neues Projekt XYZ" / "new project XYZ"
+  ✨ Register a new project?
+     In-session: say "new project XYZ"
        → o9k-new-project skill handles schema + O-entry linking.
+
+  📌 Keep important entries visible every session?
+     In-session: say "pin this entry"
+       → marks entry as [P] pinned, L2 content injected at session start.
+
+  🧹 Curate / delete entries?
+     claude mcp add hmem-curate -s user -- npx hmem-curate
+       → adds the maintenance MCP (bulk edits, delete, merge, stats).
+         Activate via /mcp only when curating, deactivate when done.
 `);
   printUsageTable();
 }
