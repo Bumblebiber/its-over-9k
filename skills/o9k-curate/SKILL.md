@@ -1,22 +1,28 @@
 ---
 name: o9k-curate
-description: "Curate an .hmem file (your own or foreign) — mark obsolete/irrelevant, fix titles, consolidate duplicates. Use on 'aufräumen', 'clean up memory', 'tidy up', or when memory_health() flags issues."
+description: "Curate an .hmem file (your own or foreign) — mark obsolete/irrelevant, fix titles, consolidate duplicates, repair broken links. **Requires the `hmem-curate` MCP server** (skill prompts the user to enable it on entry). Use whenever the user says 'aufräumen', 'memory aufräumen', 'Speicher aufräumen', 'hmem aufräumen', 'clean up memory', 'tidy up hmem', 'curate memory', 'consolidate duplicates', 'merge duplicate entries', 'fix broken links', 'kümmer dich um die Memory', or invokes /o9k-curate. Also trigger when `memory_health()` flags BLOCKER/WARNING issues, when a P-entry's load_project output exceeds 4k tokens (session-start noise check defers to this skill), or before any batch cleanup of L, E, D, P entries. Skipping this skill and editing memory directly bypasses health checks, severity triage, and obsolete-chain integrity — never curate without it."
 ---
 
 # hmem Curation
 
-## Prerequisite: Activate o9k-curate MCP Server
+## Prerequisite: Activate hmem-curate MCP Server
 
 Curation tools (`memory_health`, `memory_stats`, `update_many`, `tag_bulk`, `tag_rename`,
 `move_memory`, `rename_id`, `move_nodes`, `export_memory`, `import_memory`, `reset_memory_cache`)
-are in the **separate `o9k-curate` MCP server** — not in the daily `hmem` server.
+are in the **separate `hmem-curate` MCP server** — not in the daily `hmem` server. They are not
+available by default; curation cannot start until the user enables them.
 
-Before starting curation, tell the user:
+Check the available tools first. If `memory_health` is not callable, tell the user:
 
-> "I need the o9k-curate MCP server to be active. Please run `/mcp` and enable **o9k-curate**,
-> then come back to continue."
+> "I need the `hmem-curate` MCP server to be active. It is not enabled by default because curation
+> writes destructively. To enable for this project:
+> ```
+> claude mcp add hmem-curate -s user -- npx hmem-curate
+> ```
+> Then run `/mcp` to confirm it loaded, and come back."
 
-Wait for confirmation before proceeding. Once the tools are available, continue with Step 0 below.
+Wait for confirmation before proceeding. Do not attempt curation calls until the tools are available —
+they will fail silently or with cryptic errors. Once confirmed, continue with Step 0 below.
 
 Curate hmem memory — mark obsolete/irrelevant/favorite, fix titles, consolidate duplicates, fix broken links.
 

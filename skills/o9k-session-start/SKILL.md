@@ -8,9 +8,19 @@ description: "Mandatory entry point for every Cortex session — invoke at conve
 ## TRIGGER
 Run at the beginning of any session where a Cortex project is active.
 
+## STEP 0: Load context
+
+Before anything else, load the memory context that the hook no longer pre-injects:
+
+```
+read_memory(mode='essentials')
+```
+
+This returns H-entries (user identity, preferences), recent projects, device info, and pinned content. The `--- hmem-sync ---` status line is already in your context from the hook.
+
 ## STEP 1: Activate project
 
-**If the UserPromptSubmit hook already called load_project** (you'll see a project briefing block — `P00XX  Title | Status | Tech | Repo` followed by sections .1–.9 — in your recent context), the project is already active. Skip directly to STEP 2.
+**If you already see a project briefing in context** (from a prior load_project in this session), skip to STEP 2.
 
 **Otherwise:**
 
@@ -137,7 +147,7 @@ H0000 defines the canonical H-Slots (Identität, Online-ID, IT-Skills, Business-
 - Welche Sprache bevorzugst du (Deutsch / Englisch / andere)?
 - Welche Begrüßungen sind OK, welche stören dich?
 
-Save answers immediately. Only proceed with the greeting after the slot is filled. This check runs once per session — if H0008 (Identität) is pinned and has children, the hook already injected its L2 content and you're done.
+Save answers immediately. Only proceed with the greeting after the slot is filled. If H0008 is pinned and has L2 children, the essentials read from STEP 0 already loaded them — you're done.
 
 ## STEP 6: O-Entry routing check
 
@@ -164,17 +174,9 @@ Move the misrouted session/batch node to the correct O-entry.
 
 ## What gets injected automatically (first message)
 
-The UserPromptSubmit hook injects the following into every session start:
-- **H-entries** — top 10 by access count (ID + title). **Pinned H-entries also include their L2 children inline** (`  • <text>`) so canonical identity/preference info is visible without extra `read_memory` calls.
-- **Active device apps** — Apps list of the current I-entry (if device is set)
-- **Infrastructure favorites** — any I-entry with `favorite: true` (e.g. reMarkable, shared server). Mark with `update_memory(id="I00XX", favorite=true)`.
-- **Recent projects** — 5 most recently updated P-entries
-- **hmem-sync status** — `--- hmem-sync ---` block with link state. Only present if `~/.hmem/config.json` exists.
-- **Tip block** — constant `--- Tip ---` line pointing users at `! hmem help`. The agent does NOT need to repeat this hint in its greeting output — the user already sees it in the injected context directly above the greeting.
+The hook injects only the `--- hmem-sync ---` status line (link state, active file, last sync). Everything else — H-entries, recent projects, device info — must be loaded via `read_memory` in STEP 0 below.
 
 ## OUTPUT — natural greeting
-
-The hook injects a first-message directive that drives the greeting. Follow it.
 
 **Format (two lines, user's preferred language and name, no padding):**
 
@@ -191,7 +193,7 @@ Schema (placeholders shown — never copy literally; pull real values from H-ent
 **Pulling the right values:**
 - **Language** — H0005 specifies it (German native, English fluent). Match the user's first message.
 - **Address form** — H0008 (Identität, pinned) is canonical: preferred name AND the explicit greeting whitelist/blacklist. Hook injects its L2 content directly, so the rules are visible without extra reads. Follow them literally — using a blacklisted greeting is a session-start failure.
-- **Sync-status line** — read from the `--- hmem-sync ---` block (always present since v1.2.9). Always a separate line above the greeting:
+- **Sync-status line** — read from the `--- hmem-sync ---` block injected by the hook. Always a separate line above the greeting:
   - `✓ Linked …` → `🟢 hmem-sync verbunden.`
   - `⚠ …` → `🟡 hmem-sync: <kurze Statusbeschreibung>.`
   - `✗ Not linked` → `🔴 hmem-sync nicht verbunden.`
