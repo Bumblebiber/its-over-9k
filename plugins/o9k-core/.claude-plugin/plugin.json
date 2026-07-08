@@ -1,0 +1,10 @@
+{
+  "name": "o9k-core",
+  "displayName": "o9k Core",
+  "version": "0.1.0",
+  "description": "The o9k doctrine: token-efficiency rules of engagement and the arbitration layer that keeps efficiency plugins from colliding.",
+  "author": { "name": "Bumblebiber" },
+  "repository": "https://github.com/Bumblebiber/its-over-9k",
+  "license": "MIT",
+  "keywords": ["token-efficiency", "claude-code", "meta-framework", "o9k"]
+}

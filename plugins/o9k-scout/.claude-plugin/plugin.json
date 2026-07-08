@@ -1,0 +1,10 @@
+{
+  "name": "o9k-scout",
+  "displayName": "o9k Scout",
+  "version": "0.1.0",
+  "description": "Context discipline: load structure before files, search before read, one canonical repo map per session.",
+  "author": { "name": "Bumblebiber" },
+  "repository": "https://github.com/Bumblebiber/its-over-9k",
+  "license": "MIT",
+  "keywords": ["token-efficiency", "context", "repo-map", "o9k"]
+}

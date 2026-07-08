@@ -1,0 +1,10 @@
+{
+  "name": "o9k-dispatch",
+  "displayName": "o9k Dispatch",
+  "version": "0.1.0",
+  "description": "Cost-gated subagent fan-out: isolate searches and decomposable work in subagents that return results, not transcripts.",
+  "author": { "name": "Bumblebiber" },
+  "repository": "https://github.com/Bumblebiber/its-over-9k",
+  "license": "MIT",
+  "keywords": ["token-efficiency", "subagents", "orchestration", "o9k"]
+}
