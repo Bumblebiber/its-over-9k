@@ -208,39 +208,32 @@ revisit if a turnkey MCP wrapper appears.
 ## Pairwise compatibility matrix
 
 Every cell answers: *what happens if you run BOTH of these?* The matrix is
-symmetric; the diagonal is —.
+symmetric; the diagonal is —. It lists only **o9k-compatible companions** —
+frameworks that block an o9k pillar outright (claude-mem/mem0, Graphify,
+claude-context/codebase-memory-mcp/tokenmax, token-optimizer-mcp) never share a
+setup with o9k, so their pairings are moot; they're covered as *replacements* in
+the blocking section above.
 
-- 🟢 **ergänzen sich** — the pair is worth more together than apart
-- ⚪ **tangieren sich nicht** — no interaction, safe by construction
-- ⚠️ **kombinierbar mit Regel** — works, but you must name ONE owner for the
-  overlapping concern (see notes below)
-- 🔴 **blockieren sich** — same concern, never both active
+- 🟢 **complement each other** — worth more together than apart
+- ⚪ **don't touch** — no interaction, safe by construction
+- ⚠️ **one rule needed** — works once you name a single owner (see notes)
+- 🔴 **block each other** — same concern, never both active
 
-Column key: **o9k** = all five pillars · **Pony** = Ponytail · **Ctx7** = Context7 ·
-**ccus** = ccusage · **sp** = superpowers · **Ser** = Serena · **ast** = ast-grep ·
-**hmem** = hmem/TIM · **cmem** = claude-mem/mem0/memory-mcp · **Gfy** = Graphify ·
-**Idx** = claude-context/codebase-memory-mcp/tokenmax · **tm** = task-master ·
-**BMAD** = BMAD/spec-kit/SuperClaude · **topt** = token-optimizer-mcp
+| | o9k | Ponytail | Context7 | ccusage | superpowers | beads | Serena | ast-grep | hmem/TIM | task-master | BMAD·spec-kit·SC |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| **o9k** | — | 🟢 | 🟢 | ⚪ | ⚠️¹ | 🟢 | 🟢 | 🟢 | 🟢 | ⚪ | ⚪ |
+| **Ponytail** | 🟢 | — | 🟢 | ⚪ | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
+| **Context7** | 🟢 | 🟢 | — | ⚪ | 🟢 | ⚪ | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ |
+| **ccusage** | ⚪ | ⚪ | ⚪ | — | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
+| **superpowers** | ⚠️¹ | 🟢 | 🟢 | ⚪ | — | ⚠️² | ⚪ | ⚪ | ⚪ | ⚠️² | 🔴 |
+| **beads** | 🟢 | ⚪ | ⚪ | ⚪ | ⚠️² | — | ⚪ | ⚪ | ⚠️³ | 🔴 | 🔴 |
+| **Serena** | 🟢 | ⚪ | 🟢 | ⚪ | ⚪ | ⚪ | — | ⚪ | ⚪ | ⚪ | ⚪ |
+| **ast-grep** | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | — | ⚪ | ⚪ | ⚪ |
+| **hmem/TIM** | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ | ⚠️³ | ⚪ | ⚪ | — | ⚠️³ | ⚪ |
+| **task-master** | ⚪ | ⚪ | ⚪ | ⚪ | ⚠️² | 🔴 | ⚪ | ⚪ | ⚠️³ | — | 🔴 |
+| **BMAD·spec-kit·SuperClaude** | ⚪ | ⚪ | ⚪ | ⚪ | 🔴 | 🔴 | ⚪ | ⚪ | ⚪ | 🔴 | —⁴ |
 
-| | o9k | Pony | Ctx7 | ccus | sp | beads | Ser | ast | hmem | cmem | Gfy | Idx | tm | BMAD | topt |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| **o9k** | — | 🟢 | 🟢 | ⚪ | ⚠️¹ | 🟢 | 🟢 | 🟢 | 🟢 | 🔴 | 🔴 | 🔴 | ⚪ | ⚪ | 🔴 |
-| **Ponytail** | 🟢 | — | 🟢 | ⚪ | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
-| **Context7** | 🟢 | 🟢 | — | ⚪ | 🟢 | ⚪ | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
-| **ccusage** | ⚪ | ⚪ | ⚪ | — | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
-| **superpowers** | ⚠️¹ | 🟢 | 🟢 | ⚪ | — | ⚠️² | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚠️² | 🔴 | ⚪ |
-| **beads** | 🟢 | ⚪ | ⚪ | ⚪ | ⚠️² | — | ⚪ | ⚪ | ⚠️³ | ⚠️³ | ⚪ | ⚪ | 🔴 | 🔴 | ⚪ |
-| **Serena** | 🟢 | ⚪ | 🟢 | ⚪ | ⚪ | ⚪ | — | ⚪ | ⚪ | ⚪ | 🔴 | 🔴 | ⚪ | ⚪ | ⚪ |
-| **ast-grep** | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | — | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
-| **hmem/TIM** | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ | ⚠️³ | ⚪ | ⚪ | — | 🔴 | ⚪ | ⚪ | ⚠️³ | ⚪ | ⚪ |
-| **claude-mem·mem0** | 🔴 | ⚪ | ⚪ | ⚪ | ⚪ | ⚠️³ | ⚪ | ⚪ | 🔴 | — | ⚪ | ⚪ | ⚠️³ | ⚪ | ⚪ |
-| **Graphify** | 🔴 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | 🔴 | ⚪ | ⚪ | ⚪ | — | 🔴 | ⚪ | ⚪ | 🔴 |
-| **claude-context·cbm·tokenmax** | 🔴 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | 🔴 | ⚪ | ⚪ | ⚪ | 🔴 | —⁴ | ⚪ | ⚪ | 🔴 |
-| **task-master** | ⚪ | ⚪ | ⚪ | ⚪ | ⚠️² | 🔴 | ⚪ | ⚪ | ⚠️³ | ⚠️³ | ⚪ | ⚪ | — | 🔴 | ⚪ |
-| **BMAD·spec-kit·SC** | ⚪ | ⚪ | ⚪ | ⚪ | 🔴 | 🔴 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | 🔴 | —⁴ | ⚪ |
-| **token-optimizer** | 🔴 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | 🔴 | 🔴 | ⚪ | ⚪ | — |
-
-**Notes on the ⚠️/grouped cells:**
+**Notes:**
 
 1. **o9k × superpowers** — great pair, ONE arbitration: keep `o9k-dispatch` OR
    superpowers' dispatch skills, disable the other.
@@ -250,10 +243,8 @@ Column key: **o9k** = all five pillars · **Pony** = Ponytail · **Ctx7** = Cont
 3. **beads/task-master × memory backends** — coexist fine with the
    don't-cross-the-streams rule: the plan store owns work items, memory owns
    lessons/decisions/errors. Never track the same work in both.
-4. **Grouped columns are 🔴 among themselves** — the members of `cmem`
-   (claude-mem, mem0, memory-mcp), `Idx` (claude-context, codebase-memory-mcp,
-   tokenmax), and `BMAD` (BMAD, spec-kit, SuperClaude) each claim the *same*
-   concern, so any two members of one group block each other too.
+4. **Grouped entries block each other too** — BMAD, spec-kit, and SuperClaude
+   all claim the methodology spine; any two of them collide.
 
 Notable 🟢 pairs beyond o9k: **Ponytail × superpowers** (methodology decides
 *what* to build, Ponytail keeps it minimal), **Context7 × superpowers**

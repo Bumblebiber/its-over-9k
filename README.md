@@ -87,31 +87,48 @@ recommended --run`). Bundles: `minimal`, `recommended`, `max` — see
 
 o9k deliberately does **not** re-implement workflow methodology, issue tracking,
 docs injection, or symbol-level navigation — excellent frameworks exist for
-those. The compatibility question is always the same: **does this framework
-claim a concern o9k already owns?** Three outcomes:
+those. This matrix covers every **o9k-compatible companion** and how each pair
+gets along:
 
-- 🟢 **Symbiotic** — occupies a concern o9k has no opinion on, or feeds a pillar.
-  Install alongside; they multiply. (One-owner caveats noted.)
-- ⚪ **Orthogonal** — never touches an o9k concern. Safe by construction.
-- 🔴 **Blocking** — claims a concern a pillar owns. Run **one owner, never two**.
+- 🟢 **complement each other** — worth more together than apart
+- ⚪ **don't touch** — no interaction, safe by construction
+- ⚠️ **one rule needed** — works once you name a single owner (see notes)
+- 🔴 **block each other** — same concern, never both active
 
-| Framework | Concern | Verdict | Rule |
-|-----------|---------|:-------:|------|
-| [Ponytail](https://github.com/DietrichGebert/ponytail) | Code minimalism (YAGNI, smallest diff) | 🟢 | New axis — caveman shrinks *prose*, Ponytail shrinks the *diff* (~54% less code). Pure multiplier; o9k's closest cousin. |
-| [Context7](https://github.com/upstash/context7) | Live library-docs injection | ⚪ | Pure add — o9k has no docs pillar. Best low-risk companion. |
-| [ccusage](https://github.com/ryoppippi/ccusage) | Cost ($) reporting | ⚪ | Complements `/o9k-stats` (context share); different axis, no overlap. |
-| [superpowers](https://github.com/obra/superpowers) | Workflow methodology | 🟢 | Owns *process*, o9k owns *efficiency*. Pick one dispatch owner (its skills or `o9k-dispatch`). |
-| [beads](https://github.com/steveyegge/beads) | Task/plan graph | 🟢 | Owns "the plan"; keep plans out of memory & markdown. |
-| [Serena](https://github.com/oraios/serena) | Symbol-level ops | 🟢 | Scout owns the *overview*, Serena owns *symbols*. Never both per lookup. |
-| [ast-grep](https://github.com/ast-grep/ast-grep) · [repomix](https://github.com/yamadashy/repomix) · [codesight](https://github.com/Houseofmvps/codesight) | Structure extraction | 🟢 | Feed `scout` — but **one** overview builder per session. |
-| [claude-mem](https://github.com/thedotmack/claude-mem) · [mem0](https://github.com/mem0ai/mem0) · TIM/hmem | Persistent memory | 🔴 | One memory MCP only — two = double injection, split-brain. |
-| [Graphify](https://github.com/Graphify-Labs/graphify) · [claude-context](https://github.com/zilliztech/claude-context) · [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp) | Code knowledge-graph / semantic index | 🔴 | Overview builder — collides with scout's map and each other. Pick one. Graphify also hooks search calls toward its graph. |
-| [token-optimizer-mcp](https://github.com/ooples/token-optimizer-mcp) | Output/tool compression | 🔴 | Overlaps `caveman` + `scout`. Treat as a *replacement* for those pillars, not an addition. |
-| [BMAD](https://github.com/bmad-code-org/BMAD-METHOD) · [spec-kit](https://github.com/github/spec-kit) · [task-master](https://github.com/eyaltoledano/claude-task-master) | Methodology / plan spine | 🔴 | One process owner and one plan owner — collide with superpowers/beads and each other. |
+| | o9k | [Ponytail](https://github.com/DietrichGebert/ponytail) | [Context7](https://github.com/upstash/context7) | [ccusage](https://github.com/ryoppippi/ccusage) | [superpowers](https://github.com/obra/superpowers) | [beads](https://github.com/steveyegge/beads) | [Serena](https://github.com/oraios/serena) | [ast-grep](https://github.com/ast-grep/ast-grep) | [hmem](https://github.com/Bumblebiber/hmem)/TIM | [task-master](https://github.com/eyaltoledano/claude-task-master) | [BMAD](https://github.com/bmad-code-org/BMAD-METHOD)·[spec-kit](https://github.com/github/spec-kit) |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| **o9k** | — | 🟢 | 🟢 | ⚪ | ⚠️¹ | 🟢 | 🟢 | 🟢 | 🟢 | ⚪ | ⚪ |
+| **Ponytail** | 🟢 | — | 🟢 | ⚪ | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
+| **Context7** | 🟢 | 🟢 | — | ⚪ | 🟢 | ⚪ | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ |
+| **ccusage** | ⚪ | ⚪ | ⚪ | — | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
+| **superpowers** | ⚠️¹ | 🟢 | 🟢 | ⚪ | — | ⚠️² | ⚪ | ⚪ | ⚪ | ⚠️² | 🔴 |
+| **beads** | 🟢 | ⚪ | ⚪ | ⚪ | ⚠️² | — | ⚪ | ⚪ | ⚠️³ | 🔴 | 🔴 |
+| **Serena** | 🟢 | ⚪ | 🟢 | ⚪ | ⚪ | ⚪ | — | ⚪ | ⚪ | ⚪ | ⚪ |
+| **ast-grep** | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | — | ⚪ | ⚪ | ⚪ |
+| **hmem/TIM** | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ | ⚠️³ | ⚪ | ⚪ | — | ⚠️³ | ⚪ |
+| **task-master** | ⚪ | ⚪ | ⚪ | ⚪ | ⚠️² | 🔴 | ⚪ | ⚪ | ⚠️³ | — | 🔴 |
+| **BMAD·spec-kit·SuperClaude** | ⚪ | ⚪ | ⚪ | ⚪ | 🔴 | 🔴 | ⚪ | ⚪ | ⚪ | 🔴 | —⁴ |
 
-Full per-framework notes, install mechanisms, and the **pairwise framework ×
-framework matrix** (every combination scored 🟢 ergänzen sich / ⚪ tangieren sich
-nicht / ⚠️ mit Regel / 🔴 blockieren sich):
+1. **o9k × superpowers:** keep `o9k-dispatch` OR superpowers' dispatch skills —
+   one dispatch owner.
+2. **superpowers × beads/task-master:** a plan *store* beats plan *files* — the
+   store owns plans, disable superpowers' plan markdown. One plan owner.
+3. **plan stores × memory:** the store owns work items, memory owns
+   lessons/decisions. Never track the same work in both.
+4. **Grouped entries block each other too** — BMAD, spec-kit, and SuperClaude
+   all claim the methodology spine; any two of them collide.
+
+**Not in the matrix — replacements, not companions.** Some frameworks claim a
+concern an o9k pillar owns; they never share a setup with o9k, so their pairings
+are moot. Run them *instead of* the pillar they displace, or not at all:
+[claude-mem](https://github.com/thedotmack/claude-mem) / [mem0](https://github.com/mem0ai/mem0)
+(vs the memory backend), [Graphify](https://github.com/Graphify-Labs/graphify) /
+[claude-context](https://github.com/zilliztech/claude-context) /
+[codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp)
+(vs scout's overview), [token-optimizer-mcp](https://github.com/ooples/token-optimizer-mcp)
+(vs caveman+scout).
+
+Full per-framework notes and install mechanisms:
 **[docs/COMBINING.md](docs/COMBINING.md)**.
 
 ## Scouting for new frameworks
