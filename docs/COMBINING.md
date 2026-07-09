@@ -205,19 +205,58 @@ revisit if a turnkey MCP wrapper appears.
   store + memory Next-Steps) all tracking the same work.
 - **tokenmax + Serena** both answering symbol questions — one owner.
 
-## Framework × framework quick grid
+## Pairwise compatibility matrix
 
-Rows/cols are the concerns that collide. ✅ = safe together, ⚠️ = safe only if you
-disable one owner, 🔴 = never both active.
+Every cell answers: *what happens if you run BOTH of these?* The matrix is
+symmetric; the diagonal is —.
 
-| | memory | overview | plan | methodology | output | dispatch |
-|--|:--:|:--:|:--:|:--:|:--:|:--:|
-| **hmem/TIM** | 🔴 | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **claude-context / codebase-memory** | ✅ | 🔴 | ✅ | ✅ | ✅ | ✅ |
-| **beads / task-master** | ✅ | ✅ | 🔴 | ⚠️ | ✅ | ✅ |
-| **superpowers / BMAD / spec-kit** | ✅ | ✅ | ⚠️ | 🔴 | ✅ | ⚠️ |
-| **caveman / token-optimizer** | ✅ | ⚠️ | ✅ | ✅ | 🔴 | ✅ |
+- 🟢 **ergänzen sich** — the pair is worth more together than apart
+- ⚪ **tangieren sich nicht** — no interaction, safe by construction
+- ⚠️ **kombinierbar mit Regel** — works, but you must name ONE owner for the
+  overlapping concern (see notes below)
+- 🔴 **blockieren sich** — same concern, never both active
 
-Read a 🔴 as "these two claim the same o9k concern — pick one." A ⚠️ marks a
-cross-concern overlap (a methodology that also ships a plan store, or a token
-optimizer that also touches the overview) — resolve by naming the single owner.
+Column key: **o9k** = all five pillars · **Pony** = Ponytail · **Ctx7** = Context7 ·
+**ccus** = ccusage · **sp** = superpowers · **Ser** = Serena · **ast** = ast-grep ·
+**hmem** = hmem/TIM · **cmem** = claude-mem/mem0/memory-mcp · **Gfy** = Graphify ·
+**Idx** = claude-context/codebase-memory-mcp/tokenmax · **tm** = task-master ·
+**BMAD** = BMAD/spec-kit/SuperClaude · **topt** = token-optimizer-mcp
+
+| | o9k | Pony | Ctx7 | ccus | sp | beads | Ser | ast | hmem | cmem | Gfy | Idx | tm | BMAD | topt |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| **o9k** | — | 🟢 | 🟢 | ⚪ | ⚠️¹ | 🟢 | 🟢 | 🟢 | 🟢 | 🔴 | 🔴 | 🔴 | ⚪ | ⚪ | 🔴 |
+| **Ponytail** | 🟢 | — | 🟢 | ⚪ | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
+| **Context7** | 🟢 | 🟢 | — | ⚪ | 🟢 | ⚪ | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
+| **ccusage** | ⚪ | ⚪ | ⚪ | — | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
+| **superpowers** | ⚠️¹ | 🟢 | 🟢 | ⚪ | — | ⚠️² | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚠️² | 🔴 | ⚪ |
+| **beads** | 🟢 | ⚪ | ⚪ | ⚪ | ⚠️² | — | ⚪ | ⚪ | ⚠️³ | ⚠️³ | ⚪ | ⚪ | 🔴 | 🔴 | ⚪ |
+| **Serena** | 🟢 | ⚪ | 🟢 | ⚪ | ⚪ | ⚪ | — | ⚪ | ⚪ | ⚪ | 🔴 | 🔴 | ⚪ | ⚪ | ⚪ |
+| **ast-grep** | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | — | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
+| **hmem/TIM** | 🟢 | ⚪ | ⚪ | ⚪ | ⚪ | ⚠️³ | ⚪ | ⚪ | — | 🔴 | ⚪ | ⚪ | ⚠️³ | ⚪ | ⚪ |
+| **claude-mem·mem0** | 🔴 | ⚪ | ⚪ | ⚪ | ⚪ | ⚠️³ | ⚪ | ⚪ | 🔴 | — | ⚪ | ⚪ | ⚠️³ | ⚪ | ⚪ |
+| **Graphify** | 🔴 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | 🔴 | ⚪ | ⚪ | ⚪ | — | 🔴 | ⚪ | ⚪ | 🔴 |
+| **claude-context·cbm·tokenmax** | 🔴 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | 🔴 | ⚪ | ⚪ | ⚪ | 🔴 | —⁴ | ⚪ | ⚪ | 🔴 |
+| **task-master** | ⚪ | ⚪ | ⚪ | ⚪ | ⚠️² | 🔴 | ⚪ | ⚪ | ⚠️³ | ⚠️³ | ⚪ | ⚪ | — | 🔴 | ⚪ |
+| **BMAD·spec-kit·SC** | ⚪ | ⚪ | ⚪ | ⚪ | 🔴 | 🔴 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | 🔴 | —⁴ | ⚪ |
+| **token-optimizer** | 🔴 | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | 🔴 | 🔴 | ⚪ | ⚪ | — |
+
+**Notes on the ⚠️/grouped cells:**
+
+1. **o9k × superpowers** — great pair, ONE arbitration: keep `o9k-dispatch` OR
+   superpowers' dispatch skills, disable the other.
+2. **superpowers × beads/task-master** — superpowers writes plan *files*; if a
+   plan *store* is installed, the store owns plans and superpowers' files are
+   disabled. One plan owner.
+3. **beads/task-master × memory backends** — coexist fine with the
+   don't-cross-the-streams rule: the plan store owns work items, memory owns
+   lessons/decisions/errors. Never track the same work in both.
+4. **Grouped columns are 🔴 among themselves** — the members of `cmem`
+   (claude-mem, mem0, memory-mcp), `Idx` (claude-context, codebase-memory-mcp,
+   tokenmax), and `BMAD` (BMAD, spec-kit, SuperClaude) each claim the *same*
+   concern, so any two members of one group block each other too.
+
+Notable 🟢 pairs beyond o9k: **Ponytail × superpowers** (methodology decides
+*what* to build, Ponytail keeps it minimal), **Context7 × superpowers**
+(current docs during the plan phase), **Context7 × Serena** (external API docs +
+internal symbol truth), **Context7 × Ponytail** (docs make the stdlib-first
+choice findable).

@@ -109,8 +109,10 @@ claim a concern o9k already owns?** Three outcomes:
 | [token-optimizer-mcp](https://github.com/ooples/token-optimizer-mcp) | Output/tool compression | 🔴 | Overlaps `caveman` + `scout`. Treat as a *replacement* for those pillars, not an addition. |
 | [BMAD](https://github.com/bmad-code-org/BMAD-METHOD) · [spec-kit](https://github.com/github/spec-kit) · [task-master](https://github.com/eyaltoledano/claude-task-master) | Methodology / plan spine | 🔴 | One process owner and one plan owner — collide with superpowers/beads and each other. |
 
-Full per-framework notes, install mechanisms, and the framework×framework
-conflict grid: **[docs/COMBINING.md](docs/COMBINING.md)**.
+Full per-framework notes, install mechanisms, and the **pairwise framework ×
+framework matrix** (every combination scored 🟢 ergänzen sich / ⚪ tangieren sich
+nicht / ⚠️ mit Regel / 🔴 blockieren sich):
+**[docs/COMBINING.md](docs/COMBINING.md)**.
 
 ## Scouting for new frameworks
 
