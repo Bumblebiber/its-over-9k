@@ -2,7 +2,7 @@
   "name": "o9k-memory",
   "displayName": "o9k Memory",
   "version": "0.2.0",
-  "description": "Persistent memory integration: session-start briefing, on-demand recall, save-before-compact. Recommends the TIM memory MCP (hmem as stable alternative).",
+  "description": "Persistent memory integration: session-start briefing, on-demand recall, save-before-compact. Uses the hmem memory MCP by default; auto-detects and prefers TIM once it ships.",
   "author": {
     "name": "Bumblebiber"
   },

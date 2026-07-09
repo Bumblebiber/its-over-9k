@@ -27,7 +27,12 @@
     {
       "name": "o9k-memory",
       "source": "./o9k-memory",
-      "description": "Persistent memory integration: session-start briefing, on-demand recall, save-before-compact. Recommends the TIM memory MCP (hmem as stable alternative)."
+      "description": "Persistent memory integration: session-start briefing, on-demand recall, save-before-compact. Uses the hmem memory MCP by default; auto-detects and prefers TIM once it ships."
+    },
+    {
+      "name": "o9k-recon",
+      "source": "./o9k-recon",
+      "description": "Discovery & onboarding: a GitHub Scout skill (framework-scout) for finding new agent frameworks and classifying them symbiotic/orthogonal/blocking, plus one-command companion bundle installs (companion-bundles)."
     }
   ]
 }

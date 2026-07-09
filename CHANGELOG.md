@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.3.0] — 2026-07-09
+
+### Added
+- **`o9k-recon` plugin** — discovery & onboarding:
+  - **`framework-scout`** skill — a GitHub Scout: where to hunt for new agent
+    frameworks (Topics, Trending/OSSInsight, the plugin directory, awesome-lists),
+    a six-signal scoring rubric (concern → alive → traction → license → install →
+    claim-vs-reality), and how to classify a candidate as 🟢 symbiotic / ⚪
+    orthogonal / 🔴 blocking before proposing a matrix or bundle update.
+  - **`companion-bundles`** skill + **`install/o9k-companions.sh`** — one-command,
+    dry-run-by-default installer for conflict-free companion stacks
+    (`minimal` / `recommended` / `max`). See `docs/BUNDLES.md`.
+- **Expanded "Playing with others"** into a three-tier compatibility matrix
+  (symbiotic / orthogonal / blocking) in the README and `docs/COMBINING.md`,
+  covering Context7, ccusage, Ponytail, Graphify, claude-mem, mem0,
+  claude-context, codebase-memory-mcp, tokenmax, token-optimizer-mcp, BMAD,
+  spec-kit, SuperClaude, task-master, plus a framework×framework conflict grid.
+- **Ponytail** (DietrichGebert) documented as o9k's closest cousin — code
+  minimalism on a new axis (trims the diff; caveman trims the prose) — and added
+  to every bundle.
+
+### Changed
+- **TIM status corrected:** TIM is not yet published. **hmem is now the documented
+  available default** across README, `docs/COMBINING.md`, and plugin metadata;
+  TIM is labeled *planned*, with the SessionStart hook auto-preferring it once it
+  ships. Removes the misleading "recommended" claim for an unreleased backend.
+
 ## [0.2.0] — 2026-07-09
 
 ### Added

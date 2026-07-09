@@ -1,0 +1,18 @@
+{
+  "name": "o9k-recon",
+  "displayName": "o9k Recon",
+  "version": "0.3.0",
+  "description": "Discovery & onboarding: a GitHub Scout skill for finding new agent frameworks and slotting them into the o9k compatibility matrix, plus one-command companion bundle installs.",
+  "author": {
+    "name": "Bumblebiber"
+  },
+  "repository": "https://github.com/Bumblebiber/its-over-9k",
+  "license": "MIT",
+  "keywords": [
+    "discovery",
+    "github-scout",
+    "frameworks",
+    "bundles",
+    "o9k"
+  ]
+}
