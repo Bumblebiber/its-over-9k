@@ -6,27 +6,27 @@
   "plugins": [
     {
       "name": "o9k-core",
-      "source": "o9k-core",
+      "source": "./o9k-core",
       "description": "The o9k doctrine: efficiency rules of engagement and the arbitration layer that keeps all other efficiency plugins from colliding. Install this first."
     },
     {
       "name": "o9k-caveman",
-      "source": "o9k-caveman",
+      "source": "./o9k-caveman",
       "description": "Output compression: telegraphic response style with lite/full/ultra levels and automatic fallback to full prose for safety-critical content. Adapted from JuliusBrussee/caveman (MIT)."
     },
     {
       "name": "o9k-scout",
-      "source": "o9k-scout",
+      "source": "./o9k-scout",
       "description": "Context discipline: load structure before files, search before read, one canonical repo map per session."
     },
     {
       "name": "o9k-dispatch",
-      "source": "o9k-dispatch",
+      "source": "./o9k-dispatch",
       "description": "Cost-gated subagent fan-out: isolate searches and decomposable work in subagents that return results, not transcripts."
     },
     {
       "name": "o9k-memory",
-      "source": "o9k-memory",
+      "source": "./o9k-memory",
       "description": "Persistent memory integration: session-start briefing, on-demand recall, save-before-compact. Recommends the TIM memory MCP (hmem as stable alternative)."
     }
   ]
