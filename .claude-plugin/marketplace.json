@@ -7,7 +7,7 @@
     {
       "name": "o9k-core",
       "source": "./o9k-core",
-      "description": "The o9k doctrine: efficiency rules of engagement and the arbitration layer that keeps all other efficiency plugins from colliding. Install this first."
+      "description": "The o9k doctrine: efficiency rules of engagement and the arbitration layer that keeps all other efficiency plugins from colliding. Zero-effort: a SessionStart hook activates everything automatically; /o9k-guide explains the rest. Install this first."
     },
     {
       "name": "o9k-caveman",

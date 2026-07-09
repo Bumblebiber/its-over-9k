@@ -45,6 +45,22 @@ is the only one the others assume.
 - **Together:** the agent's *effective* context — the fraction doing useful
   work — goes way past what any single technique achieves. It's over 9000.
 
+## Zero effort by design
+
+The human should not have to do — or know — anything. After install, a
+SessionStart hook in `o9k-core` injects the doctrine automatically every
+session: the agent compresses its output, loads only what it needs, offloads
+noisy searches, and saves state before compaction — no commands, no reading,
+no habits to learn.
+
+What automation can't do (picking a dispatch owner when superpowers is also
+installed, a one-time `hmem init`), the agent tells you about: on the very
+first session it offers a one-minute orientation, and **`/o9k-guide`** brings
+it back any time. The guide is personalized — it detects your actual setup and
+mentions only what's missing, offering to fix each item for you. A fully set-up
+install gets three sentences: *everything runs by itself, nothing to do,
+`/o9k-stats` shows the effect.*
+
 ## Install
 
 o9k is a [Claude Code plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces):
@@ -143,19 +159,25 @@ proposing a bundle or matrix update. See
 
 ## Status
 
-Early but functional. `o9k-memory` ships real hook automation:
+Early but functional. `o9k-core` and `o9k-memory` ship real hook automation:
 
-- **SessionStart** — detects the memory backend (TIM via `tim resolve-project`,
-  else hmem) and injects a compact loading *directive* (never memory content).
-  Stays silent if the backend's own hooks are already installed — one owner per
-  concern. Disable via `O9K_MEMORY_HOOK=off`.
-- **PreCompact** — fires the backend's checkpoint (`tim checkpoint` /
-  `hmem checkpoint`) in the background before compaction summarizes the
+- **SessionStart (o9k-core)** — injects a ~70-token doctrine directive (never
+  documentation) so all installed pillars apply automatically; flags open
+  arbitrations; offers `/o9k-guide` once on the first session. Disable via
+  `O9K_CORE_HOOK=off`.
+
+- **SessionStart (o9k-memory)** — detects the memory backend (TIM via
+  `tim resolve-project`, else hmem) and injects a compact loading *directive*
+  (never memory content). Stays silent if the backend's own hooks are already
+  installed — one owner per concern. Disable via `O9K_MEMORY_HOOK=off`.
+- **PreCompact (o9k-memory)** — fires the backend's checkpoint (`tim checkpoint`
+  / `hmem checkpoint`) in the background before compaction summarizes the
   session away. Never blocks or delays compaction.
 
-`o9k-core` ships `/o9k-stats`: a zero-dependency analyzer over Claude Code's
-session transcripts — output share, cache hit profile, avg output per turn —
-so the savings are measured, not vibes.
+`o9k-core` also ships **`/o9k-guide`** (personalized setup orientation backed by
+a read-only detector script) and **`/o9k-stats`**: a zero-dependency analyzer
+over Claude Code's session transcripts — output share, cache hit profile, avg
+output per turn — so the savings are measured, not vibes.
 
 ## Credits & prior art
 

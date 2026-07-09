@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.0] — 2026-07-09
+
+### Added
+- **Zero-effort automation in `o9k-core`:**
+  - **SessionStart hook** — injects a ~70-token doctrine directive every session
+    so all installed pillars apply automatically; the human never invokes
+    anything. Detects installed pillars/companions, flags open arbitrations
+    (e.g. two dispatch owners), and offers `/o9k-guide` once on the first
+    session (marker: `~/.claude/o9k-first-run-done`). Opt out:
+    `O9K_CORE_HOOK=off`.
+  - **`/o9k-guide` skill** — personalized one-minute orientation for the human,
+    backed by `scripts/o9k-guide.mjs` (read-only setup detector: pillars,
+    memory backend, companions, conflicts, gaps). Tells the user only what
+    their setup is missing and offers to fix each item.
+  - `scripts/detect.mjs` — shared zero-dependency detection (enabled plugins,
+    MCP servers, CLIs on PATH), degrades gracefully to sibling-directory
+    probing when settings are unreadable.
+
 ## [0.3.0] — 2026-07-09
 
 ### Added

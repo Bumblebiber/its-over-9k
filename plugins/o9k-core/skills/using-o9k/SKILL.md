@@ -39,6 +39,10 @@ Multiple efficiency frameworks installed together WILL collide. These ownership
 rules resolve every collision; when a third-party framework claims a concern
 below, either it or the o9k pillar must be disabled — never run two owners:
 
+When an arbitration needs a human decision (e.g. two dispatch owners), don't
+lecture — surface it once and point to `/o9k-guide`, which walks the user
+through it and offers to apply the fix.
+
 | Concern | Owner | Displaced alternatives |
 |---------|-------|------------------------|
 | Output style / tone | `o9k-caveman` | Claude Code output-styles, persona skills |
