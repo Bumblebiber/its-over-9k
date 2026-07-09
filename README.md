@@ -84,9 +84,19 @@ rules:
 
 ## Status
 
-Early. The pillar skills are functional; hook-based automation (session-start
-briefing injection, pre-compact memory flush) currently ships with `o9k-memory`
-as conventions and will become `hooks.json` automation in a future release.
+Early but functional. `o9k-memory` ships real hook automation:
+
+- **SessionStart** — detects the memory backend (TIM via `tim resolve-project`,
+  else hmem) and injects a compact loading *directive* (never memory content).
+  Stays silent if the backend's own hooks are already installed — one owner per
+  concern. Disable via `O9K_MEMORY_HOOK=off`.
+- **PreCompact** — fires the backend's checkpoint (`tim checkpoint` /
+  `hmem checkpoint`) in the background before compaction summarizes the
+  session away. Never blocks or delays compaction.
+
+`o9k-core` ships `/o9k-stats`: a zero-dependency analyzer over Claude Code's
+session transcripts — output share, cache hit profile, avg output per turn —
+so the savings are measured, not vibes.
 
 ## Credits & prior art
 

@@ -1,10 +1,19 @@
 {
   "name": "o9k-memory",
   "displayName": "o9k Memory",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Persistent memory integration: session-start briefing, on-demand recall, save-before-compact. Recommends the TIM memory MCP (hmem as stable alternative).",
-  "author": { "name": "Bumblebiber" },
+  "author": {
+    "name": "Bumblebiber"
+  },
   "repository": "https://github.com/Bumblebiber/its-over-9k",
   "license": "MIT",
-  "keywords": ["memory", "mcp", "tim", "hmem", "o9k"]
+  "keywords": [
+    "memory",
+    "mcp",
+    "tim",
+    "hmem",
+    "o9k"
+  ],
+  "hooks": "./hooks/hooks.json"
 }
