@@ -43,11 +43,13 @@ already done:
 Whenever a fix is something you can execute (an install command, a config
 edit), **offer to do it right now** — the user should never have to copy-paste.
 
-**3. "Optional, when curious" (max 4 lines).**
+**3. "Optional, when curious" (max 5 lines).**
 - `/o9k-stats` — proof the savings are real, measured from session logs.
+- `/o9k-update` — check pillars & companions for updates, apply the safe ones.
 - `/o9k-guide` — this orientation, any time.
 - `framework-scout` skill — scouts GitHub for new companion frameworks.
-- Kill switches, only if asked: `O9K_CORE_HOOK=off`, `O9K_MEMORY_HOOK=off`.
+- Settings, only if asked: `O9K_UPDATE_CHECK=off|notify|auto` (update policy),
+  kill switches `O9K_CORE_HOOK=off`, `O9K_MEMORY_HOOK=off`.
 
 ## Rules
 

@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.5.0] — 2026-07-09
+
+### Added
+- **Dependency update checker in `o9k-core`** (`scripts/update-check.mjs`,
+  zero deps):
+  - **SessionStart hook** — reports updatable pillars/companions instantly from
+    a cache; the actual `npm view` / `git fetch` checks run **detached in the
+    background** (throttled by `O9K_UPDATE_INTERVAL_HOURS`, default 24h) so
+    session start never waits on the network.
+  - **Policy** via `O9K_UPDATE_CHECK`: `notify` (default) reports only; `auto`
+    also applies the *safe* updates (npm-global CLIs: hmem, ast-grep, ccusage);
+    `off` disables. o9k plugins, the marketplace, and git/uvx tools are always
+    notify-only — never auto-clobbered (`/plugin marketplace update o9k` is
+    suggested when the local o9k clone is behind upstream).
+  - **`/o9k-update` skill** — on-demand `--report` (read-only) and `--apply`
+    (perform safe updates) with a human-readable status.
+
 ## [0.4.0] — 2026-07-09
 
 ### Added

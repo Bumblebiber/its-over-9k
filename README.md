@@ -165,6 +165,12 @@ Early but functional. `o9k-core` and `o9k-memory` ship real hook automation:
   documentation) so all installed pillars apply automatically; flags open
   arbitrations; offers `/o9k-guide` once on the first session. Disable via
   `O9K_CORE_HOOK=off`.
+- **SessionStart update check (o9k-core)** — reports which pillars/companions
+  are updatable, instantly from a cache; the actual version check runs detached
+  in the background (once per `O9K_UPDATE_INTERVAL_HOURS`, default 24h), so it
+  never slows session start. `O9K_UPDATE_CHECK=notify` (default) reports;
+  `auto` also applies the safe npm-global updates; `off` disables. Plugins and
+  the marketplace are always notify-only — never clobbered.
 
 - **SessionStart (o9k-memory)** — detects the memory backend (TIM via
   `tim resolve-project`, else hmem) and injects a compact loading *directive*
@@ -175,9 +181,10 @@ Early but functional. `o9k-core` and `o9k-memory` ship real hook automation:
   session away. Never blocks or delays compaction.
 
 `o9k-core` also ships **`/o9k-guide`** (personalized setup orientation backed by
-a read-only detector script) and **`/o9k-stats`**: a zero-dependency analyzer
-over Claude Code's session transcripts — output share, cache hit profile, avg
-output per turn — so the savings are measured, not vibes.
+a read-only detector script), **`/o9k-update`** (check pillars & companions for
+newer versions and apply the safe ones), and **`/o9k-stats`**: a zero-dependency
+analyzer over Claude Code's session transcripts — output share, cache hit
+profile, avg output per turn — so the savings are measured, not vibes.
 
 ## Credits & prior art
 
