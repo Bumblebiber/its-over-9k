@@ -34,11 +34,15 @@ if (pillars["o9k-dispatch"]) active.push("isolate broad sweeps in subagents (dis
 if (pillars["o9k-memory"]) active.push("persist state before compaction (memory)");
 
 const lines = [
-  "o9k efficiency framework active — apply its doctrine automatically; the user should never need to invoke it. " +
+  "MANDATORY, not a suggestion: o9k's installed pillars apply to EVERY response in this " +
+    "session, starting with your very next one. Not \"when convenient\" — every turn. " +
     (active.length
       ? "Standing orders: " + active.join("; ") + "."
       : "Load the using-o9k skill for the doctrine.") +
-    " On any conflict between efficiency rules, the using-o9k arbitration table decides.",
+    " If you catch yourself having skipped one (verbose output, unstructured search, a " +
+    "flagship model doing grunt work), that's not a pass — correct it starting the next " +
+    "turn, don't wait to be told. On any conflict between efficiency rules, the using-o9k " +
+    "arbitration table decides.",
 ];
 
 if (conflicts.length) {

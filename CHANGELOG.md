@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.7.2] — 2026-07-15
+
+### Changed
+- **SessionStart directive sharpened.** The injected doctrine text was easy to
+  read as a soft suggestion ("apply automatically") and got skipped in
+  practice. Reworded to an explicit MANDATORY framing (every turn, not "when
+  convenient") with a self-correction clause. No technical enforcement exists
+  — a hook can only inject context, not force tool calls — so this raises the
+  odds of compliance, it doesn't guarantee it.
+
 ## [0.7.1] — 2026-07-15
 
 ### Fixed

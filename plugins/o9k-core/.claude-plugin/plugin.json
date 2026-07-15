@@ -1,7 +1,7 @@
 {
   "name": "o9k-core",
   "displayName": "o9k Core",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "The o9k doctrine: token-efficiency rules of engagement and the arbitration layer that keeps efficiency plugins from colliding. Zero-effort: a SessionStart hook activates the doctrine automatically, checks dependencies for updates, /o9k-init runs the guided setup, and /o9k-guide gives the human a personalized one-minute orientation.",
   "author": {
     "name": "Bumblebiber"
