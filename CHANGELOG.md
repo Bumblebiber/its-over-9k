@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.1] — 2026-07-15
+
+### Fixed
+- **`/o9k-init` and `companion-bundles` install plugins themselves.**
+  `claude plugin install <name>@<marketplace>` and
+  `claude plugin marketplace add <owner>/<repo>` turn out to be regular CLI
+  commands (`claude plugin --help`), not the REPL-only `/plugin` slash
+  command — confirmed live: all 5 missing o9k pillars and Ponytail installed
+  straight from a shell. Step 5 of `/o9k-init` (and companion-bundles' "How
+  to run") now runs these itself instead of printing a checklist for the
+  user; only `/reload-plugins` and genuinely CLI-less installs (e.g. beads)
+  stay manual.
+
 ## [0.7.0] — 2026-07-15
 
 ### Added

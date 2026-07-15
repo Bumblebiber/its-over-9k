@@ -37,9 +37,14 @@ concern** (see [docs/COMBINING.md](../../../../docs/COMBINING.md)).
    ```bash
    install/o9k-companions.sh recommended --run
    ```
-3. Do the **manual** steps it prints — the in-session `/plugin ...` installs
-   (superpowers, Ponytail) and any CLI it flagged as manual (beads). These can't
-   run from a shell.
+3. Install the plugin-based companions (superpowers, Ponytail) yourself —
+   `claude plugin marketplace add <owner>/<repo>` and
+   `claude plugin install <name>` are regular shell commands, not the
+   `/plugin` REPL-only slash command. Then tell the user to run
+   `/reload-plugins` once (that step genuinely can't run from a shell).
+   Anything the printed plan flags as truly manual (e.g. beads has no
+   npm/go/brew package to script against) stays with the user — point at
+   the upstream repo, don't guess an install command.
 
 ## The one arbitration you must resolve
 

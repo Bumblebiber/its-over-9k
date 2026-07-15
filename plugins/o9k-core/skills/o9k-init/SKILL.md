@@ -110,22 +110,40 @@ anything:
    - derived indexes (Graphify, claude-context, …) → nothing to import;
      they rebuild from source.
 3. **Show the user a one-screen summary** — N items migrated, backup path —
-   *then* uninstall (npm rm / `claude mcp remove` / `/plugin uninstall`).
+   *then* uninstall (`npm rm -g` / `claude mcp remove` / `claude plugin uninstall`,
+   all regular shell commands you run yourself).
 
 ## Step 5 — execute
 
-Order: git (if agreed) → shell-installable companions → manual steps.
+Order: git (if agreed) → shell-installable companions → plugin installs →
+whatever genuinely has no CLI path.
 
 - Always **dry-run the bundle first** and show the plan:
   `install/o9k-companions.sh <bundle>` — then `--run` to execute
-  (skip lines for companions dropped in Step 3).
+  (skip lines for companions dropped in Step 3, and for anything Step 1
+  already showed as installed).
 - **Agent-run memory setup:** `npm i -g hmem-mcp && hmem init --global`
   (add `--tools <list>` / `--no-example` when the interview said so).
   User-run: plain `hmem init` (interactive).
-- **Manual steps can't leave the session** — `/plugin install` lines
-  (superpowers, Ponytail, missing o9k pillars) must be run by the user in
-  Claude Code; print them as a short checklist.
-- Fold in any Step 4 uninstalls *after* their migration completed.
+- **Plugins install from the CLI — run them yourself, don't hand them to the
+  user.** `claude plugin install <name>@<marketplace>` and
+  `claude plugin marketplace add <owner>/<repo>` are regular shell commands,
+  not the `/plugin` REPL-only slash command:
+  ```bash
+  claude plugin install o9k-caveman@o9k    # missing o9k pillars
+  claude plugin marketplace add DietrichGebert/ponytail   # third-party, from source
+  claude plugin install ponytail
+  ```
+  Loop this for every missing pillar and every bundle plugin (superpowers,
+  Ponytail, …). After installing, tell the user to run `/reload-plugins`
+  once (that one genuinely can't be done from a shell) — then re-run the
+  Step 1 snapshot yourself to confirm.
+- **Only hand the user a manual step when there truly is no CLI path** —
+  e.g. a companion with no npm/go/brew package and no plugin marketplace
+  (check before assuming; don't guess an install one-liner you're not sure
+  of — point at the upstream repo instead).
+- Fold in any Step 4 uninstalls *after* their migration completed
+  (`claude plugin uninstall <name>` / `claude mcp remove <name>` / `npm rm -g <pkg>`).
 
 ## Step 6 — verify & hand off
 
