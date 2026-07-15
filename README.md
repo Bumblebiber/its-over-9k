@@ -54,9 +54,14 @@ noisy searches, and saves state before compaction — no commands, no reading,
 no habits to learn.
 
 What automation can't do (picking a dispatch owner when superpowers is also
-installed, a one-time `hmem init`), the agent tells you about: on the very
-first session it offers a one-minute orientation, and **`/o9k-guide`** brings
-it back any time. The guide is personalized — it detects your actual setup and
+installed, a one-time `hmem init`), the agent handles conversationally:
+**`/o9k-init`** is the guided setup — it detects what's already on the
+machine, asks which companion bundle you want, installs git if you're missing
+it, and when something you already run collides with a bundle pick it explains
+*why* the pick is better and migrates your data before uninstalling anything
+(your call, either way). On the very first session the agent offers it
+automatically, and **`/o9k-guide`** brings back a one-minute orientation any
+time. The guide is personalized — it detects your actual setup and
 mentions only what's missing, offering to fix each item for you. A fully set-up
 install gets three sentences: *everything runs by itself, nothing to do,
 `/o9k-stats` shows the effect.*
@@ -75,10 +80,12 @@ o9k is a [Claude Code plugin marketplace](https://code.claude.com/docs/en/plugin
 /plugin install o9k-recon@o9k
 ```
 
-Then set up the memory backend. **hmem is the available default** today:
+Then run **`/o9k-init`** in a session — it detects your setup, walks you
+through the companion bundle choice, and handles conflicts and migration.
+Or set up the memory backend by hand. **hmem is the available default** today:
 
 ```bash
-npm install -g hmem && npx hmem init
+npm install -g hmem-mcp && hmem init
 ```
 
 **TIM** is a planned backend — not yet published. Once it ships, `o9k-memory`
@@ -145,7 +152,12 @@ are moot. Run them *instead of* the pillar they displace, or not at all:
 (vs caveman+scout).
 
 Full per-framework notes and install mechanisms:
-**[docs/COMBINING.md](docs/COMBINING.md)**.
+**[docs/COMBINING.md](docs/COMBINING.md)**. The same facts exist
+machine-readable as a **compatibility layer**
+(`plugins/o9k-core/compat/registry.json`): detection, arbitration, and the
+export-first migration driver (`o9k-migrate.mjs`) are all registry-driven —
+`/o9k-init` uses it to detect rivals, argue the trade-off, and migrate data
+before anything is uninstalled.
 
 ## Scouting for new frameworks
 

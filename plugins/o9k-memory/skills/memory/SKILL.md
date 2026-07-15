@@ -12,7 +12,7 @@ context — into one cheap call. o9k's available default is **hmem**
 and not yet published; once it ships the SessionStart hook auto-detects and
 prefers it. Both follow the same token discipline below.
 
-No memory MCP configured? Point the user at `npm i -g hmem && npx hmem init`
+No memory MCP configured? Point the user at `npm i -g hmem-mcp && hmem init`
 once, then continue without memory features.
 
 ## Session start — briefing, not history

@@ -1,22 +1,18 @@
-// detect.mjs — shared setup detection for o9k-core (hook + /o9k-guide).
+// detect.mjs — shared setup detection for o9k-core (hook + /o9k-guide + /o9k-init).
 //
 // Zero dependencies. Everything degrades gracefully: a probe that can't run
 // reports `null` (unknown), never throws. Set O9K_CORE_HOOK=off to disable
 // the o9k-core SessionStart hook entirely.
+//
+// All framework knowledge (who claims which concern, how to detect it, why a
+// bundle pick beats a rival) lives in ../compat/registry.json — this file is
+// only the probe engine. Adding a framework = adding a registry entry.
 
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-
-export const PILLARS = [
-  "o9k-core",
-  "o9k-caveman",
-  "o9k-scout",
-  "o9k-dispatch",
-  "o9k-memory",
-  "o9k-recon",
-];
+import { fileURLToPath } from "node:url";
 
 export function readJsonSafe(p) {
   try {
@@ -34,6 +30,21 @@ export function readStdinJson() {
     return {};
   }
 }
+
+const REGISTRY_PATH = fileURLToPath(new URL("../compat/registry.json", import.meta.url));
+
+/** The compatibility registry — single source of truth for concerns/frameworks/bundles. */
+export function loadRegistry() {
+  return (
+    readJsonSafe(REGISTRY_PATH) || { concerns: {}, bundles: {}, frameworks: {} }
+  );
+}
+
+const REG = loadRegistry();
+
+export const PILLARS = Object.keys(REG.frameworks).filter(
+  (id) => REG.frameworks[id].kind === "pillar"
+);
 
 function onPath(bin) {
   try {
@@ -62,6 +73,26 @@ function mcpServerNames() {
   return Object.keys(cfg.mcpServers).map((k) => k.toLowerCase());
 }
 
+/** Run a registry `detect` spec. A miss means "not detected", never "not installed". */
+function probe(spec, keys, mcp) {
+  if (!spec) return false;
+  if (spec.plugin && spec.plugin.some((n) => keys.some((k) => k.startsWith(n + "@")))) return true;
+  if (spec.mcp && spec.mcp.some((frag) => mcp.some((s) => s.includes(frag)))) return true;
+  if (spec.env && spec.env.some((v) => !!process.env[v])) return true;
+  if (spec.path && spec.path.some((bin) => onPath(bin))) return true;
+  return false;
+}
+
+function detectByKind(kinds) {
+  const keys = enabledPluginKeys() || [];
+  const mcp = mcpServerNames();
+  const out = {};
+  for (const [id, f] of Object.entries(REG.frameworks)) {
+    if (kinds.includes(f.kind)) out[id] = probe(f.detect, keys, mcp);
+  }
+  return out;
+}
+
 /** Which o9k pillars are present. true/false, or null when undeterminable. */
 export function detectPillars(pluginRoot) {
   const keys = enabledPluginKeys();
@@ -79,35 +110,41 @@ export function detectPillars(pluginRoot) {
   return out;
 }
 
-/** Companion frameworks from the compatibility matrix. */
+/** Companion frameworks + essentials (git) from the registry. */
 export function detectCompanions() {
-  const keys = enabledPluginKeys() || [];
-  const mcp = mcpServerNames();
-  return {
-    hmem: onPath("hmem") || mcp.includes("hmem"),
-    tim: !!process.env.TIM_CLI || onPath("tim"),
-    context7: mcp.some((s) => s.includes("context7")),
-    serena: mcp.some((s) => s.includes("serena")),
-    superpowers: keys.some((k) => k.startsWith("superpowers@")),
-    ponytail: keys.some((k) => k.startsWith("ponytail@")),
-    beads: onPath("bd"),
-    astGrep: onPath("ast-grep") || onPath("sg"),
-    ccusage: onPath("ccusage"),
-  };
+  return detectByKind(["companion", "essential"]);
 }
 
-/** Arbitrations the user must resolve once (matrix ⚠️ cells that are live). */
+/**
+ * Rival frameworks: tools that claim a concern an o9k pillar or bundled
+ * companion already owns (🔴 rows of the matrix).
+ */
+export function detectRivals() {
+  return detectByKind(["rival"]);
+}
+
+/**
+ * Arbitrations the user must resolve once: any *exclusive* concern with two
+ * detected owners among pillars/companions (rivals are reported separately).
+ */
 export function detectConflicts(pillars, comp) {
-  const c = [];
-  if (pillars["o9k-dispatch"] && comp.superpowers) {
-    c.push(
-      "dispatch has two owners: o9k-dispatch AND superpowers' dispatch skills — keep one, disable the other."
+  const owners = {}; // concern -> [framework id]
+  for (const [id, f] of Object.entries(REG.frameworks)) {
+    if (f.kind === "rival") continue;
+    const detected = f.kind === "pillar" ? pillars[id] : comp[id];
+    if (!detected) continue;
+    for (const c of f.concerns || []) (owners[c] ??= []).push(id);
+  }
+  const out = [];
+  for (const [concern, ids] of Object.entries(owners)) {
+    const meta = REG.concerns[concern];
+    if (!meta?.exclusive || ids.length < 2) continue;
+    out.push(
+      `${concern} has two owners: ${ids.join(" AND ")} — one owner per concern; ` +
+        (meta.note || "keep one, disable the other.")
     );
   }
-  if (comp.hmem && comp.tim) {
-    c.push("two memory backends on PATH (hmem AND tim) — the hooks prefer TIM; uninstall one to be unambiguous.");
-  }
-  return c;
+  return out;
 }
 
 const MARKER = path.join(os.homedir(), ".claude", "o9k-first-run-done");

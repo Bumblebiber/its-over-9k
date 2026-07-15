@@ -1,5 +1,73 @@
 # Changelog
 
+## [0.7.0] — 2026-07-15
+
+### Added
+- **Compatibility layer in `o9k-core`** — the framework×concern knowledge is
+  now machine-readable instead of scattered prose:
+  - **`compat/registry.json`** — single source of truth: every pillar,
+    companion, essential (git) and rival with its concern claims, detection
+    spec (plugin/MCP/PATH/env), bundle membership, install command, the WHY
+    rationale vs. the bundle pick, and its migration adapter.
+  - **Generic arbitration**: `detectConflicts()` now flags any *exclusive*
+    concern with two detected owners — new collisions come free with a
+    registry entry, no code change.
+  - **`scripts/o9k-migrate.mjs`** — export-first migration driver for
+    `/o9k-init` Step 4. Per-rival adapters (claude-mem, mem0, task-master,
+    derived-index, repo-docs, home-config) copy raw data to
+    `~/o9k-migration-<date>/<rival>/raw/`, write a normalized
+    `exchange.json` (memory entries, tasks with dependencies) plus
+    `NOTES.md`/`MANIFEST.json`. Never deletes, never uninstalls.
+- `docs/COMBINING.md`: "The compatibility layer" section — the doc page is
+  now the human-readable rendering of the registry.
+
+### Changed
+- `detect.mjs`, `o9k-init.mjs`, `o9k-guide.mjs` are registry-driven: labels,
+  bundle deltas, rival list (now printed with the WHY and the migrate
+  command) all come from `compat/registry.json`. Public API unchanged.
+- `/o9k-init` skill: the WHY table is replaced by the registry-fed snapshot
+  output; Step 4 migration starts with `o9k-migrate.mjs` instead of manual
+  copying.
+
+## [0.6.0] — 2026-07-15
+
+### Added
+- **`/o9k-init` skill in `o9k-core`** — guided first-install & reconfiguration:
+  - **Detect first** (`scripts/o9k-init.mjs`, read-only): pillars, git, memory
+    backend, companions, per-bundle deltas, rival frameworks, arbitrations.
+  - **Interview**: bundle choice presented as a delta from the actual setup,
+    agent-run (non-interactive flags) vs. user-run (interactive) execution.
+  - **Cheap-model policy**: on a flagship model the skill recommends
+    `/model haiku` once and pushes detection/installs into cheap subagents
+    either way — setup never burns flagship tokens on the heavy lifting.
+  - **git as an essential**: not a hard prerequisite, but the skill recommends
+    it with a reason and installs it (platform-specific) on the user's go.
+  - **Conflict resolution with a WHY table**: for every detected rival
+    (claude-mem/mem0, Graphify/claude-context/codebase-memory,
+    token-optimizer, task-master, BMAD/spec-kit/SuperClaude) the agent can
+    explain in one breath why the bundle pick is the better half of the pair;
+    the user chooses uninstall-and-migrate or keep-rival-drop-companion.
+  - **Mandatory migration on uninstall**: export to
+    `~/o9k-migration-<date>/` first (data is never deleted), then migrate —
+    memory rivals → hmem entries, task-master → beads issues, spec docs stay
+    in the repo.
+- `detect.mjs`: companions now include `git`; new `detectRivals()`
+  (best-effort via enabled plugins, MCP server names, PATH).
+- `install/o9k-companions.sh`: git line in the prerequisite check.
+
+### Changed
+- First-run SessionStart offer now points to `/o9k-init` (guided setup);
+  `/o9k-guide` stays the read-only orientation and links to it.
+- `companion-bundles` skill defers to `/o9k-init` for first installs.
+
+### Fixed
+- **hmem npm package name**: the package is **`hmem-mcp`** (binary stays
+  `hmem`) — `npm install -g hmem` was a 404. Corrected in README, the
+  companions installer, `/o9k-guide` (script + skill), the memory skill, and
+  the update checker's npm target map (it was version-checking a nonexistent
+  package). Also dropped `npx hmem init` (resolves the wrong package) in
+  favor of plain `hmem init`.
+
 ## [0.5.0] — 2026-07-09
 
 ### Added

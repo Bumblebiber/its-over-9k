@@ -48,8 +48,9 @@ if (conflicts.length) {
 if (isFirstRun()) {
   lines.push(
     "First o9k session on this machine: briefly tell the user o9k is now active and fully " +
-      "automatic, and offer a one-minute orientation via /o9k-guide (run the o9k-guide skill " +
-      "if they accept). Do this once, at a natural moment — never interrupt an explicit task."
+      "automatic, and offer the guided setup via /o9k-init (companions, git, conflict " +
+      "resolution — run the o9k-init skill if they accept; /o9k-guide is the read-only " +
+      "orientation). Do this once, at a natural moment — never interrupt an explicit task."
   );
   markFirstRunDone();
 }

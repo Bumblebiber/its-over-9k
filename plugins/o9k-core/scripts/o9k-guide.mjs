@@ -7,10 +7,13 @@
 
 import {
   PILLARS,
+  loadRegistry,
   detectPillars,
   detectCompanions,
   detectConflicts,
 } from "./detect.mjs";
+
+const REG = loadRegistry();
 
 const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || "";
 const pillars = detectPillars(pluginRoot);
@@ -30,17 +33,9 @@ console.log(`Memory backend: ${backend}`);
 
 console.log("");
 console.log("Companions detected:");
-const compNames = {
-  context7: "Context7 (live docs MCP)",
-  serena: "Serena (symbol ops MCP)",
-  superpowers: "superpowers (methodology plugin)",
-  ponytail: "Ponytail (code minimalism plugin)",
-  beads: "beads (task graph, `bd` CLI)",
-  astGrep: "ast-grep (structural search)",
-  ccusage: "ccusage (cost reports)",
-};
-for (const [key, label] of Object.entries(compNames)) {
-  console.log(`  ${label.padEnd(36)} ${mark(comp[key])}`);
+for (const [id, f] of Object.entries(REG.frameworks)) {
+  if (f.kind !== "companion" || id === "hmem" || id === "tim") continue;
+  console.log(`  ${f.label.padEnd(36)} ${mark(comp[id])}`);
 }
 
 console.log("");
@@ -53,7 +48,7 @@ if (conflicts.length) {
 
 const gaps = [];
 if (backend === "NONE")
-  gaps.push("no memory backend — sessions start from zero. Fix: npm i -g hmem && npx hmem init");
+  gaps.push("no memory backend — sessions start from zero. Fix: npm i -g hmem-mcp && hmem init");
 for (const p of PILLARS) {
   if (pillars[p] === false) gaps.push(`pillar ${p} not installed — /plugin install ${p}@o9k`);
 }

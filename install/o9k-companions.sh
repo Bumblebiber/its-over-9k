@@ -57,13 +57,14 @@ head "Prerequisites"
 for tool in node npm; do
   have "$tool" && say "  ✓ $tool" || say "  ✗ $tool  (required — install it first)"
 done
+have git   && say "  ✓ git"                 || say "  · git not found — strongly recommended for any dev machine (/o9k-init offers to install it)"
 have uvx   && say "  ✓ uvx (Serena)"        || say "  · uvx not found — needed only for Serena (pip install uv)"
 have claude && say "  ✓ claude CLI (MCP add)" || say "  · claude CLI not found — needed to register MCP servers"
 
 # --- MINIMAL: memory + live docs (zero-conflict foundation) ------------------
 head "Memory backend  (concern: memory — ONE owner only)"
 step   "hmem — available default memory MCP" \
-       "npm install -g hmem && npx hmem init"
+       "npm install -g hmem-mcp && hmem init"
 say    "      (TIM is planned/unreleased; o9k-memory auto-prefers it once it ships.)"
 
 head "Live library docs  (concern: none — orthogonal, pure add)"

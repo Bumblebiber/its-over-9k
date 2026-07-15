@@ -6,6 +6,18 @@ them from fighting. The general law (from `using-o9k`): **exactly one owner per
 concern** — one output style, one SessionStart injector, one repo map, one plan,
 one dispatch mechanism, one memory backend.
 
+## The compatibility layer
+
+Everything on this page also exists machine-readable:
+**`plugins/o9k-core/compat/registry.json`** maps every framework to the
+concern(s) it claims, how to detect it, which bundle it belongs to, and — for
+rivals — why the bundle pick wins and which migration adapter applies. The
+detection scripts (`detect.mjs`, `o9k-init.mjs`, `o9k-guide.mjs`, the
+SessionStart hook) and the migration driver (`o9k-migrate.mjs`) all read that
+registry; arbitration is computed generically (any *exclusive* concern with
+two detected owners is flagged). This page is the human-readable rendering —
+when adding a framework, update the registry **and** the matrix below.
+
 ## How to read a candidate
 
 Every framework maps to one question: **which o9k concern does it claim?**

@@ -40,7 +40,7 @@ const flag = process.argv[2] || "";
 
 // npm-global CLIs we can check and safely auto-update. Key = detect.mjs field.
 const NPM_TARGETS = {
-  hmem: "hmem",
+  hmem: "hmem-mcp",
   astGrep: "@ast-grep/cli",
   ccusage: "ccusage",
 };

@@ -1,0 +1,190 @@
+{
+  "//": "o9k compatibility registry — the single machine-readable source of truth for which framework claims which concern. detect.mjs, o9k-init.mjs, o9k-guide.mjs, session-start.mjs and o9k-migrate.mjs all read this file; docs/COMBINING.md is the human-readable rendering of the same facts. Adding a framework = one entry here (+ a matrix row in the docs).",
+  "concerns": {
+    "doctrine": { "exclusive": false, "desc": "efficiency rules of engagement + arbitration" },
+    "output-style": { "exclusive": true, "desc": "how the agent writes (compression, tone)" },
+    "overview": { "exclusive": true, "desc": "the one repo map / code index per session" },
+    "symbols": { "exclusive": true, "desc": "symbol-level navigation and edits" },
+    "dispatch": { "exclusive": true, "desc": "subagent isolation mechanism" },
+    "memory": { "exclusive": true, "desc": "persistent memory backend", "note": "the o9k-memory hooks prefer TIM; uninstall one to be unambiguous." },
+    "memory-integration": { "exclusive": false, "desc": "hooks wiring a memory backend into sessions" },
+    "methodology": { "exclusive": true, "desc": "the process spine (plan/TDD/review workflow)" },
+    "plan": { "exclusive": true, "desc": "the store that owns work items" },
+    "docs": { "exclusive": false, "desc": "live library documentation" },
+    "cost": { "exclusive": false, "desc": "usage/cost reporting" },
+    "code-minimalism": { "exclusive": false, "desc": "smallest-diff discipline" },
+    "structural-search": { "exclusive": false, "desc": "AST-level queries (feeds overview, builds none)" },
+    "discovery": { "exclusive": false, "desc": "scouting new companion frameworks" },
+    "vcs": { "exclusive": false, "desc": "version control" }
+  },
+  "bundles": {
+    "minimal": ["hmem", "context7", "ponytail"],
+    "recommended": ["hmem", "context7", "ponytail", "superpowers", "beads", "serena"],
+    "max": ["hmem", "context7", "ponytail", "superpowers", "beads", "serena", "astGrep", "ccusage"]
+  },
+  "frameworks": {
+    "o9k-core": { "kind": "pillar", "label": "o9k-core", "concerns": ["doctrine"] },
+    "o9k-caveman": { "kind": "pillar", "label": "o9k-caveman", "concerns": ["output-style"] },
+    "o9k-scout": { "kind": "pillar", "label": "o9k-scout", "concerns": ["overview"] },
+    "o9k-dispatch": { "kind": "pillar", "label": "o9k-dispatch", "concerns": ["dispatch"] },
+    "o9k-memory": { "kind": "pillar", "label": "o9k-memory", "concerns": ["memory-integration"] },
+    "o9k-recon": { "kind": "pillar", "label": "o9k-recon", "concerns": ["discovery"] },
+
+    "git": {
+      "kind": "essential",
+      "label": "git",
+      "concerns": ["vcs"],
+      "detect": { "path": ["git"] }
+    },
+
+    "hmem": {
+      "kind": "companion",
+      "label": "hmem (memory MCP)",
+      "concerns": ["memory"],
+      "detect": { "path": ["hmem"], "mcp": ["hmem"] },
+      "install": "npm install -g hmem-mcp && hmem init"
+    },
+    "tim": {
+      "kind": "companion",
+      "label": "TIM (memory MCP, planned)",
+      "concerns": ["memory"],
+      "detect": { "path": ["tim"], "env": ["TIM_CLI"] }
+    },
+    "context7": {
+      "kind": "companion",
+      "label": "Context7 (live docs MCP)",
+      "concerns": ["docs"],
+      "detect": { "mcp": ["context7"] },
+      "install": "claude mcp add context7 -- npx -y @upstash/context7-mcp"
+    },
+    "ponytail": {
+      "kind": "companion",
+      "label": "Ponytail (code minimalism plugin)",
+      "concerns": ["code-minimalism"],
+      "detect": { "plugin": ["ponytail"] }
+    },
+    "superpowers": {
+      "kind": "companion",
+      "label": "superpowers (methodology plugin)",
+      "concerns": ["methodology", "dispatch"],
+      "detect": { "plugin": ["superpowers"] }
+    },
+    "beads": {
+      "kind": "companion",
+      "label": "beads (task graph, `bd` CLI)",
+      "concerns": ["plan"],
+      "detect": { "path": ["bd"] }
+    },
+    "serena": {
+      "kind": "companion",
+      "label": "Serena (symbol ops MCP)",
+      "concerns": ["symbols"],
+      "detect": { "mcp": ["serena"] }
+    },
+    "astGrep": {
+      "kind": "companion",
+      "label": "ast-grep (structural search)",
+      "concerns": ["structural-search"],
+      "detect": { "path": ["ast-grep", "sg"] },
+      "install": "npm install -g @ast-grep/cli"
+    },
+    "ccusage": {
+      "kind": "companion",
+      "label": "ccusage (cost reports)",
+      "concerns": ["cost"],
+      "detect": { "path": ["ccusage"] },
+      "install": "npm install -g ccusage"
+    },
+
+    "claudeMem": {
+      "kind": "rival",
+      "label": "claude-mem",
+      "concerns": ["memory"],
+      "detect": { "plugin": ["claude-mem"], "mcp": ["claude-mem"] },
+      "vs": "hmem",
+      "why": "hmem is what o9k-memory's hooks are wired to: session-start briefing, deep recall on demand, checkpoint-before-compact, cross-device sync. A second memory writes the same lessons to a place no hook reads — split-brain memory.",
+      "migrate": { "adapter": "claude-mem", "target": "hmem" }
+    },
+    "mem0": {
+      "kind": "rival",
+      "label": "mem0",
+      "concerns": ["memory"],
+      "detect": { "mcp": ["mem0"] },
+      "vs": "hmem",
+      "why": "Same memory concern, but hosted and outside the hook wiring — hmem keeps memory local, hook-integrated and inspectable.",
+      "migrate": { "adapter": "mem0", "target": "hmem" }
+    },
+    "graphify": {
+      "kind": "rival",
+      "label": "Graphify",
+      "concerns": ["overview"],
+      "detect": { "mcp": ["graphify"], "plugin": ["graphify"] },
+      "vs": "scout (pillar)",
+      "why": "Index-based overviews bulk-inject retrieved context and go stale between reindexes. Scout builds one canonical map per session from the live tree — no index server, no staleness, and it feeds ast-grep instead of fighting it.",
+      "migrate": { "adapter": "derived-index" }
+    },
+    "claudeContext": {
+      "kind": "rival",
+      "label": "claude-context",
+      "concerns": ["overview"],
+      "detect": { "mcp": ["claude-context", "code-context"] },
+      "vs": "scout (pillar)",
+      "why": "A vector index of the repo is a second overview owner that drifts from the live tree. Scout's per-session map needs no index server and never serves stale results.",
+      "migrate": { "adapter": "derived-index" }
+    },
+    "codebaseMemory": {
+      "kind": "rival",
+      "label": "codebase-memory-mcp",
+      "concerns": ["overview"],
+      "detect": { "mcp": ["codebase-memory"] },
+      "vs": "scout (pillar)",
+      "why": "A code knowledge graph is a second overview owner. Scout's one-map-per-session rule delivers the same navigation without the index build and staleness cost.",
+      "migrate": { "adapter": "derived-index" }
+    },
+    "tokenOptimizer": {
+      "kind": "rival",
+      "label": "token-optimizer-mcp",
+      "concerns": ["output-style", "overview"],
+      "detect": { "mcp": ["token-optimizer"] },
+      "vs": "caveman + scout (pillars)",
+      "why": "Same concern, opaque middle-man: it rewrites context in flight. caveman+scout achieve the savings at the source (say less, load less) and stay inspectable — /o9k-stats can prove the effect.",
+      "migrate": { "adapter": "derived-index" }
+    },
+    "taskMaster": {
+      "kind": "rival",
+      "label": "task-master",
+      "concerns": ["plan"],
+      "detect": { "path": ["task-master"], "mcp": ["task-master", "taskmaster"] },
+      "vs": "beads",
+      "why": "Both are plan stores, only one may own work items. beads is a dependency-aware graph with CLI+MCP, plays under the one-plan-owner rule with superpowers, and doesn't claim the methodology spine the way task-master's PRD flow does.",
+      "migrate": { "adapter": "task-master", "target": "beads" }
+    },
+    "bmad": {
+      "kind": "rival",
+      "label": "BMAD",
+      "concerns": ["methodology", "plan"],
+      "detect": { "plugin": ["bmad", "bmad-method"] },
+      "vs": "superpowers",
+      "why": "One methodology spine, ever. superpowers is the tested one: brainstorm→plan→TDD→review as skills, composes with o9k under a single named arbitration. BMAD also carries its own plan store, colliding with beads too.",
+      "migrate": { "adapter": "repo-docs", "dirs": [".bmad-core", "bmad-docs", "docs/prd"] }
+    },
+    "specKit": {
+      "kind": "rival",
+      "label": "spec-kit",
+      "concerns": ["methodology"],
+      "detect": { "path": ["specify"] },
+      "vs": "superpowers",
+      "why": "One methodology spine, ever. spec-kit wants to own the whole workflow; its specs are project documents that survive in the repo without the tool.",
+      "migrate": { "adapter": "repo-docs", "dirs": [".specify", "specs"] }
+    },
+    "superClaude": {
+      "kind": "rival",
+      "label": "SuperClaude",
+      "concerns": ["methodology"],
+      "detect": { "plugin": ["superclaude"], "mcp": ["superclaude"] },
+      "vs": "superpowers",
+      "why": "One methodology spine, ever. superpowers composes with o9k under a single named arbitration; SuperClaude's command suite wants the whole workflow.",
+      "migrate": { "adapter": "home-config", "dirs": ["~/.superclaude", "~/.claude/superclaude"] }
+    }
+  }
+}

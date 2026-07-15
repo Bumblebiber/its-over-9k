@@ -5,6 +5,11 @@ description: "Install a conflict-free stack of third-party o9k companion framewo
 
 # companion-bundles — one-command companion install
 
+> **Guided flow available:** `/o9k-init` (o9k-core) wraps this skill in a full
+> interview — detection, bundle choice as a delta, conflict resolution with
+> migration, git setup. Prefer it for first installs; use this skill directly
+> when the user already knows which bundle they want.
+
 o9k's pillars are Claude Code plugins. The *companions* (memory backend, live
 docs, methodology, task graph, symbols) live in other ecosystems — npm, uvx,
 MCP, other plugin marketplaces. This skill installs a **curated, internally

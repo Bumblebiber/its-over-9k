@@ -34,7 +34,7 @@ already done:
 
 | Gap in report | Tell the user |
 |---------------|---------------|
-| No memory backend | Run `npm i -g hmem && npx hmem init` once — without it, sessions start from zero. |
+| No memory backend | Run `npm i -g hmem-mcp && hmem init` once — without it, sessions start from zero. |
 | Missing pillar(s) | `/plugin install <name>@o9k` for each. |
 | dispatch × superpowers arbitration | Two dispatch owners are active. Say which to disable and offer to do it for them. |
 | Two memory backends | Say which one wins (TIM) and offer to remove the other. |
@@ -44,6 +44,8 @@ Whenever a fix is something you can execute (an install command, a config
 edit), **offer to do it right now** — the user should never have to copy-paste.
 
 **3. "Optional, when curious" (max 5 lines).**
+- `/o9k-init` — guided setup/reconfiguration: companions, git, conflict
+  resolution with migration. The fix-everything path when gaps pile up.
 - `/o9k-stats` — proof the savings are real, measured from session logs.
 - `/o9k-update` — check pillars & companions for updates, apply the safe ones.
 - `/o9k-guide` — this orientation, any time.
