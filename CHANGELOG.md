@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.7.3] — 2026-07-15
+
+### Added
+- **Pillar drift check in the SessionStart hook.** If a previously-enabled
+  pillar goes missing or gets disabled (accidental `claude plugin
+  uninstall`/`disable`, a marketplace hiccup, …), the hook now flags it by
+  name with an install command, instead of silently issuing standing orders
+  for tools that aren't actually there. Only fires on a confirmed miss
+  (`enabledPlugins` readable, pillar absent) — never on undeterminable
+  detection.
+
 ## [0.7.2] — 2026-07-15
 
 ### Changed

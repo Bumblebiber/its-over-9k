@@ -16,6 +16,8 @@ import {
   isFirstRun,
   markFirstRunDone,
   readStdinJson,
+  loadRegistry,
+  PILLARS,
 } from "./detect.mjs";
 
 if (process.env.O9K_CORE_HOOK === "off") process.exit(0);
@@ -47,6 +49,25 @@ const lines = [
 
 if (conflicts.length) {
   lines.push("Arbitration needed (mention once, don't nag): " + conflicts.join(" "));
+}
+
+// Drift check: a pillar this machine had before (there's a settings.json to
+// read at all — pillars isn't null) but that's now missing/disabled.
+const reg = loadRegistry();
+const missingPillars = PILLARS.filter(
+  (id) => id !== "o9k-core" && pillars[id] === false
+);
+if (missingPillars.length) {
+  const labels = missingPillars.map((id) => reg.frameworks[id]?.label || id);
+  lines.push(
+    "Pillar drift detected: " +
+      labels.join(", ") +
+      (missingPillars.length > 1 ? " are" : " is") +
+      " missing or disabled — the doctrine above assumes the full stack. Mention it once " +
+      "to the user and suggest `claude plugin install " +
+      missingPillars[0] +
+      "@o9k` (or /o9k-init to fix all gaps at once)."
+  );
 }
 
 if (isFirstRun()) {
