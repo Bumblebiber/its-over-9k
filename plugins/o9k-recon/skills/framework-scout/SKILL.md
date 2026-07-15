@@ -80,7 +80,47 @@ The tie-breaker question for every candidate: *"If I install this, do two things
 now inject at SessionStart / rewrite output / build an overview / own the plan?"*
 If yes → 🔴, and name which owner wins.
 
-## Step 4 — Report & propose
+## Step 4 — Trial (measure before adopting, never on the live config)
+
+A 🟢 verdict from a README is a *hypothesis*. Before a candidate goes into a
+bundle (or gets recommended to the user as install-worthy), run it once in
+isolation and replace the README claims with measured numbers. **The live
+setup is never the test bench.**
+
+### Isolation — pick the lowest rung that answers the question
+
+1. **Rung 0 — standalone probe, no Claude integration at all.** The default
+   for MCP servers. Start the server directly (`uvx <pkg>`, or the package in
+   a throwaway venv), call its tools by hand (stdio JSON-RPC or the package's
+   own CLI), capture raw output. Answers the two core questions — is the
+   output compact? does it stay in its lane? — without registering anything.
+2. **Rung 1 — sandboxed config.** Only when the actual Claude Code
+   integration is the thing under test (hooks, SessionStart injection):
+   `CLAUDE_CONFIG_DIR=/tmp/o9k-trial-<name>` and install the candidate into
+   that sandbox, never into `~/.claude`. Teardown = delete the directory.
+3. **Rung 2 — throwaway target repo.** Whatever repo the tool indexes/watches
+   is a clone or fixture, never the live project — even a "read-only" indexer
+   may drop dotfiles or caches into it.
+
+### Measure — four numbers, captured not estimated
+
+| # | Measurement | How |
+|---|-------------|-----|
+| 1 | **Footprint diff** | Snapshot sandbox config + target repo before/after (`find | sort` + checksums). Any new hooks, MCP entries, dotfiles? This is the collision check with evidence. |
+| 2 | **Token profile** | Run the tool's main query, count tokens of the raw output, compare against the grep+read baseline for the same question. This decides whether a "scout-feeder" actually feeds or floods. |
+| 3 | **Runtime cost** | What did it stand up — DB, daemon, watcher, build step? Check the process list before/after. |
+| 4 | **Concern check** | Does observed behavior match the claimed concern, or did it quietly persist memory / inject context / rewrite output? |
+
+### Verdict gate
+
+- Numbers beat claims: the trial's measured token profile replaces the
+  README's headline in the report and the matrix row.
+- **Teardown is part of the trial**: prove the live `~/.claude` is
+  byte-identical to before (snapshot diff), remove the sandbox and venv.
+- A candidate that can't be trialed in isolation (install is irreversible,
+  demands global state) — that itself is a finding: note it, don't adopt.
+
+## Step 5 — Report & propose
 
 Output a compact candidate report — **not** the raw findings:
 
@@ -88,7 +128,8 @@ Output a compact candidate report — **not** the raw findings:
 CANDIDATE: <name> (<owner>/<repo>) — <stars>★, last commit <date>, <license>
 CONCERN:   <o9k concern or "none">
 VERDICT:   🟢/⚪/🔴 — <one-line rule>
-INSTALL:   <plugin | mcp add | npm/uvx one-liner>
+INSTALL:   <plugin | mcp add | npx/uvx one-liner>
+TRIAL:     <not run | measured: tokens vs baseline, footprint, runtime cost>
 NOTE:      <claim to verify, or which owner it displaces>
 ```
 
@@ -104,7 +145,10 @@ Then, if it earns a slot:
 
 - **Don't** paste search results or full READMEs into context — classify, keep
   the verdict line.
-- **Don't** trust a token-savings headline — mark it "unverified" until measured.
+- **Don't** trust a token-savings headline — mark it "unverified" until a
+  Step 4 trial measured it.
+- **Don't** install a candidate into the live `~/.claude` to "just try it" —
+  that's what the trial sandbox is for.
 - **Don't** bundle a 🔴 framework next to the pillar it collides with — a bundle
   must be internally conflict-free.
 - **Don't** scout every session — it's a scheduled recon, not a per-turn habit.

@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.0] — 2026-07-15
+
+### Added
+- **Trial protocol in `framework-scout` (o9k-recon 0.4.0).** New Step 4:
+  before any candidate is bundled or recommended, it gets measured in
+  isolation — never on the live config. Three isolation rungs (standalone
+  probe → `CLAUDE_CONFIG_DIR` sandbox → throwaway target repo), four captured
+  measurements (footprint diff, token profile vs grep baseline, runtime cost,
+  concern check), and a teardown that proves `~/.claude` is byte-identical
+  afterwards. The report format gains a `TRIAL:` line — measured numbers
+  replace README claims.
+
 ## [0.7.3] — 2026-07-15
 
 ### Added
