@@ -2,36 +2,35 @@
   "name": "o9k",
   "owner": { "name": "Bumblebiber" },
   "description": "its-over-9k — meta-framework combining token-efficiency frameworks (output compression, context discipline, subagent isolation, memory MCP) for Claude Code.",
-  "metadata": { "pluginRoot": "./plugins" },
   "plugins": [
     {
       "name": "o9k-core",
-      "source": "./o9k-core",
+      "source": "./plugins/o9k-core",
       "description": "The o9k doctrine: efficiency rules of engagement and the arbitration layer that keeps all other efficiency plugins from colliding. Zero-effort: a SessionStart hook activates everything automatically; /o9k-guide explains the rest. Install this first."
     },
     {
       "name": "o9k-caveman",
-      "source": "./o9k-caveman",
+      "source": "./plugins/o9k-caveman",
       "description": "Output compression: telegraphic response style with lite/full/ultra levels and automatic fallback to full prose for safety-critical content. Adapted from JuliusBrussee/caveman (MIT)."
     },
     {
       "name": "o9k-scout",
-      "source": "./o9k-scout",
+      "source": "./plugins/o9k-scout",
       "description": "Context discipline: load structure before files, search before read, one canonical repo map per session."
     },
     {
       "name": "o9k-dispatch",
-      "source": "./o9k-dispatch",
+      "source": "./plugins/o9k-dispatch",
       "description": "Cost-gated subagent fan-out: isolate searches and decomposable work in subagents that return results, not transcripts."
     },
     {
       "name": "o9k-memory",
-      "source": "./o9k-memory",
+      "source": "./plugins/o9k-memory",
       "description": "Persistent memory integration: session-start briefing, on-demand recall, save-before-compact. Uses the hmem memory MCP by default; auto-detects and prefers TIM once it ships."
     },
     {
       "name": "o9k-recon",
-      "source": "./o9k-recon",
+      "source": "./plugins/o9k-recon",
       "description": "Discovery & onboarding: a GitHub Scout skill (framework-scout) for finding new agent frameworks and classifying them symbiotic/orthogonal/blocking, plus one-command companion bundle installs (companion-bundles)."
     }
   ]
