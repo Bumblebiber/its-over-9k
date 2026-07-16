@@ -54,3 +54,12 @@ no sign-off:
 
 Integrate the conclusion; discard the rest. If a result contradicts the main
 context, say so explicitly and resolve it — don't silently keep both versions.
+
+## Model choice (when o9k-roster is installed)
+
+Dispatch decides WHETHER to delegate; roster decides WHO does it. Before
+spawning a subagent/worker of non-trivial scope, map the task to a roster
+role (scout, researcher, summarizer, implementer, …) and consult
+`roster pick --role <role>` — or hand the whole spawn to
+`roster dispatch` — instead of defaulting to your own model family. See the
+`roster` skill. Without o9k-roster installed, this section is a no-op.

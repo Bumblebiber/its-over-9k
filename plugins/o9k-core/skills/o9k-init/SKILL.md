@@ -72,6 +72,14 @@ Ask, don't lecture. One question at a time, options not essays. In order:
      `hmem init`) and the user drives.
 3. **Conflicts** — only if Step 1 found rivals; see Step 3.
 4. **git** — only if missing; see below.
+5. **Multi-agent roster** — only if the `o9k-roster` pillar is installed and
+   `~/.o9k/roster.json` is missing: *"Use the multi-agent setup (roster)? It
+   routes work to models by role with fallback chains and warns before
+   session limits."* On yes, during setup run:
+   `node "<marketplace>/plugins/o9k-roster/scripts/roster.mjs" init`
+   then tell the user to curate `~/.o9k/roster.json` (models, chains) — the
+   scaffold is example data. On no, skip; the limit-watch hook stays silent
+   without config.
 
 ### Multi-CLI hosts (do not install CLIs)
 
