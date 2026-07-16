@@ -140,6 +140,10 @@ Then, if it earns a slot:
    [install/o9k-companions.sh](../../../../install/o9k-companions.sh) and
    [docs/BUNDLES.md](../../../../docs/BUNDLES.md).
 3. Save the finding to memory (`memory` skill) so the next scout diffs against it.
+4. Before it graduates into a *recommended* bundle: measure the combination,
+   not just the candidate — that's the `bundle-bench` skill
+   (`benchmarks/run-bench.sh`). The trial proves a candidate is clean alone;
+   bundle-bench proves it earns its seat next to the others.
 
 ## Anti-patterns
 

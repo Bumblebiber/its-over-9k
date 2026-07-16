@@ -1,0 +1,12 @@
+{
+  "//": "o9k bundle-bench task set. The task-set hash printed by run-bench.sh covers every file under tasks/; results are only comparable when hash, target_ref and model match.",
+  "version": 1,
+  "target_repo": "https://github.com/Bumblebiber/its-over-9k",
+  "target_ref": "bench-target-v1",
+  "tasks": ["t1-orient", "t2-trace", "t3-edit", "t4-debug", "t5-digest"],
+  "scoring": {
+    "success": "check.sh exits 0",
+    "cost": "tokens (input+output) and USD from claude -p JSON output",
+    "rule": "lower cost only counts between runs with equal or better success count"
+  }
+}

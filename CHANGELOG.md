@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.0] — 2026-07-16
+
+### Added
+- **`bundle-bench` skill + `benchmarks/` (o9k-recon 0.5.0).** The companion
+  bundles were curated by best guess; now they can be measured. Autoresearch-
+  style loop: a fixed 5-task workload (orient/trace/edit/debug/digest,
+  `benchmarks/tasks/`) runs against a pinned clone of this repo via
+  `benchmarks/run-bench.sh`, each combo isolated in its own
+  `CLAUDE_CONFIG_DIR` sandbox (the runner refuses the live `~/.claude`).
+  Ablation instead of brute force: bare → pillars → +1 companion each →
+  greedy combine. Pass count ranks first, cost breaks ties; results land as
+  comparable JSON (`benchmarks/results/`, stamped with tasks_hash +
+  target_ref + model) and are PR-able — community-measured bundles graduate
+  into the registry's `bundles` block.
+
 ## [0.8.0] — 2026-07-15
 
 ### Added
