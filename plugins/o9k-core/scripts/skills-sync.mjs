@@ -68,10 +68,28 @@ function isIdenticalSymlink(linkPath, target) {
   }
 }
 
-function ensureSymlink(target, linkPath, dryRun) {
+function linkExists(linkPath) {
+  try {
+    fs.lstatSync(linkPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function ensureSymlink(target, linkPath, dryRun, errors) {
   if (isIdenticalSymlink(linkPath, target)) return false;
+
+  if (linkExists(linkPath)) {
+    const st = fs.lstatSync(linkPath);
+    if (!st.isSymbolicLink()) {
+      errors.push(`foreign content blocks symlink: ${linkPath}`);
+      return false;
+    }
+    if (!dryRun) fs.unlinkSync(linkPath);
+  }
+
   if (dryRun) return true;
-  if (fs.existsSync(linkPath)) fs.rmSync(linkPath, { recursive: true, force: true });
   const type = process.platform === "win32" ? "junction" : "dir";
   fs.symlinkSync(target, linkPath, type);
   return true;
@@ -120,8 +138,9 @@ export function syncSkills(options = {}) {
         if (!dryRun) fs.mkdirSync(host.skillDir, { recursive: true });
         for (const [, name] of SKILL_SOURCES) {
           const canonicalDir = path.join(canonical, name);
-          const linkPath = path.join(host.skillDir, name);
-          if (ensureSymlink(canonicalDir, linkPath, dryRun)) linked.push(linkPath);
+          if (!fs.existsSync(canonicalDir)) continue;
+          const linkPath = path.join(host.skillDir, `o9k-${name}`);
+          if (ensureSymlink(canonicalDir, linkPath, dryRun, errors)) linked.push(linkPath);
         }
       } catch (e) {
         errors.push(`${host.id} skillDir: ${e.message}`);

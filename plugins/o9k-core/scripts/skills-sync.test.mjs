@@ -14,11 +14,46 @@ test("syncSkills writes canonical and symlinks into codex skills dir", () => {
   fs.mkdirSync(path.join(tmp, ".codex"), { recursive: true });
   const r = syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
   assert.ok(fs.existsSync(path.join(tmp, ".agents/skills/o9k/scout/SKILL.md")));
-  const link = path.join(tmp, ".codex/skills/scout");
+  const link = path.join(tmp, ".codex/skills/o9k-scout");
   assert.ok(fs.lstatSync(link).isSymbolicLink());
   // idempotent
   const r2 = syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
   assert.equal(r2.errors.length, 0);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("syncSkills leaves foreign scout dir and creates o9k-scout symlink beside it", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-skills-"));
+  const skillsDir = path.join(tmp, ".codex/skills");
+  fs.mkdirSync(path.join(tmp, ".codex"), { recursive: true });
+  const foreignScout = path.join(skillsDir, "scout");
+  fs.mkdirSync(foreignScout, { recursive: true });
+  fs.writeFileSync(path.join(foreignScout, "SKILL.md"), "# foreign\n");
+
+  const r = syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
+
+  assert.ok(fs.statSync(foreignScout).isDirectory());
+  assert.equal(fs.readFileSync(path.join(foreignScout, "SKILL.md"), "utf8"), "# foreign\n");
+  const link = path.join(skillsDir, "o9k-scout");
+  assert.ok(fs.lstatSync(link).isSymbolicLink());
+  assert.ok(r.errors.every((e) => !e.includes("foreign")));
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("syncSkills preserves foreign o9k-scout content and reports error", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-skills-"));
+  const skillsDir = path.join(tmp, ".codex/skills");
+  fs.mkdirSync(skillsDir, { recursive: true });
+  const blocked = path.join(skillsDir, "o9k-scout");
+  fs.mkdirSync(blocked, { recursive: true });
+  fs.writeFileSync(path.join(blocked, "SKILL.md"), "# user skill\n");
+
+  const r = syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
+
+  assert.ok(fs.statSync(blocked).isDirectory());
+  assert.equal(fs.readFileSync(path.join(blocked, "SKILL.md"), "utf8"), "# user skill\n");
+  assert.ok(r.errors.some((e) => e.includes("foreign content blocks symlink")));
+  assert.ok(r.errors.some((e) => e.includes("o9k-scout")));
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
