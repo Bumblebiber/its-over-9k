@@ -116,6 +116,13 @@ Deterministic shell script — no LLM reasoning in the selection path.
   agent that observes a rate-limit error; marks the target unavailable until
   TTL expiry. This is the reliable path for subscription limits without a
   queryable API.
+- `roster dispatch --role <r> --prompt-file <f> --dir <taskdir>` — the
+  primary delegation entry point. Picks the model via the same chain logic,
+  **spawns the worker itself** in a tmux session, and returns only the
+  session handle + attach command. The calling agent never makes (or sees)
+  the model choice — selection stays in code, which both prevents
+  model-family favoritism and removes the "who should do this?" reasoning
+  step from the delegating agent.
 - `roster handoff --role <r> --dir <taskdir>` — picks a successor via the
   same chain logic, starts it **interactively inside a tmux session**
   (Hermes pattern — no `claude -p`; subscription plans do not cover
@@ -186,6 +193,12 @@ own copy of the logic.
   a curated live model list.
 - **No interactive-session takeover.** A successor never replaces the
   user's current terminal session; it always starts in its own tmux session.
+- **No MCP server in v1.** An MCP wrapper around `roster dispatch` was
+  considered and deferred: hooks cannot call MCP tools (so the script layer
+  is required regardless), a server adds per-host config and lifecycle
+  maintenance, and its tool schema would sit in every session context. If
+  agents in practice bypass the Bash path, a thin MCP wrapper around
+  `roster dispatch` is the designated v2 upgrade.
 
 ## Error handling
 
