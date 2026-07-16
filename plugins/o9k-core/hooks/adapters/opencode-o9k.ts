@@ -13,6 +13,7 @@ const SESSION_START_TARGETS = [
   "core/session-start",
   "memory/session-start",
   "core/update-check",
+  "roster/limit-watch",
 ] as const;
 
 function runHook(target: string): string | undefined {

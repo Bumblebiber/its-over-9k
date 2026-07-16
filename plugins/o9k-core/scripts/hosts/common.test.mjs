@@ -63,13 +63,14 @@ test("writeFileWithBackup writes a single rolling .o9k-bak only when content dif
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
-test("HOOK_WRAPPERS lists the four shared wrapper names with timeouts", () => {
+test("HOOK_WRAPPERS lists the shared wrapper names with timeouts", () => {
   const names = HOOK_WRAPPERS.map((w) => w.name);
   assert.deepEqual(names, [
     "o9k-core-session",
     "o9k-memory-session",
     "o9k-update-check",
     "o9k-memory-precompact",
+    "o9k-roster-limit-watch",
   ]);
   assert.ok(HOOK_WRAPPERS.every((w) => typeof w.timeout === "number"));
 });

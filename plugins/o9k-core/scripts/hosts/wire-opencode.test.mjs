@@ -21,6 +21,7 @@ test("buildOpencodePluginContent bakes absolute MARKETPLACE path", () => {
   assert.match(content, /core\/session-start/);
   assert.match(content, /memory\/session-start/);
   assert.match(content, /core\/update-check/);
+  assert.match(content, /roster\/limit-watch/);
   assert.match(content, /run-o9k-hook\.sh/);
   assert.match(content, /experimental\.session\.compacting/);
 });

@@ -42,6 +42,7 @@ test("wireCursor merges o9k hooks and preserves foreign hooks", () => {
   assert.ok(cmds.some((c) => c.includes("foreign-cursor.sh")));
   assert.ok(cmds.some((c) => c.includes("o9k-memory-session")));
   assert.ok(cmds.some((c) => c.includes("o9k-update-check")));
+  assert.ok(cmds.some((c) => c.includes("o9k-roster-limit-watch")));
 
   const pre = merged.hooks.preCompact?.map((h) => h.command) ?? [];
   assert.ok(pre.some((c) => c.includes("o9k-memory-precompact")));

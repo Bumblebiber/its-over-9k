@@ -50,7 +50,8 @@ test("mergeHermesHooksYaml preserves foreign hooks and adds o9k entries", () => 
   assert.ok(pre.some((c) => c.includes("o9k-core-session")));
   assert.ok(pre.some((c) => c.includes("o9k-memory-session")));
   assert.ok(pre.some((c) => c.includes("o9k-update-check")));
-  assert.equal(pre.filter((c) => c.includes("o9k-")).length, 3);
+  assert.ok(pre.some((c) => c.includes("o9k-roster-limit-watch")));
+  assert.equal(pre.filter((c) => c.includes("o9k-")).length, 4);
 
   const end = hookCommands(merged, "on_session_end");
   assert.ok(end.some((c) => c.includes("foreign-end.sh")));

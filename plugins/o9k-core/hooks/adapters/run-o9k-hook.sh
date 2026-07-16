@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: run-o9k-hook.sh <core|memory>/<script-basename>
+# Usage: run-o9k-hook.sh <core|memory|roster>/<script-basename>
 # Resolves O9K_MARKETPLACE_ROOT or walks from this file to plugins/.
 set -euo pipefail
 TARGET="${1:?target like core/session-start}"
@@ -12,6 +12,8 @@ case "$TARGET" in
            export CLAUDE_PLUGIN_ROOT="$ROOT/o9k-core" ;;
   memory/*) SCRIPT="$ROOT/o9k-memory/scripts/${TARGET#memory/}.mjs"
            export CLAUDE_PLUGIN_ROOT="$ROOT/o9k-memory" ;;
+  roster/*) SCRIPT="$ROOT/o9k-roster/scripts/${TARGET#roster/}.mjs"
+           export CLAUDE_PLUGIN_ROOT="$ROOT/o9k-roster" ;;
   *) echo "unknown target $TARGET" >&2; exit 1 ;;
 esac
 exec node "$SCRIPT"

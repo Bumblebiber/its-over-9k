@@ -18,7 +18,12 @@ function buildCursorHooksPatch(home) {
   return {
     version: 1,
     hooks: {
-      sessionStart: ["o9k-core-session", "o9k-memory-session", "o9k-update-check"].map((name) => ({
+      sessionStart: [
+        "o9k-core-session",
+        "o9k-memory-session",
+        "o9k-update-check",
+        "o9k-roster-limit-watch",
+      ].map((name) => ({
         command: cmd(`${name}.sh`),
         timeout: byName[name].timeout,
       })),

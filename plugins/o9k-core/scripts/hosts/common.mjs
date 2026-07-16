@@ -63,6 +63,7 @@ export const HOOK_WRAPPERS = [
   { name: "o9k-memory-session", target: "memory/session-start", timeout: 15 },
   { name: "o9k-update-check", target: "core/update-check", timeout: 20 },
   { name: "o9k-memory-precompact", target: "memory/pre-compact", timeout: 30 },
+  { name: "o9k-roster-limit-watch", target: "roster/limit-watch", timeout: 10 },
 ];
 
 /**

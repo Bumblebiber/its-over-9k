@@ -45,6 +45,7 @@ test("wireCodex merges o9k hooks and preserves foreign hooks", () => {
   assert.ok(cmds.some((c) => c.includes("foreign-codex.sh")));
   assert.ok(cmds.some((c) => c.includes("o9k-memory-session")));
   assert.ok(cmds.some((c) => c.includes("o9k-update-check")));
+  assert.ok(cmds.some((c) => c.includes("o9k-roster-limit-watch")));
 
   const pre = merged.hooks.PreCompact?.[0]?.hooks?.map((h) => h.command) ?? [];
   assert.ok(pre.some((c) => c.includes("o9k-memory-precompact")));
