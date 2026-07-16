@@ -15,7 +15,7 @@ import { wireOpencode } from "./hosts/wire-opencode.mjs";
 import { wireHermes } from "./hosts/wire-hermes.mjs";
 
 const CANONICAL_PROBE = "using-o9k";
-const O9K_HOOK_MARKER = /o9k-/;
+const O9K_HOOK_MARKER = /o9k/;
 
 const WIRERS = {
   codex: wireCodex,
@@ -124,7 +124,9 @@ export function wireHosts(options) {
   const dryRun = !!options.dryRun;
   const only = options.only?.map((s) => s.toLowerCase());
 
-  const hosts = detectHosts({ home, pathEnv: options.pathEnv ?? "" });
+  const detectOpts = { home };
+  if (options.pathEnv !== undefined) detectOpts.pathEnv = options.pathEnv;
+  const hosts = detectHosts(detectOpts);
   const results = [];
 
   for (const [id, host] of Object.entries(hosts)) {

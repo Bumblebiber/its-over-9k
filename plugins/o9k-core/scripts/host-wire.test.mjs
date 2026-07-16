@@ -9,6 +9,7 @@ import { detectHosts } from "./detect.mjs";
 import { syncSkills } from "./skills-sync.mjs";
 import { verifyHost, wireHosts } from "./host-wire.mjs";
 import { wireCodex } from "./hosts/wire-codex.mjs";
+import { wireOpencode } from "./hosts/wire-opencode.mjs";
 
 const coreRoot = fileURLToPath(new URL("..", import.meta.url));
 const marketRoot = path.join(coreRoot, "..");
@@ -27,6 +28,15 @@ test("verifyHost reports no before wiring", () => {
   assert.equal(v.skills, "no");
   assert.equal(v.hooks, "no");
   assert.equal(v.mcp, "no");
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
+test("verifyHost reports hooks=yes after wireOpencode", () => {
+  const home = makeTmpHome([".config/opencode"]);
+  wireOpencode({ home, marketplaceRoot: marketRoot });
+  const hosts = detectHosts({ home, pathEnv: "" });
+  const v = verifyHost(hosts.opencode, home);
+  assert.equal(v.hooks, "yes");
   fs.rmSync(home, { recursive: true, force: true });
 });
 

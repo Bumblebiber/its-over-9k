@@ -128,7 +128,9 @@ export function syncSkills(options = {}) {
 
   installCanonical(home, marketplaceRoot, canonical, dryRun, errors);
 
-  const hosts = detectHosts({ home, pathEnv: options.pathEnv ?? "" });
+  const detectOpts = { home };
+  if (options.pathEnv !== undefined) detectOpts.pathEnv = options.pathEnv;
+  const hosts = detectHosts(detectOpts);
 
   for (const host of Object.values(hosts)) {
     if (!host.present) continue;
