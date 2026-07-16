@@ -1,0 +1,87 @@
+{
+  "$comment": "o9k-roster user config. Copied to ~/.o9k/roster.json by 'roster init'. Curate models/roles/chains yourself — o9k ships no live model list. cmd templates are argv arrays; {model} and {prompt} are substituted literally per element.",
+  "clis": {
+    "claude": { "cmd": ["claude", "--model", "{model}", "{prompt}"] },
+    "codex": { "cmd": ["codex", "--model", "{model}", "{prompt}"] },
+    "cursor": { "cmd": ["cursor-agent", "--model", "{model}", "{prompt}"] },
+    "opencode": { "cmd": ["opencode", "--model", "{model}", "--prompt", "{prompt}"] }
+  },
+  "models": {
+    "claude-fable-5": {
+      "provider": "anthropic",
+      "tier": "frontier",
+      "cli": ["claude"],
+      "price": { "in": null, "out": null, "note": "fill in per effort level" },
+      "strengths": ["architecture", "review"],
+      "weaknesses": ["cost"]
+    },
+    "claude-opus": {
+      "provider": "anthropic",
+      "tier": "high",
+      "cli": ["claude"]
+    },
+    "claude-sonnet-5": {
+      "provider": "anthropic",
+      "tier": "mid",
+      "cli": ["claude"]
+    },
+    "claude-haiku": {
+      "provider": "anthropic",
+      "tier": "low",
+      "cli": ["claude"]
+    },
+    "gpt-5.6-sol": {
+      "provider": "openai",
+      "tier": "frontier",
+      "cli": ["codex"]
+    },
+    "gpt-5.6-terra": {
+      "provider": "openai",
+      "tier": "high",
+      "cli": ["codex"]
+    },
+    "gpt-5.6-luna": {
+      "provider": "openai",
+      "tier": "mid",
+      "cli": ["codex"]
+    },
+    "gpt-5.4-mini": {
+      "provider": "openai",
+      "tier": "low",
+      "cli": ["codex"]
+    },
+    "composer-2.5": {
+      "provider": "cursor",
+      "tier": "mid",
+      "cli": ["cursor"]
+    },
+    "grok-4.5-high": {
+      "provider": "xai",
+      "tier": "high",
+      "cli": ["opencode"]
+    },
+    "deepseek-v4-pro": {
+      "provider": "deepseek",
+      "tier": "mid",
+      "cli": ["opencode"]
+    },
+    "deepseek-v4-flash": {
+      "provider": "deepseek",
+      "tier": "low",
+      "cli": ["opencode"]
+    }
+  },
+  "roles": {
+    "planner": { "chain": ["claude-fable-5", "gpt-5.6-sol", "claude-opus", "gpt-5.6-terra"] },
+    "reviewer": { "chain": ["claude-fable-5", "claude-opus", "gpt-5.6-terra"] },
+    "implementer": { "chain": ["composer-2.5", "gpt-5.6-luna", "claude-sonnet-5", "deepseek-v4-pro"] },
+    "researcher": { "chain": ["gpt-5.6-luna", "claude-sonnet-5", "deepseek-v4-pro"] },
+    "prompt-writer": { "chain": ["claude-sonnet-5", "gpt-5.6-luna"] },
+    "frontend-designer": { "chain": ["composer-2.5", "claude-sonnet-5", "gpt-5.6-luna"] },
+    "triager": { "chain": ["claude-haiku", "gpt-5.4-mini", "deepseek-v4-flash"] },
+    "scout": { "chain": ["claude-haiku", "deepseek-v4-flash", "gpt-5.4-mini"] },
+    "summarizer": { "chain": ["deepseek-v4-flash", "claude-haiku", "gpt-5.4-mini"] },
+    "test-writer": { "chain": ["claude-sonnet-5", "composer-2.5", "gpt-5.6-luna"] }
+  },
+  "limits": { "warn_at": 0.9, "handoff_at": 0.95 }
+}

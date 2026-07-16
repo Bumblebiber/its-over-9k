@@ -32,6 +32,11 @@
       "name": "o9k-recon",
       "source": "./plugins/o9k-recon",
       "description": "Discovery & onboarding: a GitHub Scout skill (framework-scout) for finding new agent frameworks and classifying them symbiotic/orthogonal/blocking, plus one-command companion bundle installs (companion-bundles)."
+    },
+    {
+      "name": "o9k-roster",
+      "source": "./plugins/o9k-roster",
+      "description": "Multi-agent model roster: role-based selection with fallback chains, usage-limit awareness, tmux dispatch, and limit-triggered handoff. Model choice is deterministic code, never LLM reasoning."
     }
   ]
 }

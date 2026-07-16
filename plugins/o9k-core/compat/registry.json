@@ -15,8 +15,10 @@
     "code-minimalism": { "exclusive": false, "desc": "smallest-diff discipline" },
     "structural-search": { "exclusive": false, "desc": "AST-level queries (feeds overview, builds none)" },
     "discovery": { "exclusive": false, "desc": "scouting new companion frameworks" },
-    "vcs": { "exclusive": false, "desc": "version control" }
+    "vcs": { "exclusive": false, "desc": "version control" },
+    "roster": { "exclusive": false, "desc": "role-based model selection + limit-aware dispatch" }
   },
+
   "bundles": {
     "minimal": ["hmem", "context7", "ponytail"],
     "recommended": ["hmem", "context7", "ponytail", "superpowers", "beads", "serena"],
@@ -29,6 +31,11 @@
     "o9k-dispatch": { "kind": "pillar", "label": "o9k-dispatch", "concerns": ["dispatch"] },
     "o9k-memory": { "kind": "pillar", "label": "o9k-memory", "concerns": ["memory-integration"] },
     "o9k-recon": { "kind": "pillar", "label": "o9k-recon", "concerns": ["discovery"] },
+    "o9k-roster": {
+      "kind": "pillar",
+      "label": "o9k-roster",
+      "concerns": ["roster"]
+    },
 
     "git": {
       "kind": "essential",
