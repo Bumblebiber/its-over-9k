@@ -1,7 +1,7 @@
 {
   "name": "o9k-memory",
   "displayName": "o9k Memory",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Persistent memory integration: session-start briefing, on-demand recall, save-before-compact. Uses the hmem memory MCP by default; auto-detects and prefers TIM once it ships.",
   "author": {
     "name": "Bumblebiber"
@@ -14,6 +14,5 @@
     "tim",
     "hmem",
     "o9k"
-  ],
-  "hooks": "./hooks/hooks.json"
+  ]
 }

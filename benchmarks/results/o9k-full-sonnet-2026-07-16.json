@@ -1,0 +1,69 @@
+{
+  "combo": "o9k-full",
+  "model": "sonnet",
+  "tasks_hash": "ffd5d80deff9",
+  "target_ref": "bench-target-v1",
+  "date": "2026-07-16T09:00:20Z",
+  "claude_code": "2.1.211 (Claude Code)",
+  "passed": 5,
+  "total": 5,
+  "total_cost_usd": 1.1150316,
+  "total_output_tokens": 8156,
+  "tasks": [
+    {
+      "task": "t1-orient",
+      "pass": true,
+      "turns": 10,
+      "duration_ms": 36201,
+      "cost_usd": 0.25520040000000005,
+      "input_tokens": 17,
+      "output_tokens": 2389,
+      "cache_read_tokens": 294588,
+      "cache_creation_tokens": 21823
+    },
+    {
+      "task": "t2-trace",
+      "pass": true,
+      "turns": 4,
+      "duration_ms": 13484,
+      "cost_usd": 0.1513212,
+      "input_tokens": 8,
+      "output_tokens": 634,
+      "cache_read_tokens": 112424,
+      "cache_creation_tokens": 18010
+    },
+    {
+      "task": "t3-edit",
+      "pass": true,
+      "turns": 11,
+      "duration_ms": 45888,
+      "cost_usd": 0.29229689999999997,
+      "input_tokens": 22,
+      "output_tokens": 1975,
+      "cache_read_tokens": 391813,
+      "cache_creation_tokens": 24177
+    },
+    {
+      "task": "t4-debug",
+      "pass": true,
+      "turns": 7,
+      "duration_ms": 29461,
+      "cost_usd": 0.19255289999999997,
+      "input_tokens": 12,
+      "output_tokens": 1433,
+      "cache_read_tokens": 184113,
+      "cache_creation_tokens": 19298
+    },
+    {
+      "task": "t5-digest",
+      "pass": true,
+      "turns": 7,
+      "duration_ms": 31006,
+      "cost_usd": 0.2236602,
+      "input_tokens": 10,
+      "output_tokens": 1725,
+      "cache_read_tokens": 157404,
+      "cache_creation_tokens": 25089
+    }
+  ]
+}

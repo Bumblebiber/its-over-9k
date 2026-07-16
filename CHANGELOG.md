@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.9.1] — 2026-07-16
+
+### Fixed
+- **Fresh installs of o9k-core and o9k-memory failed to load** under Claude
+  Code ≥ 2.1.x: their `plugin.json` declared `"hooks": "./hooks/hooks.json"`,
+  which the CLI now also auto-loads from the conventional path — "Duplicate
+  hooks file detected", plugin disabled. The explicit `hooks` key is removed
+  (auto-load covers it); o9k-core 0.7.4, o9k-memory 0.2.1. Found by the first
+  bundle-bench reference run installing the pillars into a clean sandbox.
+
+### Added
+- **First bundle-bench reference results** (`benchmarks/results/`): bare vs
+  o9k-pillars vs o9k-full, sonnet, tasks_hash `ffd5d80deff9`. All 5/5; the
+  full stack was cheapest on orientation (t1: 10 turns vs 21 bare) and lowest
+  total output tokens; pillars alone add doctrine overhead this small task
+  set doesn't pay back — a harder task set is the known next step.
+
 ## [0.9.0] — 2026-07-16
 
 ### Added
