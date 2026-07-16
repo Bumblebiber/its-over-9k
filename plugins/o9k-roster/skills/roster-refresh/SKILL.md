@@ -36,8 +36,11 @@ $ROSTER refresh --fixture-dir ... --apply
 
 ## Cron
 
-Registered on this server as Hermes job **`e0c56515831c`** (Mo 10h,
-`roster-refresh-wrapper.sh`, no_agent). Reports:
-`~/.hermes/cron-outputs/roster-refresh/`.
+**Live trigger:** system crontab `0 10 * * 1` →
+`~/.hermes/scripts/roster-refresh-wrapper.sh` (Hermes gateway often down;
+same pattern as TIM watchdogs).
+
+Hermes job id `e0c56515831c` exists but is **paused** (avoids double-fire).
+Reports: `~/.hermes/cron-outputs/roster-refresh/`.
 
 Manual: `bash ~/.hermes/scripts/roster-refresh-wrapper.sh`
