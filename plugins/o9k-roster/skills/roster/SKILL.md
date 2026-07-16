@@ -42,6 +42,8 @@ curate `~/.o9k/roster.json`.
 - **Just ask who would do it:** `$ROSTER pick --role <role>`
 - **You hit a rate-limit error from a provider:** `$ROSTER mark-limited <model|provider> --ttl 5h --reason rate-limit` — then continue with the next viable model.
 - **Check limits:** `$ROSTER usage --check`
+- **Refresh scores/prices (OpenRouter + AA indices):** see `roster-refresh`
+  skill — `$ROSTER refresh [--apply]`
 
 ## Limit handoff protocol
 

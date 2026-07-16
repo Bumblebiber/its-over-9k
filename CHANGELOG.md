@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.10.2] — 2026-07-16
+
+### Added
+- **o9k-roster scores refresh** — OpenRouter collectors (AA coding/agentic/
+  intelligence indices + model catalog), `~/.o9k/roster-scores.json`,
+  semiauto `refresh --apply` (score↑ and cost↛↑; `pin_head` blocks), hosted
+  open-weight → Hermes/OpenCode. Skill `roster-refresh` +
+  `roster-refresh-cron.sh`. Spec:
+  `docs/superpowers/specs/2026-07-16-o9k-roster-scores-design.md`.
+
 ## [0.10.1] — 2026-07-16
 
 ### Changed

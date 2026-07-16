@@ -1,0 +1,35 @@
+{
+  "data": [
+    {
+      "source": "artificial-analysis",
+      "model_permaslug": "openai/gpt-5.6-sol",
+      "display_name": "GPT-5.6 Sol",
+      "intelligence_index": 78,
+      "coding_index": 80,
+      "agentic_index": 76,
+      "pricing": { "prompt": "0.000005", "completion": "0.00003" }
+    },
+    {
+      "source": "artificial-analysis",
+      "model_permaslug": "deepseek/deepseek-v4-pro",
+      "display_name": "DeepSeek V4 Pro",
+      "intelligence_index": 66,
+      "coding_index": 72,
+      "agentic_index": 68,
+      "pricing": { "prompt": "0.00000027", "completion": "0.0000011" }
+    },
+    {
+      "source": "artificial-analysis",
+      "model_permaslug": "anthropic/claude-sonnet-5",
+      "display_name": "Claude Sonnet 5",
+      "intelligence_index": 70,
+      "coding_index": 65,
+      "agentic_index": 60,
+      "pricing": { "prompt": "0.000003", "completion": "0.000015" }
+    }
+  ],
+  "meta": {
+    "as_of": "2026-07-16T00:00:00Z",
+    "citation": "Source: Artificial Analysis via OpenRouter (fixture)."
+  }
+}

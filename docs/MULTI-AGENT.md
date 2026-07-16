@@ -14,6 +14,10 @@ Hermes) with role-based model selection.
   `handoff` moves a dying session's work to a successor.
 - **limit-watch hook**: warns the active agent at 90% usage, triggers the
   handoff protocol at 95%. Wired on all supported hosts by `/o9k-init`.
+- **Scores refresh** (`roster refresh`): OpenRouter pulls Artificial Analysis
+  indices + prices (incl. hosted open-weight for Hermes/OpenCode) into
+  `~/.o9k/roster-scores.json`; `--apply` semiauto-promotes chain heads when
+  score rises and cost does not. See skill `roster-refresh`.
 
 ## The standard pipeline (plan → implement → review)
 

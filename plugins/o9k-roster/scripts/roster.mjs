@@ -333,19 +333,123 @@ function cmdHandoff(args) {
   });
 }
 
+function printProposalReport(proposals) {
+  console.log(`== roster scores report (${proposals.at}) ==`);
+  console.log(`applied: ${proposals.applied.length}`);
+  for (const a of proposals.applied) {
+    console.log(
+      `  APPLY ${a.role}: ${a.current ? `${a.current.cli}:${a.current.model} (${a.current.score})` : "(empty)"} → ${a.entry} (${a.proposed.score}, blended=${a.proposed.blended})`
+    );
+  }
+  console.log(`skipped: ${proposals.skipped.length}`);
+  for (const s of proposals.skipped) {
+    console.log(`  SKIP  ${s.role}: ${s.reason}`);
+  }
+}
+
+function backupRoster(rosterFile) {
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const bak = `${rosterFile}.bak-${stamp}`;
+  fs.copyFileSync(rosterFile, bak);
+  console.log(`backup: ${bak}`);
+  return bak;
+}
+
+async function cmdRefresh(args) {
+  const { collectScores, buildRoleScores, writeScores } =
+    await import("./scores.mjs");
+  const { proposeRoleChanges, applyProposals } = await import("./propose.mjs");
+
+  const fixtureDir = argValue(args, "--fixture-dir");
+  const doApply = args.includes("--apply");
+  let collected;
+  try {
+    collected = await collectScores({
+      fixtureDir: fixtureDir || undefined,
+    });
+  } catch (e) {
+    console.error(String(e.message || e));
+    process.exit(1);
+  }
+
+  const roster = loadJson(configPath());
+  collected.role_scores = buildRoleScores(collected, roster || { clis: {} });
+  const dest = writeScores(collected);
+  console.log(`scores written: ${dest}`);
+
+  if (!roster) {
+    console.log("no roster.json — scores only (run init + curate before apply)");
+    return;
+  }
+
+  const proposals = proposeRoleChanges({ roster, scoresFile: collected });
+  printProposalReport(proposals);
+
+  if (doApply && proposals.applied.length) {
+    backupRoster(configPath());
+    const next = applyProposals({ roster, scoresFile: collected, proposals });
+    fs.writeFileSync(configPath(), `${JSON.stringify(next, null, 2)}\n`);
+    console.log(`roster updated: ${configPath()}`);
+  } else if (doApply) {
+    console.log("nothing to auto-apply");
+  } else {
+    console.log("hint: re-run with --apply for semiauto chain updates");
+  }
+}
+
+async function cmdPropose() {
+  const { loadScores } = await import("./scores.mjs");
+  const { proposeRoleChanges } = await import("./propose.mjs");
+  const roster = requireRoster();
+  const scoresFile = loadScores();
+  if (!scoresFile) {
+    console.error(`no scores at scores path — run: roster.mjs refresh`);
+    process.exit(1);
+  }
+  printProposalReport(proposeRoleChanges({ roster, scoresFile }));
+}
+
+async function cmdApplyScores() {
+  const { loadScores } = await import("./scores.mjs");
+  const { proposeRoleChanges, applyProposals } = await import("./propose.mjs");
+  const roster = requireRoster();
+  const scoresFile = loadScores();
+  if (!scoresFile) {
+    console.error(`no scores — run: roster.mjs refresh`);
+    process.exit(1);
+  }
+  const proposals = proposeRoleChanges({ roster, scoresFile });
+  printProposalReport(proposals);
+  if (!proposals.applied.length) {
+    console.log("nothing to auto-apply");
+    return;
+  }
+  backupRoster(configPath());
+  const next = applyProposals({ roster, scoresFile, proposals });
+  fs.writeFileSync(configPath(), `${JSON.stringify(next, null, 2)}\n`);
+  console.log(`roster updated: ${configPath()}`);
+}
+
 const HANDLERS = {
-  init: cmdInit, pick: cmdPick, "mark-limited": cmdMarkLimited,
-  usage: cmdUsage, dispatch: cmdDispatch, handoff: cmdHandoff,
+  init: cmdInit,
+  pick: cmdPick,
+  "mark-limited": cmdMarkLimited,
+  usage: cmdUsage,
+  dispatch: cmdDispatch,
+  handoff: cmdHandoff,
+  refresh: cmdRefresh,
+  propose: cmdPropose,
+  "apply-scores": cmdApplyScores,
 };
 
-function main() {
+async function main() {
   const [cmd, ...args] = process.argv.slice(2);
   const handler = HANDLERS[cmd];
   if (!handler) {
     console.error(`usage: roster.mjs <${Object.keys(HANDLERS).join("|")}> [options]`);
     process.exit(1);
   }
-  handler(args);
+  await handler(args);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -1,7 +1,7 @@
 {
   "name": "o9k-roster",
   "displayName": "o9k Roster",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Multi-agent model registry: role-based model selection with fallback chains, usage-limit awareness, tmux worker dispatch, and limit-triggered session handoff. Selection is deterministic code, not LLM reasoning.",
   "author": {
     "name": "Bumblebiber"
