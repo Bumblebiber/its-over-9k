@@ -2,7 +2,7 @@
 // no ~/.o9k access.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { pick, parseTtl, markLimited, checkThresholds } from "./roster.mjs";
+import { pick, parseTtl, markLimited, checkThresholds, buildCommand, tmuxArgs } from "./roster.mjs";
 
 const ROSTER = {
   clis: { claude: { cmd: ["claude", "--model", "{model}", "{prompt}"] } },
@@ -117,4 +117,28 @@ test("checkThresholds warns at warn_at and instructs handoff at handoff_at", () 
   });
   assert.match(handoff, /HANDOFF\.md/);
   assert.match(handoff, /roster.*handoff/i);
+});
+
+test("buildCommand substitutes model and prompt per argv element", () => {
+  const argv = buildCommand({ roster: ROSTER, model: "model-a", cli: "claude", prompt: "do the thing" });
+  assert.deepEqual(argv, ["claude", "--model", "model-a", "do the thing"]);
+});
+
+test("buildCommand throws when cli template is missing", () => {
+  assert.throws(
+    () => buildCommand({ roster: ROSTER, model: "model-b", cli: "codex", prompt: "x" }),
+    /no cli template/
+  );
+});
+
+test("tmuxArgs builds a detached session with cwd and shell-quoted command", () => {
+  const args = tmuxArgs({
+    session: "o9k-implementer-abc",
+    dir: "/tmp/task",
+    argv: ["claude", "--model", "m", "it's a prompt"],
+  });
+  assert.deepEqual(args.slice(0, 7), [
+    "new-session", "-d", "-s", "o9k-implementer-abc", "-c", "/tmp/task",
+    `claude --model m 'it'\\''s a prompt'`,
+  ]);
 });

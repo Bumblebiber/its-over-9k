@@ -10,6 +10,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 export function configPath() {
@@ -208,7 +209,72 @@ function cmdUsage(args) {
   }
 }
 
-const HANDLERS = { init: cmdInit, pick: cmdPick, "mark-limited": cmdMarkLimited, usage: cmdUsage };
+export function buildCommand({ roster, model, cli, prompt }) {
+  const template = roster.clis?.[cli]?.cmd;
+  if (!template) throw new Error(`no cli template for "${cli}" in roster.json clis section`);
+  return template.map((part) => part.replaceAll("{model}", model).replaceAll("{prompt}", prompt));
+}
+
+function shellQuote(s) {
+  return /^[A-Za-z0-9_\-./=]+$/.test(s) ? s : `'${s.replaceAll("'", `'\\''`)}'`;
+}
+
+/** Pure tmux argv builder — spawn itself stays a one-liner around this. */
+export function tmuxArgs({ session, dir, argv }) {
+  return ["new-session", "-d", "-s", session, "-c", dir, argv.map(shellQuote).join(" ")];
+}
+
+function spawnInTmux({ roster, role, dir, prompt }) {
+  const usage = loadJson(usagePath());
+  const r = pick({ roster, usage, role });
+  for (const s of r.skipped) console.log(`skipped ${s.model}: ${s.reason}`);
+  if (!r.model) {
+    console.error(`chain exhausted for role ${role} — no viable model`);
+    process.exit(2);
+  }
+  const argv = buildCommand({ roster, model: r.model, cli: r.cli, prompt });
+  const session = `o9k-${role}-${Date.now().toString(36)}`;
+  execFileSync("tmux", tmuxArgs({ session, dir, argv }), { stdio: "inherit" });
+  console.log(`model: ${r.model} (${r.cli})`);
+  console.log(`tmux session: ${session}`);
+  console.log(`attach: tmux attach -t ${session}`);
+}
+
+function cmdDispatch(args) {
+  const role = argValue(args, "--role");
+  const promptFile = argValue(args, "--prompt-file");
+  const dir = argValue(args, "--dir") || process.cwd();
+  if (!role || !promptFile) {
+    console.error("usage: roster.mjs dispatch --role <role> --prompt-file <file> [--dir <taskdir>]");
+    process.exit(1);
+  }
+  const prompt = fs.readFileSync(promptFile, "utf8").trim();
+  spawnInTmux({ roster: requireRoster(), role, dir, prompt });
+}
+
+function cmdHandoff(args) {
+  const role = argValue(args, "--role");
+  const dir = argValue(args, "--dir") || process.cwd();
+  if (!role) {
+    console.error("usage: roster.mjs handoff --role <role> [--dir <taskdir>]");
+    process.exit(1);
+  }
+  if (!fs.existsSync(path.join(dir, "HANDOFF.md"))) {
+    console.error(`no HANDOFF.md in ${dir} — write it first (state, done, open, verification), then re-run`);
+    process.exit(1);
+  }
+  spawnInTmux({
+    roster: requireRoster(),
+    role,
+    dir,
+    prompt: "Read HANDOFF.md in this directory and continue the task it describes.",
+  });
+}
+
+const HANDLERS = {
+  init: cmdInit, pick: cmdPick, "mark-limited": cmdMarkLimited,
+  usage: cmdUsage, dispatch: cmdDispatch, handoff: cmdHandoff,
+};
 
 function main() {
   const [cmd, ...args] = process.argv.slice(2);
