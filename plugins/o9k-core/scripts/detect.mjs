@@ -46,7 +46,13 @@ export const PILLARS = Object.keys(REG.frameworks).filter(
   (id) => REG.frameworks[id].kind === "pillar"
 );
 
-function onPath(bin) {
+function onPath(bin, pathEnv) {
+  if (pathEnv !== undefined) {
+    for (const dir of pathEnv.split(path.delimiter).filter(Boolean)) {
+      if (fs.existsSync(path.join(dir, bin))) return true;
+    }
+    return false;
+  }
   try {
     execFileSync(process.platform === "win32" ? "where" : "which", [bin], {
       stdio: ["ignore", "ignore", "ignore"],
@@ -169,9 +175,10 @@ export function listHostDefs() {
 
 export function detectHosts(options = {}) {
   const home = options.home || os.homedir();
+  const pathEnv = options.pathEnv;
   const out = {};
   for (const def of listHostDefs()) {
-    const bin = (def.bin || []).some((b) => onPath(b));
+    const bin = (def.bin || []).some((b) => onPath(b, pathEnv));
     const homeDir = def.homeRel ? path.join(home, def.homeRel) : null;
     const homeOk = !!(homeDir && fs.existsSync(homeDir));
     const joinRel = (rel) => (rel ? path.join(home, rel) : null);
