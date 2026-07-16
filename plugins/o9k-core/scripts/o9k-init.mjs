@@ -14,6 +14,7 @@ import {
   detectCompanions,
   detectConflicts,
   detectRivals,
+  detectHosts,
 } from "./detect.mjs";
 
 const REG = loadRegistry();
@@ -36,6 +37,13 @@ console.log("Essentials:");
 console.log(`  git                                  ${mark(comp.git)}`);
 const backend = comp.tim ? "TIM" : comp.hmem ? "hmem" : "NONE";
 console.log(`  memory backend                       ${backend}`);
+
+const hosts = detectHosts();
+console.log("");
+console.log("Hosts:");
+for (const h of Object.values(hosts)) {
+  console.log(`  ${h.label.padEnd(36)} ${h.present ? "present" : "absent"}`);
+}
 
 console.log("");
 console.log("Companions detected:");
