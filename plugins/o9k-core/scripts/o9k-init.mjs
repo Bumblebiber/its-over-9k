@@ -7,6 +7,7 @@
 // registry), and live arbitrations. The o9k-init skill turns this into the
 // interview + install plan. Zero dependencies, changes nothing.
 
+import os from "node:os";
 import {
   PILLARS,
   loadRegistry,
@@ -16,6 +17,7 @@ import {
   detectRivals,
   detectHosts,
 } from "./detect.mjs";
+import { verifyHost } from "./host-wire.mjs";
 
 const REG = loadRegistry();
 const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || "";
@@ -38,11 +40,15 @@ console.log(`  git                                  ${mark(comp.git)}`);
 const backend = comp.tim ? "TIM" : comp.hmem ? "hmem" : "NONE";
 console.log(`  memory backend                       ${backend}`);
 
-const hosts = detectHosts();
+const hosts = detectHosts({ home: os.homedir() });
 console.log("");
 console.log("Hosts:");
 for (const h of Object.values(hosts)) {
-  console.log(`  ${h.label.padEnd(36)} ${h.present ? "present" : "absent"}`);
+  const v = verifyHost(h, os.homedir(), pluginRoot);
+  const status = h.present ? "present" : "absent";
+  console.log(
+    `  ${h.label.padEnd(36)} ${status}  skills=${v.skills} hooks=${v.hooks} mcp=${v.mcp}`,
+  );
 }
 
 console.log("");
