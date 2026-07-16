@@ -43,6 +43,27 @@ test("wireOpencode writes generated o9k.ts plugin", () => {
   fs.rmSync(home, { recursive: true, force: true });
 });
 
+test("wireOpencode preserves foreign OpenCode plugins", () => {
+  const home = makeTmpHome();
+  const pluginsDir = path.join(home, ".config/opencode/plugins");
+  const foreignDest = path.join(pluginsDir, "foreign.ts");
+  const o9kDest = path.join(pluginsDir, "o9k.ts");
+  const foreignContent = "// pre-existing third-party plugin\nexport default {};\n";
+
+  fs.mkdirSync(pluginsDir, { recursive: true });
+  fs.writeFileSync(foreignDest, foreignContent);
+
+  const r = wireOpencode({ home, marketplaceRoot: marketRoot });
+  assert.equal(r.ok, true);
+  assert.match(r.detail, /wrote .*o9k\.ts/);
+
+  assert.ok(fs.existsSync(foreignDest), "foreign.ts should still exist");
+  assert.equal(fs.readFileSync(foreignDest, "utf8"), foreignContent);
+  assert.ok(fs.existsSync(o9kDest), "o9k.ts should be written");
+
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
 test("wireOpencode is idempotent", () => {
   const home = makeTmpHome();
   const once = wireOpencode({ home, marketplaceRoot: marketRoot });
