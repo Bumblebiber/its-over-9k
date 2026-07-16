@@ -16,6 +16,7 @@ import {
   detectConflicts,
   detectRivals,
   detectHosts,
+  classifyInventory,
 } from "./detect.mjs";
 import { verifyHost } from "./host-wire.mjs";
 
@@ -25,6 +26,7 @@ const pillars = detectPillars(pluginRoot);
 const comp = detectCompanions();
 const rivals = detectRivals();
 const conflicts = detectConflicts(pillars, comp);
+const classified = classifyInventory({ home: os.homedir() });
 
 const mark = (v) => (v === null ? "?" : v ? "yes" : "no");
 const label = (id) => REG.frameworks[id]?.label || id;
@@ -94,4 +96,34 @@ if (conflicts.length) {
   for (const c of conflicts) console.log(`  ! ${c}`);
 } else {
   console.log("Open arbitrations: none.");
+}
+
+console.log("");
+const u = classified.unknown;
+if (classified.unknownCount) {
+  console.log(
+    "Unknown installed (NOT in compat/registry.json) — ask before evaluating:"
+  );
+  for (const key of u.plugins) console.log(`  plugin  ${key}`);
+  for (const m of u.mcps) console.log(`  mcp     ${m.name} (${m.host})`);
+  const skillsByName = new Map();
+  for (const s of u.skills) {
+    const hosts = skillsByName.get(s.name) || [];
+    if (!hosts.includes(s.host)) hosts.push(s.host);
+    skillsByName.set(s.name, hosts);
+  }
+  for (const [name, hosts] of skillsByName) {
+    console.log(`  skill   ${name} (${hosts.join(", ")})`);
+  }
+  console.log(
+    "  → Do NOT research GitHub/README or run trials without explicit user Go."
+  );
+  console.log(
+    "  → On Go: framework-scout (README) → if still unclear, trial / bundle-bench."
+  );
+  console.log(
+    "  → If better than an o9k pick: propose Issue/PR to its-over-9k."
+  );
+} else {
+  console.log("Unknown installed: none (everything matched the registry).");
 }

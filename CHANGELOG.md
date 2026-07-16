@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.10.3] — 2026-07-16
+
+### Added
+- **`/o9k-init` open inventory + unknown triage (o9k-core 0.9.1).** Snapshot
+  lists *all* installed plugins / MCPs / skills across hosts, not only
+  registry matches. Unknowns print under `Unknown installed` and require
+  explicit user Go before GitHub/README evaluation (`framework-scout`),
+  measured trial / `bundle-bench`, or an upstream Issue/PR to
+  `its-over-9k`. APIs: `collectInventory`, `classifyInventory`,
+  `registryDetectIndex` in `detect.mjs`.
+
 ## [0.10.2] — 2026-07-16
 
 ### Added

@@ -32,8 +32,16 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/o9k-init.mjs"
 
 Read-only, instant. Gives you: pillars, git, memory backend, companions,
 **bundle deltas** (what each bundle would still add), rival frameworks, open
-arbitrations, and a **Hosts** section. Detection is best-effort — "no" means
-*not detected*, so if the user says they have a tool, believe them.
+arbitrations, a **Hosts** section, and an **Unknown installed** section
+(plugins / MCPs / skills present on the machine that are **not** in
+`compat/registry.json`). Detection is best-effort — "no" means *not
+detected*, so if the user says they have a tool, believe them.
+
+The unknown list is open-world for **plugins and MCP servers** across hosts.
+**Skills** are scoped to `~/.agents/skills` and Claude's skill dir only
+(Hermes/Codex/OpenCode stock skill trees are skipped — they are not o9k
+rivals). **Never** auto-research, trial, uninstall, or recommend removal of
+an unknown without an explicit user Go (Step 2b).
 
 ### Hosts section
 
@@ -71,7 +79,43 @@ Ask, don't lecture. One question at a time, options not essays. In order:
    - **User-run:** you print the commands (interactive variants, e.g. plain
      `hmem init`) and the user drives.
 3. **Conflicts** — only if Step 1 found rivals; see Step 3.
-4. **git** — only if missing; see below.
+4. **Unknowns** — only if Step 1 printed `Unknown installed`; see Step 2b.
+5. **git** — only if missing; see below.
+
+### Step 2b — unknowns: ask, then evaluate (never silent)
+
+Registry rivals already have a WHY. Unknowns do not. For **each** unknown
+(or a batched shortlist if there are many), ask one clear question:
+
+> I found `<name>` installed, but it is not in o9k's compatibility registry.
+> May I check whether it conflicts with o9k / whether it might be better than
+> what o9k ships for the same concern?
+
+- **No / skip** → leave it alone; note "kept without evaluation" in the final
+  report. Do not fetch GitHub, do not trial.
+- **Yes** → proceed in this order (stop early when the answer is clear):
+
+  1. **GitHub / README first** — use the `framework-scout` skill Steps 2–3
+     (score + classify 🟢/⚪/🔴). Prefer `gh` / WebFetch of the repo README;
+     do **not** clone the whole tree. Produce a provisional verdict vs the
+     overlapping o9k pillar or bundle companion (name the concern).
+  2. **If README is enough** to say keep / remove / orthogonal → report that
+     and ask what to do (keep, uninstall+migrate if dataful, or drop the
+     colliding o9k pick). No trial yet.
+  3. **If still unclear** whether it beats o9k's pick → run the measured
+     protocols (explicit budget warning first):
+     - **Single candidate** → `framework-scout` Step 4 trial (sandbox only;
+       never live `~/.claude`).
+     - **Combo / "is this better in the stack?"** → `bundle-bench` skill
+       (`benchmarks/run-bench.sh`) after user signs off on the combo list.
+  4. **Upstream feedback** — if the verdict is "better than o9k's pick" (or
+     a strong 🟢 symbiotic missing from the registry), open or draft a
+     GitHub **Issue or PR** on `Bumblebiber/its-over-9k` with: candidate
+     name/repo, concern, README verdict, trial/bench numbers if any, and a
+     proposed `compat/registry.json` row. Do not silently edit the registry
+     on the user's machine as "upstream truth".
+
+Unknowns are **not** auto-rivals. Classification happens only after Go.
 5. **Multi-agent roster** — only if the `o9k-roster` pillar is installed and
    `~/.o9k/roster.json` is missing: *"Use the multi-agent setup (roster)? It
    routes work to models by role with fallback chains and warns before
@@ -259,6 +303,8 @@ time, `/o9k-stats` measures the effect.
 
 - Detect before asking; ask before acting; **never uninstall without an
   explicit go**, never delete data (export first — Step 4 is mandatory).
+- **Never research an unknown** (GitHub, trial, bench) without explicit Go
+  in Step 2b — listing it in the snapshot is enough until then.
 - One question at a time. The snapshot decides what's asked — never walk a
   fully-set-up user through the whole interview.
 - Re-runs are normal: `/o9k-init` on a configured machine is how you *extend*

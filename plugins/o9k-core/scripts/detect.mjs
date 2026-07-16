@@ -64,19 +64,203 @@ function onPath(bin, pathEnv) {
 }
 
 /** Plugin keys ("name@marketplace") enabled in user settings, or null if unknown. */
-function enabledPluginKeys() {
-  const s = readJsonSafe(path.join(os.homedir(), ".claude", "settings.json"));
+function enabledPluginKeys(home = os.homedir()) {
+  const s = readJsonSafe(path.join(home, ".claude", "settings.json"));
   if (!s || typeof s.enabledPlugins !== "object" || s.enabledPlugins === null) return null;
   return Object.entries(s.enabledPlugins)
     .filter(([, v]) => v)
     .map(([k]) => k.toLowerCase());
 }
 
-/** MCP server names from user config (global scope), lowercased. */
-function mcpServerNames() {
-  const cfg = readJsonSafe(path.join(os.homedir(), ".claude.json"));
+/** MCP server names from Claude user config (global scope), lowercased. */
+function mcpServerNames(home = os.homedir()) {
+  const cfg = readJsonSafe(path.join(home, ".claude.json"));
   if (!cfg || typeof cfg.mcpServers !== "object" || cfg.mcpServers === null) return [];
   return Object.keys(cfg.mcpServers).map((k) => k.toLowerCase());
+}
+
+/**
+ * All detect fragments from the registry — used to subtract *known* tools from
+ * a live inventory (open-world scan vs closed-world rival list).
+ */
+export function registryDetectIndex(reg = REG) {
+  const plugins = new Set();
+  const mcps = new Set();
+  const bins = new Set();
+  for (const [id, f] of Object.entries(reg.frameworks || {})) {
+    if (f.kind === "pillar") plugins.add(String(id).toLowerCase());
+    const d = f.detect || {};
+    for (const p of d.plugin || []) plugins.add(String(p).toLowerCase());
+    for (const m of d.mcp || []) mcps.add(String(m).toLowerCase());
+    for (const b of d.path || []) bins.add(String(b).toLowerCase());
+  }
+  return { plugins, mcps, bins };
+}
+
+function pluginNameFromKey(key) {
+  return String(key).split("@")[0].toLowerCase();
+}
+
+function isKnownPlugin(key, index) {
+  const name = pluginNameFromKey(key);
+  for (const p of index.plugins) {
+    if (name === p || name.startsWith(p + "-")) return true;
+  }
+  return false;
+}
+
+function isKnownMcp(name, index) {
+  const n = String(name).toLowerCase();
+  for (const frag of index.mcps) {
+    if (n === frag || n.includes(frag) || frag.includes(n)) return true;
+  }
+  // Memory backends also appear as companions with path-only detect (tim/hmem).
+  for (const p of index.plugins) {
+    if (n === p || n.includes(p)) return true;
+  }
+  for (const b of index.bins) {
+    if (n === b || n.includes(b)) return true;
+  }
+  return false;
+}
+
+function isKnownSkill(name, index) {
+  const n = String(name).toLowerCase();
+  if (n === "o9k" || n.startsWith("o9k-")) return true;
+  for (const p of index.plugins) {
+    if (n === p || n.startsWith(p + "-") || n.includes(p)) return true;
+  }
+  for (const b of index.bins) {
+    if (n === b || n.startsWith(b + "-")) return true;
+  }
+  return false;
+}
+
+/** Best-effort MCP server names from a host config file (JSON or TOML). */
+export function mcpNamesFromFile(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return [];
+  const lower = filePath.toLowerCase();
+  if (lower.endsWith(".json")) {
+    const j = readJsonSafe(filePath);
+    if (!j || typeof j !== "object") return [];
+    const servers = j.mcpServers || j.mcp || {};
+    if (typeof servers !== "object" || servers === null) return [];
+    return Object.keys(servers);
+  }
+  if (lower.endsWith(".toml")) {
+    try {
+      const text = fs.readFileSync(filePath, "utf8");
+      const names = new Set();
+      for (const m of text.matchAll(/\[mcp_servers\.([^\].]+)\]/gi)) names.add(m[1]);
+      for (const m of text.matchAll(/\[mcp\.servers\.([^\].]+)\]/gi)) names.add(m[1]);
+      return [...names];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function listDirNames(dir) {
+  if (!dir || !fs.existsSync(dir)) return [];
+  try {
+    return fs
+      .readdirSync(dir, { withFileTypes: true })
+      .filter((d) => d.isDirectory() || d.isSymbolicLink())
+      .map((d) => d.name)
+      .filter((n) => n && !n.startsWith("."));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Open inventory of installed agent tooling across hosts — not limited to the
+ * registry. Returns raw lists; use classifyInventory() for known/unknown split.
+ */
+export function collectInventory(options = {}) {
+  const home = options.home || os.homedir();
+  const hosts = options.hosts || detectHosts({ home, pathEnv: options.pathEnv });
+  const plugins = enabledPluginKeys(home) || [];
+
+  const mcps = [];
+  const seenMcp = new Set();
+  // Claude global MCP lives at ~/.claude.json (registry mcpRel).
+  for (const name of mcpServerNames(home)) {
+    const key = `claude:${name}`;
+    if (seenMcp.has(key)) continue;
+    seenMcp.add(key);
+    mcps.push({ name, host: "claude" });
+  }
+  for (const h of Object.values(hosts)) {
+    if (!h.mcpPath) continue;
+    for (const name of mcpNamesFromFile(h.mcpPath)) {
+      const key = `${h.id}:${name.toLowerCase()}`;
+      if (seenMcp.has(key)) continue;
+      seenMcp.add(key);
+      mcps.push({ name: name.toLowerCase(), host: h.id });
+    }
+  }
+
+  const skills = [];
+  const seenSkill = new Set();
+  const pushSkills = (hostId, dir) => {
+    for (const name of listDirNames(dir)) {
+      const key = `${hostId}:${name.toLowerCase()}`;
+      if (seenSkill.has(key)) continue;
+      seenSkill.add(key);
+      skills.push({ name: name.toLowerCase(), host: hostId, path: path.join(dir, name) });
+    }
+  };
+  // Skills triage is limited to shared + Claude user skills. Hermes/Codex/
+  // OpenCode ship large stock skill trees that are not o9k rivals — listing
+  // them as unknowns would drown the init interview.
+  pushSkills("agents", path.join(home, ".agents", "skills"));
+  // Nested package: ~/.agents/skills/o9k/<skill> — list children as o9k skills.
+  for (const name of listDirNames(path.join(home, ".agents", "skills", "o9k"))) {
+    const key = `agents:o9k/${name.toLowerCase()}`;
+    if (seenSkill.has(key)) continue;
+    seenSkill.add(key);
+    skills.push({
+      name: `o9k/${name.toLowerCase()}`,
+      host: "agents",
+      path: path.join(home, ".agents", "skills", "o9k", name),
+    });
+  }
+  const claudeSkills = hosts.claude?.skillDir || path.join(home, ".claude", "skills");
+  pushSkills("claude", claudeSkills);
+
+  return { plugins, mcps, skills };
+}
+
+/**
+ * Split the live inventory into registry-known vs unknown. Unknowns must NOT
+ * be auto-researched — o9k-init asks the user for Go first.
+ */
+export function classifyInventory(options = {}) {
+  const index = registryDetectIndex(options.registry || REG);
+  const inv = collectInventory(options);
+  const known = { plugins: [], mcps: [], skills: [] };
+  const unknown = { plugins: [], mcps: [], skills: [] };
+
+  for (const key of inv.plugins) {
+    (isKnownPlugin(key, index) ? known.plugins : unknown.plugins).push(key);
+  }
+  for (const m of inv.mcps) {
+    (isKnownMcp(m.name, index) ? known.mcps : unknown.mcps).push(m);
+  }
+  for (const s of inv.skills) {
+    const leaf = s.name.includes("/") ? s.name.split("/").pop() : s.name;
+    const knownSkill =
+      isKnownSkill(s.name, index) ||
+      isKnownSkill(leaf, index) ||
+      s.name.startsWith("o9k/");
+    (knownSkill ? known.skills : unknown.skills).push(s);
+  }
+
+  const unknownCount =
+    unknown.plugins.length + unknown.mcps.length + unknown.skills.length;
+  return { known, unknown, unknownCount, inventory: inv };
 }
 
 /** Run a registry `detect` spec. A miss means "not detected", never "not installed". */

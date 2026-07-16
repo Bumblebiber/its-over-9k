@@ -20,6 +20,9 @@ memory** so the next session starts from the last scout, not from zero.
 - Refreshing [docs/COMBINING.md](../../../../docs/COMBINING.md) or the README
   matrix.
 - Before proposing a new companion bundle.
+- **`/o9k-init` Step 2b** — user gave Go to evaluate an *unknown* installed
+  tool (not in `compat/registry.json`). Start at Step 2 (score); escalate to
+  Step 4 trial / `bundle-bench` only if the README verdict is inconclusive.
 - **Not** every session — schedule it (weekly-ish). Recon has a cost; amortize it.
 
 ## Step 1 — Hunt (where to look)
