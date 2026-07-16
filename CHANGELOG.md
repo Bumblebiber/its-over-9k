@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.9.2] — 2026-07-16
+
+### Added
+- **Multi-CLI `/o9k-init` flow (o9k-core 0.8.0).** The init snapshot now
+  prints a `Hosts:` section (Claude, Codex, Cursor, OpenCode, Hermes) with
+  `skills=` / `hooks=` / `mcp=` verification per host. Setup executes in order:
+  memory backend → `skills-sync.mjs` → `host-wire.mjs` → Claude pillar installs
+  → companion bundles. Missing CLI binaries are never installed; users who
+  override an absent host can wire via `host-wire.mjs --only=…`. Memory prefers
+  TIM when detected (`tim setup-agent`); else hmem with `--tools` mapped to
+  `claude-code`, `cursor`, `opencode` — Codex and Hermes rely on TIM or manual
+  MCP until hmem upstream adds them.
+
 ## [0.9.1] — 2026-07-16
 
 ### Fixed

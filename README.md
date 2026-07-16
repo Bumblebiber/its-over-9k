@@ -82,6 +82,12 @@ o9k is a [Claude Code plugin marketplace](https://code.claude.com/docs/en/plugin
 
 Then run **`/o9k-init`** in a session — it detects your setup, walks you
 through the companion bundle choice, and handles conflicts and migration.
+
+**Works with Claude Code, Codex, Cursor, OpenCode, and Hermes** on the same
+machine: `/o9k-init` syncs shared o9k skills and wires session hooks on every
+detected host (it never installs missing CLI binaries — see the
+[`o9k-init` skill](plugins/o9k-core/skills/o9k-init/SKILL.md)).
+
 Or set up the memory backend by hand. **hmem is the available default** today:
 
 ```bash
