@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.9.3] — 2026-07-16
+
+### Added
+- **`/o9k-update` refreshes multi-CLI skills + hooks (o9k-core 0.8.1).**
+  `--apply` runs `skills-sync` + `host-wire` after npm-global updates so
+  Codex/Cursor/OpenCode/Hermes wrappers pick up new plugin scripts. New flag
+  `--refresh-hosts` for use right after `/plugin marketplace update o9k`.
+  Disable with `O9K_REFRESH_HOSTS=off`.
+
 ## [0.9.2] — 2026-07-16
 
 ### Added

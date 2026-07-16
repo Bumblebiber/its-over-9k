@@ -20,8 +20,11 @@
 //              start on the network.
 //   --refresh  internal background pass — do the network checks, write cache,
 //              apply auto-updates if configured. No stdout.
-//   --report   force a fresh check now; print a human-readable status. Read-only.
-//   --apply    force a fresh check now; apply safe updates; print what happened.
+//   --report         force a fresh check now; print a human-readable status. Read-only.
+//   --apply          force a fresh check now; apply safe npm updates; then refresh
+//                    multi-CLI skills+hooks (idempotent host-wire / skills-sync).
+//   --refresh-hosts  only re-sync skills + re-wire host hooks (after marketplace
+//                    update). No npm checks.
 //
 // Zero dependencies. Every probe degrades to "unknown" instead of throwing.
 
@@ -30,6 +33,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { detectPillars, detectCompanions } from "./detect.mjs";
+import { refreshHosts } from "./refresh-hosts.mjs";
 
 const CACHE = path.join(os.homedir(), ".claude", "o9k-update-cache.json");
 const MODE = (process.env.O9K_UPDATE_CHECK || "notify").toLowerCase();
@@ -202,7 +206,9 @@ function hookDirective(cache) {
   if (cache?.o9kRepo?.behind > 0) {
     lines.push(
       `o9k itself is ${cache.o9kRepo.behind} commit(s) behind upstream — ` +
-        "suggest `/plugin marketplace update o9k` (o9k plugins are never auto-updated)."
+        "suggest `/plugin marketplace update o9k`, then " +
+        '`node "$CLAUDE_PLUGIN_ROOT/scripts/update-check.mjs" --refresh-hosts` ' +
+        "(o9k plugins are never auto-updated)."
     );
   }
   return lines.join("\n");
@@ -217,6 +223,27 @@ if (flag === "--refresh") {
   // Background pass: do the work, write cache, stay silent.
   performCheck(false);
   process.exit(0);
+}
+
+if (flag === "--refresh-hosts") {
+  // After `/plugin marketplace update o9k` (or a git pull of the marketplace
+  // clone): re-copy skills and re-bake host wrappers so non-Claude CLIs pick
+  // up the new plugin scripts. Idempotent.
+  const dry = process.argv.includes("--dry-run");
+  const out = refreshHosts({ dryRun: dry });
+  console.log("== o9k host refresh ==");
+  console.log(`mode: ${dry ? "dry-run" : "run"}`);
+  console.log(
+    `skills: linked=${out.skills.linked.length} rules=${out.skills.rules.length}` +
+      ` errors=${out.skills.errors.length}`
+  );
+  for (const e of out.skills.errors) console.log(`  ! ${e}`);
+  for (const row of out.hooks.results) {
+    console.log(`  ${row.id.padEnd(12)} ${row.ok ? "ok" : "FAIL"}  ${row.detail}`);
+  }
+  const failed =
+    out.hooks.results.some((x) => !x.ok) || out.skills.errors.length > 0;
+  process.exit(failed ? 1 : 0);
 }
 
 if (flag === "--report" || flag === "--apply") {
@@ -245,7 +272,8 @@ if (flag === "--report" || flag === "--apply") {
   if (cache.o9kRepo) {
     console.log(
       cache.o9kRepo.behind > 0
-        ? `o9k repo: ${cache.o9kRepo.behind} commit(s) behind — run: /plugin marketplace update o9k`
+        ? `o9k repo: ${cache.o9kRepo.behind} commit(s) behind — run: /plugin marketplace update o9k` +
+            `\n  then: node "$CLAUDE_PLUGIN_ROOT/scripts/update-check.mjs" --refresh-hosts`
         : "o9k repo: up to date."
     );
   }
@@ -258,6 +286,31 @@ if (flag === "--report" || flag === "--apply") {
   }
   if (flag === "--apply") {
     console.log(app.length ? `Applied ${app.length} update(s).` : "Nothing to apply.");
+    // Always refresh multi-CLI wiring after apply — wrappers bake absolute
+    // marketplace paths; skills are copies. Skip with O9K_REFRESH_HOSTS=off.
+    if ((process.env.O9K_REFRESH_HOSTS || "on").toLowerCase() !== "off") {
+      console.log("");
+      console.log("Refreshing multi-CLI skills + hooks…");
+      try {
+        const out = refreshHosts({ dryRun: false });
+        console.log(
+          `  skills: linked=${out.skills.linked.length} errors=${out.skills.errors.length}`
+        );
+        for (const row of out.hooks.results) {
+          console.log(`  ${row.id.padEnd(12)} ${row.ok ? "ok" : "FAIL"}`);
+        }
+      } catch (e) {
+        console.log(`  host refresh failed: ${e.message}`);
+      }
+    }
+  }
+  if (flag === "--report") {
+    console.log(
+      "After any o9k marketplace/plugin update, refresh non-Claude hosts:"
+    );
+    console.log(
+      '  node "$CLAUDE_PLUGIN_ROOT/scripts/update-check.mjs" --refresh-hosts'
+    );
   }
   process.exit(0);
 }

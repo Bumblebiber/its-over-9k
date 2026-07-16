@@ -28,17 +28,25 @@ opted into `O9K_UPDATE_CHECK=auto`):
 node "${CLAUDE_PLUGIN_ROOT}/scripts/update-check.mjs" --apply
 ```
 
-This updates **only npm-global CLIs** (hmem, ast-grep, ccusage) — isolated and
-reversible. It deliberately does **not** touch:
+This updates **npm-global CLIs** (hmem, ast-grep, ccusage) and then **refreshes
+multi-CLI skills + hooks** (`skills-sync` + `host-wire`) so Codex/Cursor/
+OpenCode/Hermes wrappers point at the current marketplace scripts. Skip the
+host refresh with `O9K_REFRESH_HOSTS=off`. It deliberately does **not** touch:
 
 - **o9k plugins / the marketplace** — run `/plugin marketplace update o9k`
   instead (Claude Code manages that clone; a manual pull could clobber it).
+  **After that marketplace update, always run:**
+  ```bash
+  node "${CLAUDE_PLUGIN_ROOT}/scripts/update-check.mjs" --refresh-hosts
+  ```
+  Claude picks up new plugin hooks via `CLAUDE_PLUGIN_ROOT`; other hosts need
+  this re-bake because wrappers bake absolute paths and skills are copies.
 - **Plugins like superpowers / Ponytail** — `/plugin` owns those.
 - **git/uvx tools (Serena)** — already always-latest via `uvx`; npx-based MCPs
   (Context7) too. Nothing to pin.
 
 Offer to run the `/plugin marketplace update` for the user when the report flags
-the o9k repo as behind.
+the o9k repo as behind — and chain `--refresh-hosts` immediately after.
 
 ## Modes (tell the user, don't decide for them)
 
