@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Hermes pre_llm_call adapter — session-start stack (core + memory + update-check).
+# Wired by wire-hermes.mjs into ~/.hermes/agent-hooks/o9k-*.sh with O9K_MARKETPLACE_ROOT set.
+set -euo pipefail
+ROOT="${O9K_MARKETPLACE_ROOT:?O9K_MARKETPLACE_ROOT required}"
+RUNNER="$ROOT/o9k-core/hooks/adapters/run-o9k-hook.sh"
+bash "$RUNNER" core/session-start
+bash "$RUNNER" memory/session-start
+bash "$RUNNER" core/update-check
