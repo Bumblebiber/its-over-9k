@@ -111,6 +111,37 @@ test("wireHermes is idempotent", () => {
   fs.rmSync(home, { recursive: true, force: true });
 });
 
+test("mergeHermesHooksYaml preserves foreign-o9k-helper (o9k- substring, not o9k hook)", () => {
+  const yaml = `hooks:
+  pre_llm_call:
+    - command: ~/.hermes/agent-hooks/foreign-o9k-helper.sh
+`;
+  const merged = mergeHermesHooksYaml(yaml, { home: "/tmp/x" });
+  const pre = hookCommands(merged, "pre_llm_call");
+  assert.ok(pre.some((c) => c.includes("foreign-o9k-helper.sh")));
+  assert.equal(pre.filter((c) => c.includes("foreign-o9k-helper")).length, 1);
+});
+
+test("wireHermes preserves foreign-o9k-helper.sh", () => {
+  const home = makeTmpHome();
+  const configPath = path.join(home, ".hermes/config.yaml");
+  const yaml = `hooks:
+  pre_llm_call:
+    - command: ~/.hermes/agent-hooks/foreign-o9k-helper.sh
+`;
+  fs.writeFileSync(configPath, yaml);
+
+  const r = wireHermes({ home, marketplaceRoot: marketRoot });
+  assert.equal(r.ok, true);
+
+  const merged = fs.readFileSync(configPath, "utf8");
+  const pre = hookCommands(merged, "pre_llm_call");
+  assert.ok(pre.some((c) => c.includes("foreign-o9k-helper.sh")));
+  assert.ok(pre.some((c) => c.includes("o9k-core-session")));
+
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
 test("wireHermes dryRun does not write files", () => {
   const home = makeTmpHome();
   const configPath = path.join(home, ".hermes/config.yaml");

@@ -23,7 +23,9 @@ function hookCommandPath(home, script) {
 }
 
 function isO9kHookLine(line) {
-  return /command:.*o9k-/.test(line);
+  if (!/command:/.test(line)) return false;
+  if (/agent-hooks\/o9k-/.test(line)) return true;
+  return HOOK_WRAPPERS.some((w) => line.includes(`/${w.name}`));
 }
 
 function formatHookEntry(home, { name, timeout }) {
