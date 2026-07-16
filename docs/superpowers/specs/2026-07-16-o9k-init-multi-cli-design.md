@@ -32,11 +32,29 @@ OpenCode, and Hermes on the same machine. Those hosts need:
 ## Non-goals
 
 - Installing missing CLI tools (claude/codex/cursor/opencode/hermes binaries).
-- Shipping o9k as a Codex/Hermes/Cursor plugin marketplace package.
+- Inventing a fake marketplace on hosts that have none (e.g. Cursor).
 - Making TIM the public recommended MCP before TIM 1.0 ships.
 - Perfect Cursor skill parity if `skills-cursor` is read-only / IDE-synced
   (document Rules fallback instead of faking installs).
 - Changing companion-bundle / rival-migration flow beyond host awareness.
+
+## Packaging preference
+
+**Prefer native marketplace / plugin install when the host supports it.**
+Symlinks and hand-merged hook files are the fallback, not the first choice.
+
+| Host | Preferred ship path | Fallback |
+|------|---------------------|----------|
+| Claude | Already: `claude plugin marketplace` + `o9k-*@o9k` | — |
+| Codex | `codex plugin marketplace add` / `codex plugin add` if o9k can be packaged in Codex’s plugin format (skills + hooks bundle) | Symlink skills + merge `hooks.json` |
+| OpenCode | Publish/install as `opencode plugin` (npm module or local plugin package that registers lifecycle hooks) | Drop TS file into `~/.config/opencode/plugins/` + skill symlinks |
+| Hermes | `hermes plugins install <git-url\|owner/repo>` shipping skills + hook scripts | Symlink skills + `agent-hooks/` + `config.yaml` merge |
+| Cursor | No marketplace — session `--plugin-dir` is optional only | Shared skills/Rules + `hooks.json` merge |
+
+Implementation order per host: try plugin/marketplace path first in
+`host-wire`; if packaging is not ready yet for that host in v1, use the
+fallback and track marketplace packaging as an explicit follow-up so o9k-init
+can switch without changing the skill flow.
 
 ## Decisions (from brainstorm)
 
@@ -97,11 +115,11 @@ context when the host cannot run Claude-shaped hook JSON).
 
 | Host | Detect | Skills | Hooks | MCP |
 |------|--------|--------|-------|-----|
-| Claude | `claude` + `~/.claude` | plugin + optional symlink | `~/.claude/settings.json` / plugin hooks | hmem/tim as today |
-| Codex | `codex` + `~/.codex` | symlink → `~/.codex/skills/` | `~/.codex/hooks.json` + `~/.codex/hooks/` | `config.toml` / `tim setup-agent --host codex`; extend hmem later |
-| Cursor | `cursor-agent` + `~/.cursor` | symlink or Rules fallback | `~/.cursor/hooks.json` + `~/.cursor/hooks/` | `~/.cursor/mcp.json` |
-| OpenCode | `opencode` + `~/.config/opencode` | symlink → skills/ | TS plugin under `plugins/` mapping session/compact events | `opencode.json` |
-| Hermes | `hermes` + `~/.hermes` | symlink or `hermes skills install` | `config.yaml` `hooks:` + `~/.hermes/agent-hooks/` | `tim setup-agent --host hermes`; hmem later |
+| Claude | `claude` + `~/.claude` | marketplace plugins (primary) | plugin `hooks.json` | hmem/tim as today |
+| Codex | `codex` + `~/.codex` | Codex plugin package if viable; else symlink → `~/.codex/skills/` | plugin-bundled hooks if viable; else `hooks.json` + `~/.codex/hooks/` | `config.toml` / `tim setup-agent --host codex`; extend hmem later |
+| Cursor | `cursor-agent` + `~/.cursor` | symlink or Rules fallback (no marketplace) | `~/.cursor/hooks.json` + `~/.cursor/hooks/` | `~/.cursor/mcp.json` |
+| OpenCode | `opencode` + `~/.config/opencode` | via `opencode plugin` package when shipped; else symlink → skills/ | plugin lifecycle hooks (preferred) or local TS under `plugins/` | `opencode.json` |
+| Hermes | `hermes` + `~/.hermes` | via `hermes plugins install` when packaged; else symlink / `hermes skills install` | plugin-bundled hooks or `config.yaml` + `agent-hooks/` | `tim setup-agent --host hermes`; hmem later |
 
 ### Event mapping
 
@@ -180,7 +198,8 @@ No full test harness exists in-repo yet; add a minimal Node test script or
 
 - `/o9k-init` on a multi-CLI machine wires every detected host without
   requiring Claude-only steps for Codex/Cursor/OpenCode/Hermes.
-- Shared skills appear (or Rules fallback on Cursor) after one agent-run.
+- Shared skills appear (via marketplace plugin where available, else symlink /
+  Rules fallback on Cursor) after one agent-run.
 - Hook intents from the parity table fire (or explicitly report unsupported
   with a follow-up task) on each wired host.
 - Re-running `/o9k-init` does not duplicate hooks or destroy foreign config.
@@ -191,6 +210,8 @@ No full test harness exists in-repo yet; add a minimal Node test script or
 
 - Extend `hmem init --tools` for `codex` and `hermes` (upstream hmem).
 - Flip public default to TIM after 1.0.
-- Optional: publish OpenCode plugin to npm for `opencode plugin -g`.
-- Optional: Hermes plugin package if skills-via-CLI is preferred over symlinks.
+- Package and publish host-native plugins where missing: OpenCode npm plugin,
+  Hermes git plugin, Codex marketplace plugin (spike first — confirm format
+  fits o9k skills+hooks).
+- Cursor: revisit if Cursor adds a real plugin/skill marketplace.
 
