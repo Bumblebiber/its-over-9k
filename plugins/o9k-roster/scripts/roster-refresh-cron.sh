@@ -34,4 +34,15 @@ STATUS=0
 } 2>&1 | tee "$REPORT"
 
 echo "report: $REPORT"
+
+# Short ping via @bbbeeCronBot (full report stays on disk).
+if [[ -x "$HOME/.hermes/bin/send-cron-telegram" ]]; then
+  SUMMARY=$(head -n 40 "$REPORT" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+  "$HOME/.hermes/bin/send-cron-telegram" "📋 roster-refresh
+${SUMMARY}
+
+Full: ${REPORT}" \
+    || echo "WARN: CronBot telegram send failed" >&2
+fi
+
 exit "$STATUS"
