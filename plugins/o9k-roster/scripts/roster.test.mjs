@@ -2,14 +2,21 @@
 // no ~/.o9k access.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { pick, parseTtl, markLimited, checkThresholds, buildCommand, tmuxArgs } from "./roster.mjs";
+import { pick, parseTtl, markLimited, checkThresholds, buildCommand, tmuxArgs, parseChainEntry } from "./roster.mjs";
 
 const ROSTER = {
-  clis: { claude: { cmd: ["claude", "--model", "{model}", "{prompt}"] } },
+  clis: {
+    claude: { cmd: ["claude", "--model", "{model}", "{prompt}"] },
+    codex: { cmd: ["codex", "--model", "{model}", "{prompt}"] },
+    cursor: { cmd: ["cursor-agent", "--model", "{model}", "{prompt}"] },
+    opencode: { cmd: ["opencode", "--model", "{model}", "--prompt", "{prompt}"] },
+    hermes: { cmd: ["hermes", "chat", "-q", "{prompt}", "--model", "{model}"] },
+  },
   models: {
     "model-a": { provider: "anthropic", tier: "frontier", cli: ["claude"] },
     "model-b": { provider: "openai", tier: "high", cli: ["codex"] },
-    "model-c": { provider: "deepseek", tier: "mid", cli: ["opencode"] },
+    "model-c": { provider: "deepseek", tier: "mid", cli: ["opencode", "hermes"] },
+    "model-g": { provider: "xai", tier: "high", cli: ["cursor", "opencode", "hermes"] },
   },
   roles: { planner: { chain: ["model-a", "model-b", "model-c"] } },
   limits: { warn_at: 0.9, handoff_at: 0.95 },
@@ -77,6 +84,72 @@ test("pick throws on unknown role", () => {
   assert.throws(() => pick({ roster: ROSTER, usage: null, role: "nope", now: NOW }), /unknown role/);
 });
 
+test("parseChainEntry accepts bare model, cli:model, and objects", () => {
+  assert.deepEqual(parseChainEntry("model-a"), { model: "model-a", cli: null });
+  assert.deepEqual(parseChainEntry("cursor:model-g"), { model: "model-g", cli: "cursor" });
+  assert.deepEqual(parseChainEntry({ model: "model-c", cli: "hermes" }), { model: "model-c", cli: "hermes" });
+  assert.deepEqual(parseChainEntry({ model: "model-a" }), { model: "model-a", cli: null });
+  assert.throws(() => parseChainEntry(":nope"), /invalid chain entry/);
+  assert.throws(() => parseChainEntry({}), /invalid chain entry/);
+});
+
+test("pick honors cli:model pins and object entries", () => {
+  const roster = {
+    ...ROSTER,
+    roles: {
+      implementer: {
+        chain: ["cursor:model-g", "hermes:model-c", "model-a"],
+      },
+    },
+  };
+  const r = pick({ roster, usage: null, role: "implementer", now: NOW });
+  assert.equal(r.model, "model-g");
+  assert.equal(r.cli, "cursor");
+
+  const r2 = pick({
+    roster: {
+      ...roster,
+      roles: { implementer: { chain: [{ model: "model-c", cli: "hermes" }] } },
+    },
+    usage: null,
+    role: "implementer",
+    now: NOW,
+  });
+  assert.equal(r2.model, "model-c");
+  assert.equal(r2.cli, "hermes");
+});
+
+test("pick skips cli:model when cli not listed on model or template missing", () => {
+  const roster = {
+    ...ROSTER,
+    roles: { planner: { chain: ["codex:model-a", "claude:model-a"] } },
+  };
+  const r = pick({ roster, usage: null, role: "planner", now: NOW });
+  assert.equal(r.model, "model-a");
+  assert.equal(r.cli, "claude");
+  assert.match(r.skipped[0].reason, /not listed/);
+
+  const roster2 = {
+    ...ROSTER,
+    roles: { planner: { chain: ["missingcli:model-a", "model-a"] } },
+  };
+  const r2 = pick({ roster: roster2, usage: null, role: "planner", now: NOW });
+  assert.equal(r2.model, "model-a");
+  assert.match(r2.skipped[0].reason, /no cli template/);
+});
+
+test("pick skips when a CLI name is mark-limited", () => {
+  const roster = {
+    ...ROSTER,
+    roles: { implementer: { chain: ["cursor:model-g", "hermes:model-c"] } },
+  };
+  const usage = { marked: { cursor: { until: "2026-07-16T13:00:00Z" } } };
+  const r = pick({ roster, usage, role: "implementer", now: NOW });
+  assert.equal(r.model, "model-c");
+  assert.equal(r.cli, "hermes");
+  assert.match(r.skipped[0].reason, /cli marked limited/);
+});
+
 test("parseTtl parses m/h/d and rejects garbage", () => {
   assert.equal(parseTtl("30m"), 30 * 60_000);
   assert.equal(parseTtl("5h"), 5 * 3_600_000);
@@ -126,7 +199,7 @@ test("buildCommand substitutes model and prompt per argv element", () => {
 
 test("buildCommand throws when cli template is missing", () => {
   assert.throws(
-    () => buildCommand({ roster: ROSTER, model: "model-b", cli: "codex", prompt: "x" }),
+    () => buildCommand({ roster: ROSTER, model: "model-b", cli: "nosuch", prompt: "x" }),
     /no cli template/
   );
 });

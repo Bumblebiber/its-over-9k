@@ -9,6 +9,11 @@ Model choice is config + code, not judgment. One primary role per task; the
 role's chain IS the fallback mechanism. Never pick a model by reasoning —
 that's how model-family favoritism happens.
 
+Chain entries are **CLI×model** cells, not models alone:
+- `"cursor:grok-4.5-high"` or `{ "cli": "hermes", "model": "deepseek-v4-pro" }`
+  pins the pair
+- bare `"claude-sonnet-5"` still works → uses `models[m].cli[0]`
+
 All commands below: `ROSTER="node <marketplace>/plugins/o9k-roster/scripts/roster.mjs"`
 (in Claude Code: `node "${CLAUDE_PLUGIN_ROOT}/scripts/roster.mjs"` when this
 plugin is active). No config yet → `$ROSTER init`, then tell the user to

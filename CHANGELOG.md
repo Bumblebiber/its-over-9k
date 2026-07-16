@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.10.1] — 2026-07-16
+
+### Changed
+- **o9k-roster:** role chains are CLI×model cells. Entries may be
+  `"cli:model"`, `{ "cli", "model" }`, or a bare model id (still resolves
+  via `models[m].cli[0]`). Example registry pins pairs like
+  `cursor:grok-4.5-high` / `hermes:deepseek-v4-pro`; `hermes` added to
+  `clis`; `mark-limited` on a CLI name skips that host.
+
 ## [0.10.0] — 2026-07-16
 
 ### Added

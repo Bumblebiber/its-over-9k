@@ -2,9 +2,10 @@
 // roster.mjs — deterministic model selection for multi-agent delegation.
 //
 // Subcommands: init | pick | usage | mark-limited | dispatch | handoff.
-// Selection walks a role's fallback chain and skips models whose provider
-// usage is at/over limits.handoff_at or which carry an unexpired
-// mark-limited entry. All state lives in ~/.o9k/{roster,usage}.json
+// Selection walks a role's fallback chain (CLI×model cells: "cli:model",
+// {cli,model}, or bare model id) and skips entries whose provider usage is
+// at/over limits.handoff_at or which carry an unexpired mark-limited entry
+// on the model, provider, or CLI. All state lives in ~/.o9k/{roster,usage}.json
 // (override via O9K_ROSTER / O9K_USAGE for tests). Zero dependencies.
 
 import fs from "node:fs";
@@ -42,9 +43,41 @@ function markedUntil(usage, key, now) {
 }
 
 /**
+ * Parse a chain entry into {model, cli|null}.
+ * - "model-id"           → { model, cli: null }  (cli resolved from models[m].cli[0])
+ * - "cli:model-id"       → { model, cli }
+ * - { model, cli? }      → same
+ */
+export function parseChainEntry(entry) {
+  if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+    if (typeof entry.model !== "string" || !entry.model) {
+      throw new Error(`invalid chain entry object: ${JSON.stringify(entry)}`);
+    }
+    return { model: entry.model, cli: entry.cli ?? null };
+  }
+  if (typeof entry !== "string" || !entry) {
+    throw new Error(`invalid chain entry: ${entry}`);
+  }
+  const i = entry.indexOf(":");
+  if (i === -1) return { model: entry, cli: null };
+  const cli = entry.slice(0, i);
+  const model = entry.slice(i + 1);
+  if (!cli || !model) throw new Error(`invalid chain entry: ${entry}`);
+  return { model, cli };
+}
+
+function entryLabel(model, cli) {
+  return cli ? `${cli}:${model}` : model;
+}
+
+/**
  * Walk role's chain, return first viable {model, cli, skipped}. Viability:
- * defined in roster.models, provider usage below handoff_at, no unexpired
- * mark on the model or its provider. model:null when the chain is exhausted.
+ * defined in roster.models, resolved CLI has a template and is listed on the
+ * model (when model.cli is set), provider usage below handoff_at, no
+ * unexpired mark on the model / provider / CLI. model:null when exhausted.
+ *
+ * Chain entries may be bare model ids, "cli:model" pins, or {model, cli?}
+ * objects — see parseChainEntry.
  */
 export function pick({ roster, usage, role, now = Date.now() }) {
   const spec = roster.roles?.[role];
@@ -52,26 +85,55 @@ export function pick({ roster, usage, role, now = Date.now() }) {
   const { handoff_at } = limits(roster);
   const skipped = [];
 
-  for (const name of spec.chain) {
-    const model = roster.models?.[name];
-    if (!model) {
-      skipped.push({ model: name, reason: "not in models" });
+  for (const raw of spec.chain) {
+    let parsed;
+    try {
+      parsed = parseChainEntry(raw);
+    } catch (e) {
+      skipped.push({ model: String(raw), reason: e.message });
       continue;
     }
+    const { model: name } = parsed;
+    const model = roster.models?.[name];
+    if (!model) {
+      skipped.push({ model: entryLabel(name, parsed.cli), reason: "not in models" });
+      continue;
+    }
+
+    const cli = parsed.cli ?? model.cli?.[0] ?? null;
+    const label = entryLabel(name, parsed.cli);
+
+    if (!cli) {
+      skipped.push({ model: label, reason: "no cli resolved" });
+      continue;
+    }
+    if (!roster.clis?.[cli]?.cmd) {
+      skipped.push({ model: label, reason: `no cli template for "${cli}"` });
+      continue;
+    }
+    if (Array.isArray(model.cli) && model.cli.length > 0 && !model.cli.includes(cli)) {
+      skipped.push({ model: label, reason: `cli "${cli}" not listed for model` });
+      continue;
+    }
+
     const used = usage?.providers?.[model.provider]?.used;
     if (typeof used === "number" && used >= handoff_at) {
-      skipped.push({ model: name, reason: `provider ${model.provider} at ${Math.round(used * 100)}%` });
+      skipped.push({ model: label, reason: `provider ${model.provider} at ${Math.round(used * 100)}%` });
       continue;
     }
     if (markedUntil(usage, name, now)) {
-      skipped.push({ model: name, reason: `marked limited until ${usage.marked[name].until}` });
+      skipped.push({ model: label, reason: `marked limited until ${usage.marked[name].until}` });
       continue;
     }
     if (markedUntil(usage, model.provider, now)) {
-      skipped.push({ model: name, reason: `provider marked limited until ${usage.marked[model.provider].until}` });
+      skipped.push({ model: label, reason: `provider marked limited until ${usage.marked[model.provider].until}` });
       continue;
     }
-    return { model: name, cli: model.cli?.[0] ?? null, skipped };
+    if (markedUntil(usage, cli, now)) {
+      skipped.push({ model: label, reason: `cli marked limited until ${usage.marked[cli].until}` });
+      continue;
+    }
+    return { model: name, cli, skipped };
   }
   return { model: null, cli: null, skipped };
 }
