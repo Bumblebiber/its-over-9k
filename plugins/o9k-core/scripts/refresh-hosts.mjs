@@ -3,8 +3,10 @@
 // o9k plugin/marketplace update. Idempotent; skips absent hosts; never
 // installs CLI binaries. Used by /o9k-update and as a standalone CLI.
 
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { detectHosts } from "./detect.mjs";
 import { syncSkills } from "./skills-sync.mjs";
 import { wireHosts } from "./host-wire.mjs";
 
@@ -17,6 +19,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
  *   pluginRoot?: string,
  *   marketplaceRoot?: string,
  *   only?: string[],
+ *   force?: boolean,
  * }} options
  * @returns {{ skills: object, hooks: object }}
  */
@@ -28,18 +31,26 @@ export function refreshHosts(options = {}) {
     process.env.O9K_MARKETPLACE_ROOT ||
     path.join(pluginRoot, "..");
   const dryRun = !!options.dryRun;
+  const home = options.home ?? os.homedir();
+
+  // Detect hosts once and hand the same snapshot to both syncSkills and
+  // wireHosts — previously each ran its own detectHosts() pass.
+  const hosts = detectHosts({ home });
 
   const skills = syncSkills({
-    home: options.home,
+    home,
     pluginRoot,
     marketplaceRoot,
     dryRun,
+    hosts,
   });
   const hooks = wireHosts({
-    home: options.home,
+    home,
     marketplaceRoot,
     dryRun,
     only: options.only,
+    force: options.force,
+    hosts,
   });
   return { skills, hooks };
 }
@@ -63,20 +74,37 @@ function printReport(out, dryRun) {
   }
 }
 
+function parseCli(argv) {
+  const dryRun = argv.includes("--dry-run");
+  const run = argv.includes("--run");
+  if (dryRun === run) {
+    throw new Error(
+      "usage: refresh-hosts.mjs --dry-run | --run [--only=codex,cursor,…] [--force]"
+    );
+  }
+  const onlyArg = argv.find((a) => a.startsWith("--only="));
+  const only = onlyArg ? onlyArg.slice("--only=".length).split(",").filter(Boolean) : undefined;
+  const force = argv.includes("--force");
+  return { dryRun, only, force };
+}
+
 function main() {
   const argv = process.argv.slice(2);
   if (argv.includes("--help") || argv.includes("-h")) {
     console.log(
-      "usage: refresh-hosts.mjs [--run|--dry-run] [--only=codex,cursor,…]"
+      "usage: refresh-hosts.mjs --dry-run | --run [--only=codex,cursor,…] [--force]"
     );
     process.exit(0);
   }
-  const dryRun = argv.includes("--dry-run") && !argv.includes("--run");
-  const onlyArg = argv.find((a) => a.startsWith("--only="));
-  const only = onlyArg
-    ? onlyArg.slice("--only=".length).split(",").filter(Boolean)
-    : undefined;
-  const out = refreshHosts({ dryRun, only });
+  let dryRun, only, force;
+  try {
+    ({ dryRun, only, force } = parseCli(argv));
+  } catch (e) {
+    console.error(e.message);
+    process.exit(2);
+    return;
+  }
+  const out = refreshHosts({ dryRun, only, force });
   printReport(out, dryRun);
   const failed =
     out.hooks.results.some((x) => !x.ok) || out.skills.errors.length > 0;

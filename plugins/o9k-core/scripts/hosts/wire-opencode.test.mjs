@@ -38,7 +38,13 @@ test("wireOpencode writes generated o9k.ts plugin", () => {
   const body = fs.readFileSync(dest, "utf8");
   assert.match(body, new RegExp(`const MARKETPLACE = "${marketRoot.replace(/\\/g, "\\\\")}";`));
   assert.match(body, /spawnSync\("bash", \[RUN_HOOK/);
-  assert.match(body, /console\.log\(out\)/);
+  assert.match(body, /console\.log\(extractContext\(out\)\)/);
+  assert.match(body, /function extractContext/);
+  // FIX1 regression: extractContext must unwrap the Claude hook envelope
+  // ({"hookSpecificOutput":{"additionalContext":"..."}}) instead of
+  // printing/pushing the raw JSON blob.
+  assert.match(body, /hookSpecificOutput\?\.additionalContext/);
+  assert.match(body, /output\.context\.push\(extractContext\(out\)\)/);
 
   fs.rmSync(home, { recursive: true, force: true });
 });

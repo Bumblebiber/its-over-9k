@@ -67,6 +67,20 @@ test("wireCursor is idempotent", () => {
   fs.rmSync(home, { recursive: true, force: true });
 });
 
+test("wireCursor backs up hooks.json before rewriting a changed file (FIX4)", () => {
+  const home = makeTmpHome();
+  const hooksJson = path.join(home, ".cursor/hooks.json");
+  const original = JSON.stringify({ version: 1, hooks: {} });
+  fs.writeFileSync(hooksJson, original);
+
+  wireCursor({ home, marketplaceRoot: marketRoot });
+
+  const backupPath = `${hooksJson}.o9k-bak`;
+  assert.ok(fs.existsSync(backupPath));
+  assert.equal(fs.readFileSync(backupPath, "utf8"), original);
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
 test("wireCursor dryRun does not write files", () => {
   const home = makeTmpHome();
   const hooksJson = path.join(home, ".cursor/hooks.json");

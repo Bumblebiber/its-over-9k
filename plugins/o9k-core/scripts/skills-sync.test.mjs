@@ -64,3 +64,18 @@ test("syncSkills writes Cursor rules when skillDir is null", () => {
   assert.ok(fs.existsSync(path.join(tmp, ".cursor/rules/o9k-using-o9k.mdc")));
   fs.rmSync(tmp, { recursive: true, force: true });
 });
+
+// FIX8 regression: SKILL_SOURCES used to be a hand-maintained list that
+// never included o9k-recon's skills. Discovery now walks the registry's
+// pillar list + each pillar's skills/ dir, so new skills (and pillars) show
+// up automatically.
+test("syncSkills discovers o9k-recon skills dynamically (not hardcoded)", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-skills-"));
+  fs.mkdirSync(path.join(tmp, ".codex"), { recursive: true });
+  syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
+  assert.ok(fs.existsSync(path.join(tmp, ".agents/skills/o9k/bundle-bench/SKILL.md")));
+  assert.ok(fs.existsSync(path.join(tmp, ".agents/skills/o9k/companion-bundles/SKILL.md")));
+  assert.ok(fs.existsSync(path.join(tmp, ".agents/skills/o9k/framework-scout/SKILL.md")));
+  assert.ok(fs.lstatSync(path.join(tmp, ".codex/skills/o9k-bundle-bench")).isSymbolicLink());
+  fs.rmSync(tmp, { recursive: true, force: true });
+});

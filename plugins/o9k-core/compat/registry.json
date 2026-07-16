@@ -1,5 +1,5 @@
 {
-  "//": "o9k compatibility registry — the single machine-readable source of truth for which framework claims which concern. detect.mjs, o9k-init.mjs, o9k-guide.mjs, session-start.mjs and o9k-migrate.mjs all read this file; docs/COMBINING.md is the human-readable rendering of the same facts. Adding a framework = one entry here (+ a matrix row in the docs).",
+  "//": "o9k compatibility registry — the single machine-readable source of truth for which framework claims which concern. detect.mjs, o9k-init.mjs, o9k-guide.mjs, session-start.mjs, o9k-migrate.mjs, host-wire.mjs, skills-sync.mjs and refresh-hosts.mjs all read this file; docs/COMBINING.md is the human-readable rendering of the same facts. Adding a framework = one entry here (+ a matrix row in the docs).",
   "concerns": {
     "doctrine": { "exclusive": false, "desc": "efficiency rules of engagement + arbitration" },
     "output-style": { "exclusive": true, "desc": "how the agent writes (compression, tone)" },
@@ -208,7 +208,7 @@
     },
     "cursor": {
       "label": "Cursor",
-      "bin": ["cursor-agent", "agent"],
+      "bin": ["cursor-agent"],
       "homeRel": ".cursor",
       "skillDirRel": null,
       "rulesRel": ".cursor/rules",

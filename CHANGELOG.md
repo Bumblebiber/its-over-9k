@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.9.4] — 2026-07-16
+
+### Fixed
+Review pass over the multi-CLI series (8 verified findings, o9k-core 0.8.2):
+- **OpenCode adapter showed raw hook JSON** instead of the doctrine text —
+  now unwraps `hookSpecificOutput.additionalContext`.
+- **Hermes YAML merge could emit a duplicate top-level `hooks:` key** when
+  config.yaml used inline `hooks: {}` — inline-empty is now converted to
+  block form; non-empty flow style is left untouched with a warning instead
+  of corrupted.
+- **Hermes re-injected the ~100-token doctrine on every `pre_llm_call`** —
+  session-start wrappers now carry a once-per-session marker guard.
+- **Host-config writes had no backup and ran by default on `--apply`** —
+  every touched config now gets a rolling `.o9k-bak` first, and
+  `O9K_REFRESH_HOSTS` defaults to `off` (opt in via flag or env).
+- **Cursor host detection matched any binary named `agent`** — generic name
+  removed; host `present` now requires the declared home dir too.
+- `refresh-hosts.mjs` without flags ran live writes — now requires exactly
+  one of `--dry-run`/`--run`, like host-wire.
+- `host-wire --only` wired hosts that were never detected — now skips with a
+  notice; `--force` overrides.
+- `skills-sync` had a hardcoded skill list that omitted the entire o9k-recon
+  pillar — now discovers skills from the registry's pillars dynamically.
+
+### Changed
+- New shared `scripts/hosts/common.mjs` (JSON read, root resolution,
+  backup-aware writes, the hook-wrapper list + installer) replaces 3–4
+  copy-pasted variants across the wire adapters; `refreshHosts` detects
+  hosts once and passes them through. Tests 44 → 68.
+
 ## [0.9.3] — 2026-07-16
 
 ### Added

@@ -8,19 +8,32 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { detectHosts } from "./detect.mjs";
+import { detectHosts, PILLARS } from "./detect.mjs";
 
-const SKILL_SOURCES = [
-  ["o9k-core", "using-o9k"],
-  ["o9k-core", "o9k-init"],
-  ["o9k-core", "o9k-guide"],
-  ["o9k-core", "o9k-update"],
-  ["o9k-core", "o9k-stats"],
-  ["o9k-scout", "scout"],
-  ["o9k-dispatch", "dispatch"],
-  ["o9k-caveman", "caveman"],
-  ["o9k-memory", "memory"],
-];
+/**
+ * Discover [pillar, skillName] pairs by walking plugins/<pillar>/skills/ for
+ * each registry pillar (same PILLARS list detect.mjs uses), keeping only
+ * dirs that actually contain a SKILL.md. Replaces a hand-maintained list so
+ * new skills (or new pillars, e.g. o9k-recon) are picked up automatically.
+ */
+function discoverSkillSources(marketplaceRoot) {
+  const sources = [];
+  for (const pillar of PILLARS) {
+    const skillsDir = path.join(marketplaceRoot, pillar, "skills");
+    let entries;
+    try {
+      entries = fs.readdirSync(skillsDir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (!fs.existsSync(path.join(skillsDir, entry.name, "SKILL.md"))) continue;
+      sources.push([pillar, entry.name]);
+    }
+  }
+  return sources;
+}
 
 function readSkillMeta(skillPath) {
   try {
@@ -95,8 +108,8 @@ function ensureSymlink(target, linkPath, dryRun, errors) {
   return true;
 }
 
-function installCanonical(home, marketplaceRoot, canonical, dryRun, errors) {
-  for (const [pillar, name] of SKILL_SOURCES) {
+function installCanonical(skillSources, marketplaceRoot, canonical, dryRun, errors) {
+  for (const [pillar, name] of skillSources) {
     const src = path.join(marketplaceRoot, pillar, "skills", name, "SKILL.md");
     const destDir = path.join(canonical, name);
     const destFile = path.join(destDir, "SKILL.md");
@@ -125,12 +138,16 @@ export function syncSkills(options = {}) {
   const linked = [];
   const rules = [];
   const errors = [];
+  const skillSources = discoverSkillSources(marketplaceRoot);
 
-  installCanonical(home, marketplaceRoot, canonical, dryRun, errors);
+  installCanonical(skillSources, marketplaceRoot, canonical, dryRun, errors);
 
-  const detectOpts = { home };
-  if (options.pathEnv !== undefined) detectOpts.pathEnv = options.pathEnv;
-  const hosts = detectHosts(detectOpts);
+  let hosts = options.hosts;
+  if (!hosts) {
+    const detectOpts = { home };
+    if (options.pathEnv !== undefined) detectOpts.pathEnv = options.pathEnv;
+    hosts = detectHosts(detectOpts);
+  }
 
   for (const host of Object.values(hosts)) {
     if (!host.present) continue;
@@ -138,7 +155,7 @@ export function syncSkills(options = {}) {
     if (host.skillDir) {
       try {
         if (!dryRun) fs.mkdirSync(host.skillDir, { recursive: true });
-        for (const [, name] of SKILL_SOURCES) {
+        for (const [, name] of skillSources) {
           const canonicalDir = path.join(canonical, name);
           if (!fs.existsSync(canonicalDir)) continue;
           const linkPath = path.join(host.skillDir, `o9k-${name}`);
@@ -152,11 +169,11 @@ export function syncSkills(options = {}) {
     if (host.rulesDir) {
       try {
         if (!dryRun) fs.mkdirSync(host.rulesDir, { recursive: true });
-        for (const [, name] of SKILL_SOURCES) {
+        for (const [, name] of skillSources) {
           const rulePath = path.join(host.rulesDir, `o9k-${name}.mdc`);
           const skillPath = path.join(canonical, name, "SKILL.md");
           const srcPath = (() => {
-            const pillar = SKILL_SOURCES.find(([, n]) => n === name)?.[0];
+            const pillar = skillSources.find(([, n]) => n === name)?.[0];
             return pillar
               ? path.join(marketplaceRoot, pillar, "skills", name, "SKILL.md")
               : skillPath;

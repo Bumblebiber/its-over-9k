@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveRoots, writeFileWithBackup } from "./common.mjs";
 
 const MARKETPLACE_PLACEHOLDER = "__O9K_MARKETPLACE_ROOT__";
 const PRECOMPACT_HOOK = "experimental.session.compacting";
@@ -29,8 +30,7 @@ export function buildOpencodePluginContent(marketplaceRoot) {
  * Wire o9k hooks into OpenCode via generated ~/.config/opencode/plugins/o9k.ts.
  */
 export function wireOpencode({ home, marketplaceRoot, dryRun = false }) {
-  const pluginRoot = fileURLToPath(new URL("../..", import.meta.url));
-  const resolvedMarketplace = path.resolve(marketplaceRoot ?? path.join(pluginRoot, ".."));
+  const { marketplaceRoot: resolvedMarketplace } = resolveRoots(import.meta.url, marketplaceRoot);
   const runHookPath = path.join(resolvedMarketplace, "o9k-core/hooks/adapters/run-o9k-hook.sh");
 
   if (!fs.existsSync(runHookPath)) {
@@ -40,13 +40,10 @@ export function wireOpencode({ home, marketplaceRoot, dryRun = false }) {
   const pluginsDir = path.join(home, ".config/opencode/plugins");
   const dest = path.join(pluginsDir, "o9k.ts");
   const content = buildOpencodePluginContent(resolvedMarketplace);
-  const existing = fs.existsSync(dest) ? fs.readFileSync(dest, "utf8") : null;
-  const changed = existing !== content;
 
-  if (!dryRun && changed) {
-    fs.mkdirSync(pluginsDir, { recursive: true });
-    fs.writeFileSync(dest, content);
-  }
+  const changed = !dryRun
+    ? writeFileWithBackup(dest, content)
+    : fs.existsSync(dest) ? fs.readFileSync(dest, "utf8") !== content : true;
 
   const parts = [];
   if (dryRun) parts.push("dry-run: no files written");

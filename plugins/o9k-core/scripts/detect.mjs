@@ -185,7 +185,10 @@ export function detectHosts(options = {}) {
     out[def.id] = {
       id: def.id,
       label: def.label || def.id,
-      present: bin || homeOk,
+      // A bin on PATH can be a false positive (generic name collision); a
+      // leftover home dir alone can be a false positive too (uninstalled
+      // tool, stale config). Require both when a homeRel is declared.
+      present: bin && (!def.homeRel || homeOk),
       bin,
       home: homeOk,
       homeDir: homeOk ? homeDir : null,

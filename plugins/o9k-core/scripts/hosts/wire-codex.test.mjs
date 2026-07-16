@@ -70,6 +70,20 @@ test("wireCodex is idempotent", () => {
   fs.rmSync(home, { recursive: true, force: true });
 });
 
+test("wireCodex backs up hooks.json before rewriting a changed file (FIX4)", () => {
+  const home = makeTmpHome();
+  const hooksJson = path.join(home, ".codex/hooks.json");
+  const original = JSON.stringify({ hooks: { SessionStart: [] } });
+  fs.writeFileSync(hooksJson, original);
+
+  wireCodex({ home, marketplaceRoot: marketRoot });
+
+  const backupPath = `${hooksJson}.o9k-bak`;
+  assert.ok(fs.existsSync(backupPath));
+  assert.equal(fs.readFileSync(backupPath, "utf8"), original);
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
 test("wireCodex dryRun does not write files", () => {
   const home = makeTmpHome();
   const hooksJson = path.join(home, ".codex/hooks.json");

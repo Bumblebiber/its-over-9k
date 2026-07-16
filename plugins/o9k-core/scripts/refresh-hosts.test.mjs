@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { refreshHosts } from "./refresh-hosts.mjs";
 
 const pluginRoot = fileURLToPath(new URL("..", import.meta.url));
 const marketRoot = path.join(pluginRoot, "..");
+const script = fileURLToPath(new URL("./refresh-hosts.mjs", import.meta.url));
 
 test("refreshHosts dry-run does not write host hooks under HOME", () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-refresh-"));
@@ -42,5 +44,42 @@ test("refreshHosts run wires codex and refreshes skills under HOME", () => {
   assert.match(blob, /o9k-core-session/);
   assert.equal(out.skills.errors.length, 0);
   assert.ok(out.hooks.results.every((r) => r.ok));
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+// FIX6 regression: neither flag used to default to a live --run (unsafe).
+// The CLI now requires exactly one of --dry-run/--run, mirroring host-wire.mjs.
+test("refresh-hosts.mjs CLI requires exactly one of --dry-run/--run", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-refresh-cli-"));
+  const r = spawnSync(process.execPath, [script], {
+    env: { ...process.env, HOME: tmp },
+    encoding: "utf8",
+  });
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /usage: refresh-hosts\.mjs/);
+  assert.equal(fs.existsSync(path.join(tmp, ".codex")), false);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("refresh-hosts.mjs CLI rejects both --dry-run and --run together", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-refresh-cli-"));
+  const r = spawnSync(process.execPath, [script, "--dry-run", "--run"], {
+    env: { ...process.env, HOME: tmp },
+    encoding: "utf8",
+  });
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /usage: refresh-hosts\.mjs/);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("refresh-hosts.mjs CLI --dry-run exits cleanly and writes nothing", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-refresh-cli-"));
+  fs.mkdirSync(path.join(tmp, ".codex"), { recursive: true });
+  const r = spawnSync(process.execPath, [script, "--dry-run", "--only=codex"], {
+    env: { ...process.env, HOME: tmp },
+    encoding: "utf8",
+  });
+  assert.equal(r.status, 0);
+  assert.equal(fs.existsSync(path.join(tmp, ".codex", "hooks.json")), false);
   fs.rmSync(tmp, { recursive: true, force: true });
 });

@@ -28,10 +28,13 @@ opted into `O9K_UPDATE_CHECK=auto`):
 node "${CLAUDE_PLUGIN_ROOT}/scripts/update-check.mjs" --apply
 ```
 
-This updates **npm-global CLIs** (hmem, ast-grep, ccusage) and then **refreshes
-multi-CLI skills + hooks** (`skills-sync` + `host-wire`) so Codex/Cursor/
-OpenCode/Hermes wrappers point at the current marketplace scripts. Skip the
-host refresh with `O9K_REFRESH_HOSTS=off`. It deliberately does **not** touch:
+**Scope: `--apply` only updates npm-global CLIs.** Host configs (Codex/Cursor/
+OpenCode/Hermes hook wiring, skills) are touched only with `--refresh-hosts`
+or `O9K_REFRESH_HOSTS=on` — every file `--refresh-hosts` writes gets a
+`.o9k-bak` backup first. Opt in with `O9K_REFRESH_HOSTS=on` to also
+**refresh multi-CLI skills + hooks** (`skills-sync` + `host-wire`) as part of
+`--apply`, so Codex/Cursor/OpenCode/Hermes wrappers point at the current
+marketplace scripts. It deliberately does **not** touch:
 
 - **o9k plugins / the marketplace** — run `/plugin marketplace update o9k`
   instead (Claude Code manages that clone; a manual pull could clobber it).

@@ -80,6 +80,10 @@ test("wireHosts wires codex and cursor with --only filter", () => {
     home,
     marketplaceRoot: marketRoot,
     only: ["codex", "cursor"],
+    // Deterministic regardless of what's actually on this machine's PATH —
+    // --only + --force is the documented way to wire an undetected host.
+    force: true,
+    pathEnv: "",
   });
   assert.equal(r.results.length, 2);
   assert.ok(r.results.every((x) => x.ok));
@@ -88,9 +92,42 @@ test("wireHosts wires codex and cursor with --only filter", () => {
   fs.rmSync(home, { recursive: true, force: true });
 });
 
+// FIX7 regression: --only used to bypass presence entirely. It should now
+// skip an undetected host (with a clear message) unless --force is passed.
+test("wireHosts --only skips an undetected host, --force overrides", () => {
+  const home = makeTmpHome([]); // no .codex dir -> not present
+  const skipped = wireHosts({
+    home,
+    marketplaceRoot: marketRoot,
+    only: ["codex"],
+    pathEnv: "",
+  });
+  assert.equal(skipped.results.length, 1);
+  assert.equal(skipped.results[0].ok, true);
+  assert.match(skipped.results[0].detail, /skipped codex: not detected \(use --force/);
+  assert.equal(fs.existsSync(path.join(home, ".codex/hooks.json")), false);
+
+  const forced = wireHosts({
+    home,
+    marketplaceRoot: marketRoot,
+    only: ["codex"],
+    force: true,
+    pathEnv: "",
+  });
+  assert.equal(forced.results[0].ok, true);
+  assert.ok(fs.existsSync(path.join(home, ".codex/hooks.json")));
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
 test("wireHosts skips claude hook merge", () => {
   const home = makeTmpHome([".claude"]);
-  const r = wireHosts({ home, marketplaceRoot: marketRoot, only: ["claude"] });
+  const r = wireHosts({
+    home,
+    marketplaceRoot: marketRoot,
+    only: ["claude"],
+    force: true,
+    pathEnv: "",
+  });
   assert.equal(r.results.length, 1);
   assert.equal(r.results[0].id, "claude");
   assert.equal(r.results[0].ok, true);
@@ -104,6 +141,8 @@ test("wireHosts isolates per-host failures", () => {
     home,
     marketplaceRoot: "/nonexistent/o9k-marketplace",
     only: ["codex", "cursor"],
+    force: true,
+    pathEnv: "",
   });
   assert.equal(r.results.length, 2);
   assert.ok(r.results.every((x) => x.ok === false));
@@ -112,7 +151,14 @@ test("wireHosts isolates per-host failures", () => {
 
 test("wireHosts dryRun does not write hooks", () => {
   const home = makeTmpHome();
-  const r = wireHosts({ home, marketplaceRoot: marketRoot, dryRun: true, only: ["codex"] });
+  const r = wireHosts({
+    home,
+    marketplaceRoot: marketRoot,
+    dryRun: true,
+    only: ["codex"],
+    force: true,
+    pathEnv: "",
+  });
   assert.equal(r.results[0].ok, true);
   assert.equal(fs.existsSync(path.join(home, ".codex/hooks.json")), false);
   fs.rmSync(home, { recursive: true, force: true });
@@ -126,5 +172,31 @@ test("host-wire.mjs CLI --dry-run exits 0", () => {
   });
   assert.equal(r.status, 0);
   assert.match(r.stdout, /"results"/);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("host-wire.mjs CLI requires exactly one of --dry-run/--run", () => {
+  const tmp = makeTmpHome();
+  const r = spawnSync(process.execPath, [script], {
+    env: { ...process.env, HOME: tmp },
+    encoding: "utf8",
+  });
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /usage: host-wire\.mjs/);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("host-wire.mjs CLI --dry-run --only --force wires an undetected host", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-host-wire-"));
+  const r = spawnSync(
+    process.execPath,
+    [script, "--dry-run", "--only=codex", "--force"],
+    { env: { ...process.env, HOME: tmp, PATH: "" }, encoding: "utf8" },
+  );
+  assert.equal(r.status, 0);
+  const parsed = JSON.parse(r.stdout);
+  assert.equal(parsed.results.length, 1);
+  assert.equal(parsed.results[0].id, "codex");
+  assert.equal(parsed.results[0].ok, true);
   fs.rmSync(tmp, { recursive: true, force: true });
 });

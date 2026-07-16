@@ -1,63 +1,22 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { mergeHooksJson } from "../hook-merge.mjs";
-
-const HOOK_WRAPPERS = [
-  { name: "o9k-core-session", target: "core/session-start" },
-  { name: "o9k-memory-session", target: "memory/session-start" },
-  { name: "o9k-update-check", target: "core/update-check" },
-  { name: "o9k-memory-precompact", target: "memory/pre-compact" },
-];
+import {
+  HOOK_WRAPPERS,
+  buildWrapperScript,
+  installWrapper,
+  readJsonSafe,
+  resolveRoots,
+  writeFileWithBackup,
+} from "./common.mjs";
 
 const PRECOMPACT_NOTE =
   "PreCompact hook included for parity; Codex may reject it at runtime (verify in Task 9).";
 
-function readJson(filePath) {
-  try {
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
-  } catch (e) {
-    if (e.code === "ENOENT") return {};
-    throw e;
-  }
-}
-
-function buildWrapperScript({ marketplaceRoot, runHookPath, target }) {
-  const root = marketplaceRoot.replace(/"/g, '\\"');
-  const runner = runHookPath.replace(/"/g, '\\"');
-  return `#!/usr/bin/env bash
-export O9K_MARKETPLACE_ROOT="${root}"
-exec bash "${runner}" ${target}
-`;
-}
-
-function wrapperContentMatches(filePath, expected) {
-  try {
-    return fs.readFileSync(filePath, "utf8") === expected;
-  } catch {
-    return false;
-  }
-}
-
-function installWrapper({ hooksDir, name, content, dryRun }) {
-  const dest = path.join(hooksDir, `${name}.sh`);
-  if (wrapperContentMatches(dest, content)) return false;
-
-  if (dryRun) return true;
-
-  fs.mkdirSync(hooksDir, { recursive: true });
-  fs.writeFileSync(dest, content, { mode: 0o755 });
-  try {
-    fs.chmodSync(dest, 0o755);
-  } catch {
-    // best-effort on platforms that ignore mode in writeFileSync
-  }
-  return true;
-}
-
 function buildCodexHooksPatch(home) {
   const hooksDir = path.join(home, ".codex/hooks");
   const cmd = (script) => `bash ${path.join(hooksDir, script)}`;
+  const byName = Object.fromEntries(HOOK_WRAPPERS.map((w) => [w.name, w]));
 
   return {
     hooks: {
@@ -65,16 +24,26 @@ function buildCodexHooksPatch(home) {
         {
           matcher: "startup|resume",
           hooks: [
-            { type: "command", command: cmd("o9k-core-session.sh"), timeout: 15 },
-            { type: "command", command: cmd("o9k-memory-session.sh"), timeout: 15 },
-            { type: "command", command: cmd("o9k-update-check.sh"), timeout: 20 },
-          ],
+            "o9k-core-session",
+            "o9k-memory-session",
+            "o9k-update-check",
+          ].map((name) => ({
+            type: "command",
+            command: cmd(`${name}.sh`),
+            timeout: byName[name].timeout,
+          })),
         },
       ],
       PreCompact: [
         {
           matcher: "",
-          hooks: [{ type: "command", command: cmd("o9k-memory-precompact.sh"), timeout: 30 }],
+          hooks: [
+            {
+              type: "command",
+              command: cmd("o9k-memory-precompact.sh"),
+              timeout: byName["o9k-memory-precompact"].timeout,
+            },
+          ],
         },
       ],
     },
@@ -87,8 +56,7 @@ function buildCodexHooksPatch(home) {
 export function wireCodex({ home, marketplaceRoot, dryRun = false }) {
   const hooksDir = path.join(home, ".codex/hooks");
   const hooksJsonPath = path.join(home, ".codex/hooks.json");
-  const pluginRoot = fileURLToPath(new URL("../..", import.meta.url));
-  const resolvedMarketplace = marketplaceRoot ?? path.join(pluginRoot, "..");
+  const { marketplaceRoot: resolvedMarketplace } = resolveRoots(import.meta.url, marketplaceRoot);
   const runHookPath = path.join(resolvedMarketplace, "o9k-core/hooks/adapters/run-o9k-hook.sh");
 
   if (!fs.existsSync(runHookPath)) {
@@ -105,13 +73,12 @@ export function wireCodex({ home, marketplaceRoot, dryRun = false }) {
     if (installWrapper({ hooksDir, name, content, dryRun })) installed.push(name);
   }
 
-  const existing = readJson(hooksJsonPath);
+  const existing = readJsonSafe(hooksJsonPath) ?? {};
   const patch = buildCodexHooksPatch(home);
   const merged = mergeHooksJson(existing, patch);
 
   if (!dryRun) {
-    fs.mkdirSync(path.dirname(hooksJsonPath), { recursive: true });
-    fs.writeFileSync(hooksJsonPath, `${JSON.stringify(merged, null, 2)}\n`);
+    writeFileWithBackup(hooksJsonPath, `${JSON.stringify(merged, null, 2)}\n`);
   }
 
   const parts = [];

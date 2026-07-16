@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { mergeHermesHooksYaml, wireHermes } from "./wire-hermes.mjs";
+import { hasInlineFlowHooks, mergeHermesHooksYaml, wireHermes } from "./wire-hermes.mjs";
 
 const coreRoot = fileURLToPath(new URL("../..", import.meta.url));
 const marketRoot = path.join(coreRoot, "..");
@@ -138,6 +138,98 @@ test("wireHermes preserves foreign-o9k-helper.sh", () => {
   const pre = hookCommands(merged, "pre_llm_call");
   assert.ok(pre.some((c) => c.includes("foreign-o9k-helper.sh")));
   assert.ok(pre.some((c) => c.includes("o9k-core-session")));
+
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
+test("mergeHermesHooksYaml treats inline-empty hooks: {} as a block start (no duplicate key)", () => {
+  const base = "model:\n  default: x\nhooks: {}\n";
+  const merged = mergeHermesHooksYaml(base, { home: "/tmp/x" });
+  const hooksKeyCount = (merged.match(/^hooks:/gm) || []).length;
+  assert.equal(hooksKeyCount, 1);
+  const pre = hookCommands(merged, "pre_llm_call");
+  assert.ok(pre.some((c) => c.includes("o9k-core-session")));
+});
+
+test("mergeHermesHooksYaml treats hooks: null / hooks: ~ as a block start too", () => {
+  for (const val of ["null", "~"]) {
+    const base = `model:\n  default: x\nhooks: ${val}\n`;
+    const merged = mergeHermesHooksYaml(base, { home: "/tmp/x" });
+    const hooksKeyCount = (merged.match(/^hooks:/gm) || []).length;
+    assert.equal(hooksKeyCount, 1, `hooks: ${val}`);
+  }
+});
+
+test("mergeHermesHooksYaml leaves non-empty inline flow hooks: untouched (no corruption)", () => {
+  const base = "model:\n  default: x\nhooks: {a: b}\n";
+  const merged = mergeHermesHooksYaml(base, { home: "/tmp/x" });
+  assert.equal(merged, base);
+  const hooksKeyCount = (merged.match(/^hooks:/gm) || []).length;
+  assert.equal(hooksKeyCount, 1);
+});
+
+test("hasInlineFlowHooks detects non-empty inline flow but not empty-ish forms", () => {
+  assert.equal(hasInlineFlowHooks("hooks: {a: b}\n"), true);
+  assert.equal(hasInlineFlowHooks("hooks: [a, b]\n"), true);
+  assert.equal(hasInlineFlowHooks("hooks: {}\n"), false);
+  assert.equal(hasInlineFlowHooks("hooks: null\n"), false);
+  assert.equal(hasInlineFlowHooks("hooks: ~\n"), false);
+  assert.equal(hasInlineFlowHooks("hooks:\n  pre_llm_call:\n"), false);
+});
+
+test("wireHermes reports a warning and skips merge for inline flow hooks:", () => {
+  const home = makeTmpHome();
+  const configPath = path.join(home, ".hermes/config.yaml");
+  const yaml = "model:\n  default: x\nhooks: {a: b}\n";
+  fs.writeFileSync(configPath, yaml);
+
+  const r = wireHermes({ home, marketplaceRoot: marketRoot });
+  assert.equal(r.ok, true);
+  assert.match(r.detail, /merge skipped, wire manually/);
+  assert.equal(r.warning, "hooks: uses inline flow style — merge skipped, wire manually");
+  assert.equal(fs.readFileSync(configPath, "utf8"), yaml);
+
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
+test("wireHermes backs up config.yaml before rewriting it (FIX4)", () => {
+  const home = makeTmpHome();
+  const configPath = path.join(home, ".hermes/config.yaml");
+  fs.writeFileSync(configPath, FIXTURE_YAML);
+
+  wireHermes({ home, marketplaceRoot: marketRoot });
+
+  const backupPath = `${configPath}.o9k-bak`;
+  assert.ok(fs.existsSync(backupPath));
+  assert.equal(fs.readFileSync(backupPath, "utf8"), FIXTURE_YAML);
+
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
+test("wireHermes guards session-start wrappers with a once-per-session marker (FIX3)", () => {
+  const home = makeTmpHome();
+  fs.writeFileSync(path.join(home, ".hermes/config.yaml"), FIXTURE_YAML);
+  wireHermes({ home, marketplaceRoot: marketRoot });
+
+  const coreSession = fs.readFileSync(
+    path.join(home, ".hermes/agent-hooks/o9k-core-session.sh"),
+    "utf8",
+  );
+  assert.match(coreSession, /MARKER="\$\{TMPDIR:-\/tmp\}\/o9k-hermes-\$PPID-o9k-core-session"/);
+  assert.match(coreSession, /\[ -f "\$MARKER" \] && exit 0/);
+
+  const memorySession = fs.readFileSync(
+    path.join(home, ".hermes/agent-hooks/o9k-memory-session.sh"),
+    "utf8",
+  );
+  assert.match(memorySession, /o9k-hermes-\$PPID-o9k-memory-session/);
+
+  // update-check throttles itself already — no marker guard needed.
+  const updateCheck = fs.readFileSync(
+    path.join(home, ".hermes/agent-hooks/o9k-update-check.sh"),
+    "utf8",
+  );
+  assert.doesNotMatch(updateCheck, /MARKER=/);
 
   fs.rmSync(home, { recursive: true, force: true });
 });

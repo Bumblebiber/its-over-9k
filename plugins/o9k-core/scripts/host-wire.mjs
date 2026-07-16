@@ -122,16 +122,31 @@ export function wireHosts(options) {
   const home = options.home ?? os.homedir();
   const marketplaceRoot = options.marketplaceRoot;
   const dryRun = !!options.dryRun;
+  const force = !!options.force;
   const only = options.only?.map((s) => s.toLowerCase());
 
-  const detectOpts = { home };
-  if (options.pathEnv !== undefined) detectOpts.pathEnv = options.pathEnv;
-  const hosts = detectHosts(detectOpts);
+  let hosts = options.hosts;
+  if (!hosts) {
+    const detectOpts = { home };
+    if (options.pathEnv !== undefined) detectOpts.pathEnv = options.pathEnv;
+    hosts = detectHosts(detectOpts);
+  }
   const results = [];
 
   for (const [id, host] of Object.entries(hosts)) {
-    if (only && !only.includes(id)) continue;
-    if (!only && !host.present) continue;
+    if (only) {
+      if (!only.includes(id)) continue;
+      if (!host.present && !force) {
+        results.push({
+          id,
+          ok: true,
+          detail: `skipped ${id}: not detected (use --force to wire anyway)`,
+        });
+        continue;
+      }
+    } else if (!host.present) {
+      continue;
+    }
 
     if (host.wireMode === "claude-plugin") {
       results.push({ id, ok: true, detail: "claude-plugin: skipped hook merge" });
@@ -159,11 +174,14 @@ function parseCli(argv) {
   const dryRun = argv.includes("--dry-run");
   const run = argv.includes("--run");
   if (dryRun === run) {
-    throw new Error("usage: host-wire.mjs --dry-run | --run [--only=codex,cursor]");
+    throw new Error(
+      "usage: host-wire.mjs --dry-run | --run [--only=codex,cursor] [--force]"
+    );
   }
   const onlyArg = argv.find((a) => a.startsWith("--only="));
   const only = onlyArg ? onlyArg.slice("--only=".length).split(",").filter(Boolean) : undefined;
-  return { dryRun, only };
+  const force = argv.includes("--force");
+  return { dryRun, only, force };
 }
 
 function defaultMarketplaceRoot() {
@@ -174,12 +192,13 @@ function defaultMarketplaceRoot() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    const { dryRun, only } = parseCli(process.argv.slice(2));
+    const { dryRun, only, force } = parseCli(process.argv.slice(2));
     const r = wireHosts({
       home: process.env.HOME,
       marketplaceRoot: defaultMarketplaceRoot(),
       dryRun,
       only,
+      force,
     });
     console.log(JSON.stringify(r, null, 2));
     process.exit(r.results.every((x) => x.ok) ? 0 : 1);

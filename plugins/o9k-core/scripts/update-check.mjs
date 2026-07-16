@@ -286,9 +286,13 @@ if (flag === "--report" || flag === "--apply") {
   }
   if (flag === "--apply") {
     console.log(app.length ? `Applied ${app.length} update(s).` : "Nothing to apply.");
-    // Always refresh multi-CLI wiring after apply — wrappers bake absolute
-    // marketplace paths; skills are copies. Skip with O9K_REFRESH_HOSTS=off.
-    if ((process.env.O9K_REFRESH_HOSTS || "on").toLowerCase() !== "off") {
+    // Host refresh is opt-in: --apply only touches npm-global CLIs unless
+    // explicitly asked to also re-wire host configs (wrappers bake absolute
+    // marketplace paths; skills are copies, so a marketplace update can make
+    // them stale — but silently rewriting user config files on every
+    // --apply is a surprise). Opt in with O9K_REFRESH_HOSTS=on, or run
+    // --refresh-hosts separately.
+    if ((process.env.O9K_REFRESH_HOSTS || "off").toLowerCase() !== "off") {
       console.log("");
       console.log("Refreshing multi-CLI skills + hooks…");
       try {
