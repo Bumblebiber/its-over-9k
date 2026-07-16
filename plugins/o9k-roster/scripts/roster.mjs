@@ -1,0 +1,136 @@
+#!/usr/bin/env node
+// roster.mjs — deterministic model selection for multi-agent delegation.
+//
+// Subcommands: init | pick | usage | mark-limited | dispatch | handoff.
+// Selection walks a role's fallback chain and skips models whose provider
+// usage is at/over limits.handoff_at or which carry an unexpired
+// mark-limited entry. All state lives in ~/.o9k/{roster,usage}.json
+// (override via O9K_ROSTER / O9K_USAGE for tests). Zero dependencies.
+
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+export function configPath() {
+  return process.env.O9K_ROSTER || path.join(os.homedir(), ".o9k/roster.json");
+}
+
+export function usagePath() {
+  return process.env.O9K_USAGE || path.join(os.homedir(), ".o9k/usage.json");
+}
+
+/** JSON.parse a file; ENOENT -> null; malformed JSON rethrows. */
+export function loadJson(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch (e) {
+    if (e.code === "ENOENT") return null;
+    throw e;
+  }
+}
+
+function limits(roster) {
+  return { warn_at: 0.9, handoff_at: 0.95, ...(roster.limits || {}) };
+}
+
+function markedUntil(usage, key, now) {
+  const until = usage?.marked?.[key]?.until;
+  if (!until) return false;
+  return Date.parse(until) > now;
+}
+
+/**
+ * Walk role's chain, return first viable {model, cli, skipped}. Viability:
+ * defined in roster.models, provider usage below handoff_at, no unexpired
+ * mark on the model or its provider. model:null when the chain is exhausted.
+ */
+export function pick({ roster, usage, role, now = Date.now() }) {
+  const spec = roster.roles?.[role];
+  if (!spec) throw new Error(`unknown role: ${role}`);
+  const { handoff_at } = limits(roster);
+  const skipped = [];
+
+  for (const name of spec.chain) {
+    const model = roster.models?.[name];
+    if (!model) {
+      skipped.push({ model: name, reason: "not in models" });
+      continue;
+    }
+    const used = usage?.providers?.[model.provider]?.used;
+    if (typeof used === "number" && used >= handoff_at) {
+      skipped.push({ model: name, reason: `provider ${model.provider} at ${Math.round(used * 100)}%` });
+      continue;
+    }
+    if (markedUntil(usage, name, now)) {
+      skipped.push({ model: name, reason: `marked limited until ${usage.marked[name].until}` });
+      continue;
+    }
+    if (markedUntil(usage, model.provider, now)) {
+      skipped.push({ model: name, reason: `provider marked limited until ${usage.marked[model.provider].until}` });
+      continue;
+    }
+    return { model: name, cli: model.cli?.[0] ?? null, skipped };
+  }
+  return { model: null, cli: null, skipped };
+}
+
+function requireRoster() {
+  const roster = loadJson(configPath());
+  if (!roster) {
+    console.error(`no roster config at ${configPath()} — run: node roster.mjs init (or /o9k-init)`);
+    process.exit(1);
+  }
+  return roster;
+}
+
+function argValue(args, flag) {
+  const i = args.indexOf(flag);
+  return i === -1 ? undefined : args[i + 1];
+}
+
+function cmdInit() {
+  const dest = configPath();
+  if (fs.existsSync(dest)) {
+    console.log(`exists, not touching: ${dest}`);
+    return;
+  }
+  const src = new URL("../roster.example.json", import.meta.url);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(src, dest);
+  console.log(`created ${dest} — curate models/roles/chains before first use`);
+}
+
+function cmdPick(args) {
+  const role = argValue(args, "--role");
+  if (!role) {
+    console.error("usage: roster.mjs pick --role <role>");
+    process.exit(1);
+  }
+  const roster = requireRoster();
+  const usage = loadJson(usagePath());
+  const r = pick({ roster, usage, role });
+  for (const s of r.skipped) console.log(`skipped ${s.model}: ${s.reason}`);
+  if (!r.model) {
+    console.error(`chain exhausted for role ${role} — no viable model`);
+    process.exit(2);
+  }
+  console.log(`model: ${r.model}`);
+  console.log(`cli: ${r.cli}`);
+}
+
+const HANDLERS = { init: cmdInit, pick: cmdPick };
+
+function main() {
+  const [cmd, ...args] = process.argv.slice(2);
+  const handler = HANDLERS[cmd];
+  if (!handler) {
+    console.error(`usage: roster.mjs <${Object.keys(HANDLERS).join("|")}> [options]`);
+    process.exit(1);
+  }
+  handler(args);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}
