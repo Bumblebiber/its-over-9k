@@ -75,6 +75,57 @@ export function pick({ roster, usage, role, now = Date.now() }) {
   return { model: null, cli: null, skipped };
 }
 
+export function parseTtl(str) {
+  const m = /^(\d+)([mhd])$/.exec(str || "");
+  if (!m) throw new Error(`invalid ttl: ${str} (use e.g. 30m, 5h, 1d)`);
+  const unit = { m: 60_000, h: 3_600_000, d: 86_400_000 }[m[2]];
+  return Number(m[1]) * unit;
+}
+
+/** Pure: returns a new usage object with target marked until now+ttl. */
+export function markLimited({ usage, target, ttlMs, now = Date.now(), reason }) {
+  const base = usage ? structuredClone(usage) : {};
+  base.marked = base.marked || {};
+  base.marked[target] = {
+    until: new Date(now + ttlMs).toISOString(),
+    ...(reason ? { reason } : {}),
+  };
+  return base;
+}
+
+/**
+ * Threshold check shared by `usage --check` and limit-watch.mjs.
+ * Empty string when all providers are below warn_at.
+ */
+export function checkThresholds({ roster, usage, now = Date.now() }) {
+  const { warn_at, handoff_at } = limits(roster);
+  const lines = [];
+  let handoff = false;
+  for (const [provider, info] of Object.entries(usage?.providers || {})) {
+    if (typeof info?.used !== "number") continue;
+    const pct = Math.round(info.used * 100);
+    if (info.used >= handoff_at) {
+      lines.push(`⛔ o9k-roster: ${provider} at ${pct}% — session limit reached.`);
+      handoff = true;
+    } else if (info.used >= warn_at) {
+      lines.push(`⚠️ o9k-roster: ${provider} at ${pct}% — prepare for handoff: converge to a checkpointable state.`);
+    }
+  }
+  for (const [target, mark] of Object.entries(usage?.marked || {})) {
+    if (Date.parse(mark.until) > now) {
+      lines.push(`ℹ️ o9k-roster: ${target} marked limited until ${mark.until}${mark.reason ? ` (${mark.reason})` : ""}`);
+    }
+  }
+  if (handoff) {
+    lines.push(
+      "Do this now: (1) write HANDOFF.md in the working directory (current state, done steps, open steps, verification commands), " +
+      "(2) run: node <o9k>/plugins/o9k-roster/scripts/roster.mjs handoff --role <your role> --dir \"$PWD\", " +
+      "(3) report the printed tmux session + attach command to the user, (4) stop working in this session."
+    );
+  }
+  return lines.join("\n");
+}
+
 function requireRoster() {
   const roster = loadJson(configPath());
   if (!roster) {
@@ -119,7 +170,45 @@ function cmdPick(args) {
   console.log(`cli: ${r.cli}`);
 }
 
-const HANDLERS = { init: cmdInit, pick: cmdPick };
+function cmdMarkLimited(args) {
+  const target = args.find((a) => !a.startsWith("--"));
+  const ttl = argValue(args, "--ttl");
+  if (!target || !ttl) {
+    console.error("usage: roster.mjs mark-limited <model|provider> --ttl <30m|5h|1d> [--reason txt]");
+    process.exit(1);
+  }
+  const usage = markLimited({
+    usage: loadJson(usagePath()),
+    target,
+    ttlMs: parseTtl(ttl),
+    reason: argValue(args, "--reason"),
+  });
+  fs.mkdirSync(path.dirname(usagePath()), { recursive: true });
+  fs.writeFileSync(usagePath(), `${JSON.stringify(usage, null, 2)}\n`);
+  console.log(`marked ${target} limited until ${usage.marked[target].until}`);
+}
+
+function cmdUsage(args) {
+  const roster = requireRoster();
+  const usage = loadJson(usagePath());
+  if (args.includes("--check")) {
+    const out = checkThresholds({ roster, usage });
+    if (out) console.log(out);
+    return;
+  }
+  if (!usage) {
+    console.log(`no usage data at ${usagePath()} (no known limits — chains run in config order)`);
+    return;
+  }
+  for (const [p, info] of Object.entries(usage.providers || {})) {
+    console.log(`${p}: ${Math.round((info.used ?? 0) * 100)}%${info.updated ? ` (as of ${info.updated})` : ""}`);
+  }
+  for (const [t, m] of Object.entries(usage.marked || {})) {
+    console.log(`marked ${t}: until ${m.until}${m.reason ? ` (${m.reason})` : ""}`);
+  }
+}
+
+const HANDLERS = { init: cmdInit, pick: cmdPick, "mark-limited": cmdMarkLimited, usage: cmdUsage };
 
 function main() {
   const [cmd, ...args] = process.argv.slice(2);

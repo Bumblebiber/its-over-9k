@@ -2,7 +2,7 @@
 // no ~/.o9k access.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { pick } from "./roster.mjs";
+import { pick, parseTtl, markLimited, checkThresholds } from "./roster.mjs";
 
 const ROSTER = {
   clis: { claude: { cmd: ["claude", "--model", "{model}", "{prompt}"] } },
@@ -75,4 +75,46 @@ test("pick returns model:null with full skip list when chain exhausted", () => {
 
 test("pick throws on unknown role", () => {
   assert.throws(() => pick({ roster: ROSTER, usage: null, role: "nope", now: NOW }), /unknown role/);
+});
+
+test("parseTtl parses m/h/d and rejects garbage", () => {
+  assert.equal(parseTtl("30m"), 30 * 60_000);
+  assert.equal(parseTtl("5h"), 5 * 3_600_000);
+  assert.equal(parseTtl("1d"), 24 * 3_600_000);
+  assert.throws(() => parseTtl("5x"), /invalid ttl/);
+});
+
+test("markLimited adds an until entry without mutating input", () => {
+  const usage = { providers: { anthropic: { used: 0.5 } } };
+  const out = markLimited({ usage, target: "model-a", ttlMs: 3_600_000, now: NOW, reason: "rate-limit" });
+  assert.equal(out.marked["model-a"].until, new Date(NOW + 3_600_000).toISOString());
+  assert.equal(out.marked["model-a"].reason, "rate-limit");
+  assert.equal(usage.marked, undefined);
+  // null usage bootstraps a fresh object:
+  const fresh = markLimited({ usage: null, target: "openai", ttlMs: 60_000, now: NOW });
+  assert.ok(fresh.marked.openai.until);
+});
+
+test("checkThresholds is silent below warn_at", () => {
+  const usage = { providers: { anthropic: { used: 0.5 } } };
+  assert.equal(checkThresholds({ roster: ROSTER, usage, now: NOW }), "");
+});
+
+test("checkThresholds warns at warn_at and instructs handoff at handoff_at", () => {
+  const warn = checkThresholds({
+    roster: ROSTER,
+    usage: { providers: { anthropic: { used: 0.91 } } },
+    now: NOW,
+  });
+  assert.match(warn, /anthropic at 91%/);
+  assert.match(warn, /prepare for handoff/i);
+  assert.doesNotMatch(warn, /HANDOFF\.md/);
+
+  const handoff = checkThresholds({
+    roster: ROSTER,
+    usage: { providers: { anthropic: { used: 0.96 } } },
+    now: NOW,
+  });
+  assert.match(handoff, /HANDOFF\.md/);
+  assert.match(handoff, /roster.*handoff/i);
 });
