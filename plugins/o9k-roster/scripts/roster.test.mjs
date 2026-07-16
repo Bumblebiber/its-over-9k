@@ -2,7 +2,11 @@
 // no ~/.o9k access.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { pick, parseTtl, markLimited, checkThresholds, buildCommand, tmuxArgs, parseChainEntry } from "./roster.mjs";
+import {
+  pick, parseTtl, markLimited, checkThresholds, buildCommand, tmuxArgs,
+  parseChainEntry, firstPositional,
+} from "./roster.mjs";
+import { fileURLToPath } from "node:url";
 
 const ROSTER = {
   clis: {
@@ -150,6 +154,27 @@ test("pick skips when a CLI name is mark-limited", () => {
   assert.match(r.skipped[0].reason, /cli marked limited/);
 });
 
+test("pick skips when resolved CLI usage is at/over handoff threshold", () => {
+  // Cursor Abo at 97%: composer (provider cursor) already skipped via provider
+  // gate; grok via cursor-agent must also skip — same CLI quota.
+  const roster = {
+    ...ROSTER,
+    roles: { implementer: { chain: ["cursor:model-g", "hermes:model-c"] } },
+  };
+  const usage = { providers: { cursor: { used: 0.97 } } };
+  const r = pick({ roster, usage, role: "implementer", now: NOW });
+  assert.equal(r.model, "model-c");
+  assert.equal(r.cli, "hermes");
+  assert.deepEqual(r.skipped, [{ model: "cursor:model-g", reason: "cli cursor at 97%" }]);
+});
+
+test("firstPositional skips flag values so mark-limited --ttl 5h anthropic works", () => {
+  assert.equal(firstPositional(["--ttl", "5h", "anthropic"]), "anthropic");
+  assert.equal(firstPositional(["anthropic", "--ttl", "5h"]), "anthropic");
+  assert.equal(firstPositional(["--ttl", "5h", "--reason", "rate-limit", "anthropic"]), "anthropic");
+  assert.equal(firstPositional(["--ttl", "5h"]), undefined);
+});
+
 test("parseTtl parses m/h/d and rejects garbage", () => {
   assert.equal(parseTtl("30m"), 30 * 60_000);
   assert.equal(parseTtl("5h"), 5 * 3_600_000);
@@ -190,6 +215,9 @@ test("checkThresholds warns at warn_at and instructs handoff at handoff_at", () 
   });
   assert.match(handoff, /HANDOFF\.md/);
   assert.match(handoff, /roster.*handoff/i);
+  const rosterScript = fileURLToPath(new URL("./roster.mjs", import.meta.url));
+  assert.match(handoff, new RegExp(`node ${rosterScript.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} handoff`));
+  assert.doesNotMatch(handoff, /<o9k>/);
 });
 
 test("buildCommand substitutes model and prompt per argv element", () => {

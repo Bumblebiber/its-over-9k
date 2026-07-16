@@ -12,7 +12,20 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
+
+/** First non-flag argv token; skips values that belong to --flags. */
+export function firstPositional(args) {
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a.startsWith("--")) {
+      if (i + 1 < args.length && !args[i + 1].startsWith("--")) i++;
+      continue;
+    }
+    return a;
+  }
+  return undefined;
+}
 
 export function configPath() {
   return process.env.O9K_ROSTER || path.join(os.homedir(), ".o9k/roster.json");
@@ -73,7 +86,7 @@ function entryLabel(model, cli) {
 /**
  * Walk role's chain, return first viable {model, cli, skipped}. Viability:
  * defined in roster.models, resolved CLI has a template and is listed on the
- * model (when model.cli is set), provider usage below handoff_at, no
+ * model (when model.cli is set), provider and CLI usage below handoff_at, no
  * unexpired mark on the model / provider / CLI. model:null when exhausted.
  *
  * Chain entries may be bare model ids, "cli:model" pins, or {model, cli?}
@@ -119,6 +132,11 @@ export function pick({ roster, usage, role, now = Date.now() }) {
     const used = usage?.providers?.[model.provider]?.used;
     if (typeof used === "number" && used >= handoff_at) {
       skipped.push({ model: label, reason: `provider ${model.provider} at ${Math.round(used * 100)}%` });
+      continue;
+    }
+    const cliUsed = usage?.providers?.[cli]?.used;
+    if (typeof cliUsed === "number" && cliUsed >= handoff_at) {
+      skipped.push({ model: label, reason: `cli ${cli} at ${Math.round(cliUsed * 100)}%` });
       continue;
     }
     if (markedUntil(usage, name, now)) {
@@ -180,9 +198,10 @@ export function checkThresholds({ roster, usage, now = Date.now() }) {
     }
   }
   if (handoff) {
+    const rosterScript = fileURLToPath(import.meta.url);
     lines.push(
       "Do this now: (1) write HANDOFF.md in the working directory (current state, done steps, open steps, verification commands), " +
-      "(2) run: node <o9k>/plugins/o9k-roster/scripts/roster.mjs handoff --role <your role> --dir \"$PWD\", " +
+      `(2) run: node ${rosterScript} handoff --role <your role> --dir "$PWD", ` +
       "(3) report the printed tmux session + attach command to the user, (4) stop working in this session."
     );
   }
@@ -234,7 +253,7 @@ function cmdPick(args) {
 }
 
 function cmdMarkLimited(args) {
-  const target = args.find((a) => !a.startsWith("--"));
+  const target = firstPositional(args);
   const ttl = argValue(args, "--ttl");
   if (!target || !ttl) {
     console.error("usage: roster.mjs mark-limited <model|provider> --ttl <30m|5h|1d> [--reason txt]");

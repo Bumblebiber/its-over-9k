@@ -1,7 +1,7 @@
 {
   "name": "o9k",
   "owner": { "name": "Bumblebiber" },
-  "description": "its-over-9k — meta-framework combining token-efficiency frameworks (output compression, context discipline, subagent isolation, memory MCP) for Claude Code.",
+  "description": "its-over-9k — meta-framework combining token-efficiency frameworks (output compression, context discipline, subagent isolation, memory MCP, multi-agent roster) for Claude Code, Cursor, Codex, OpenCode, and Hermes.",
   "plugins": [
     {
       "name": "o9k-core",

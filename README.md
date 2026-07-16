@@ -7,8 +7,9 @@
 
 **o9k is a meta-framework for AI coding agents.** It doesn't invent yet another
 technique — it *combines* the best token-efficiency and agent-quality frameworks
-into one coherent, conflict-free system of Claude Code skills and plugins, wired
-to a persistent memory MCP.
+into one coherent, conflict-free system of skills and plugins, wired to a
+persistent memory MCP. Primary packaging is a Claude Code marketplace; the same
+pillars also wire into **Cursor, Codex, OpenCode, and Hermes** via `/o9k-init`.
 
 Every framework below saves tokens or improves output on its own. Combined
 naively, they fight each other — two plugins hooking `SessionStart`, two output
@@ -28,7 +29,7 @@ the pieces multiply instead of colliding.
 | **Subagent isolation** | `o9k-dispatch` | Cost-gated fan-out: offload searches and decomposable work to isolated subagents that return results, not transcripts. | [Anthropic multi-agent research](https://www.anthropic.com/engineering/multi-agent-research-system), superpowers' dispatch skills |
 | **Memory** | `o9k-memory` | A memory MCP so sessions never start from zero — compact briefing at session start, deep recall on demand, save-before-compact. | **[hmem](https://github.com/Bumblebiber/hmem)** (available default), [TIM](https://github.com/Bumblebiber/tim) (planned) |
 | **Discovery** | `o9k-recon` | Find and classify companion frameworks; one-command companion bundle installs. | — |
-| **Multi-agent roster** | `o9k-roster` | Role-based model selection with fallback chains, usage-limit awareness, tmux dispatch and limit-triggered handoff. | — |
+| **Multi-agent roster** | `o9k-roster` | Role→CLI×model fallback chains (deterministic `pick`/`dispatch`/`handoff`), usage-limit watch + handoff protocol, optional OpenRouter/AA score refresh. See [docs/MULTI-AGENT.md](docs/MULTI-AGENT.md). | — |
 
 Each pillar is an independent plugin. Install all seven or cherry-pick — `o9k-core`
 is the only one the others assume.
@@ -180,7 +181,8 @@ proposing a bundle or matrix update. See
 
 ## Status
 
-Early but functional. `o9k-core` and `o9k-memory` ship real hook automation:
+Early but functional. Seven pillars; hooks and multi-CLI wiring ship for the
+hosts above.
 
 - **SessionStart (o9k-core)** — injects a ~70-token doctrine directive (never
   documentation) so all installed pillars apply automatically; flags open
@@ -191,8 +193,8 @@ Early but functional. `o9k-core` and `o9k-memory` ship real hook automation:
   in the background (once per `O9K_UPDATE_INTERVAL_HOURS`, default 24h), so it
   never slows session start. `O9K_UPDATE_CHECK=notify` (default) reports;
   `auto` also applies the safe npm-global updates; `off` disables. Plugins and
-  the marketplace are always notify-only — never clobbered.
-
+  the marketplace are always notify-only — never clobbered. `/o9k-update
+  --refresh-hosts` re-syncs multi-CLI skills/hooks after marketplace updates.
 - **SessionStart (o9k-memory)** — detects the memory backend (TIM via
   `tim resolve-project`, else hmem) and injects a compact loading *directive*
   (never memory content). Stays silent if the backend's own hooks are already
@@ -200,6 +202,10 @@ Early but functional. `o9k-core` and `o9k-memory` ship real hook automation:
 - **PreCompact (o9k-memory)** — fires the backend's checkpoint (`tim checkpoint`
   / `hmem checkpoint`) in the background before compaction summarizes the
   session away. Never blocks or delays compaction.
+- **Limit watch (o9k-roster)** — reads `~/.o9k/usage.json` (no provider API
+  calls) and warns / instructs handoff when a provider or CLI crosses
+  `limits.handoff_at`. Wired on all hosts; model choice stays in
+  `roster.mjs`, never in LLM reasoning.
 
 `o9k-core` also ships **`/o9k-guide`** (personalized setup orientation backed by
 a read-only detector script), **`/o9k-update`** (check pillars & companions for
