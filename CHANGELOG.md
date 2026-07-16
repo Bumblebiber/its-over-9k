@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.10.0] — 2026-07-16
+
+### Added
+- **New pillar: o9k-roster** — multi-agent model registry. Role→chain
+  selection in deterministic code (`roster.mjs pick|dispatch|handoff`),
+  rate-limit reaction via `mark-limited` (TTL), limit-watch hook on all
+  hosts (per-turn on Claude Code + Hermes, session-start + degraded checks
+  on Codex/Cursor/OpenCode), tmux worker spawn — no `claude -p`.
+- o9k-core 0.9.0: `roster/*` hook target, `o9k-roster-limit-watch` wrapper
+  wired via HOOK_WRAPPERS to all hosts; o9k-init roster opt-in question.
+- o9k-dispatch: roster gate — dispatch decides whether, roster decides who.
+- New doc: docs/MULTI-AGENT.md (generic plan→implement→review pipeline,
+  worker contract, handoff protocol).
+
 ## [0.9.4] — 2026-07-16
 
 ### Fixed

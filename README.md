@@ -18,7 +18,7 @@ the pieces multiply instead of colliding.
 
 ---
 
-## The Five Pillars
+## The Seven Pillars
 
 | Pillar | Plugin | What it does | Standing on the shoulders of |
 |--------|--------|--------------|------------------------------|
@@ -27,8 +27,10 @@ the pieces multiply instead of colliding.
 | **Context discipline** | `o9k-scout` | Load structure, not files: search before read, targeted line ranges, one canonical repo map per session. | aider repo-map, [codesight](https://github.com/Houseofmvps/codesight), [ast-grep](https://github.com/ast-grep/ast-grep) |
 | **Subagent isolation** | `o9k-dispatch` | Cost-gated fan-out: offload searches and decomposable work to isolated subagents that return results, not transcripts. | [Anthropic multi-agent research](https://www.anthropic.com/engineering/multi-agent-research-system), superpowers' dispatch skills |
 | **Memory** | `o9k-memory` | A memory MCP so sessions never start from zero — compact briefing at session start, deep recall on demand, save-before-compact. | **[hmem](https://github.com/Bumblebiber/hmem)** (available default), [TIM](https://github.com/Bumblebiber/tim) (planned) |
+| **Discovery** | `o9k-recon` | Find and classify companion frameworks; one-command companion bundle installs. | — |
+| **Multi-agent roster** | `o9k-roster` | Role-based model selection with fallback chains, usage-limit awareness, tmux dispatch and limit-triggered handoff. | — |
 
-Each pillar is an independent plugin. Install all five or cherry-pick — `o9k-core`
+Each pillar is an independent plugin. Install all seven or cherry-pick — `o9k-core`
 is the only one the others assume.
 
 ## Why combining multiplies
@@ -78,6 +80,7 @@ o9k is a [Claude Code plugin marketplace](https://code.claude.com/docs/en/plugin
 /plugin install o9k-dispatch@o9k
 /plugin install o9k-memory@o9k
 /plugin install o9k-recon@o9k
+/plugin install o9k-roster@o9k
 ```
 
 Then run **`/o9k-init`** in a session — it detects your setup, walks you
