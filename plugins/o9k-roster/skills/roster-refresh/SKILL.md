@@ -36,5 +36,8 @@ $ROSTER refresh --fixture-dir ... --apply
 
 ## Cron
 
-Prefer `scripts/roster-refresh-cron.sh` (disk-first report). Register weekly
-in Hermes/Overseer; do not invent a second polling path.
+Registered on this server as Hermes job **`e0c56515831c`** (Mo 10h,
+`roster-refresh-wrapper.sh`, no_agent). Reports:
+`~/.hermes/cron-outputs/roster-refresh/`.
+
+Manual: `bash ~/.hermes/scripts/roster-refresh-wrapper.sh`
