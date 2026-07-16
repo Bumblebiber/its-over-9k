@@ -186,5 +186,53 @@
       "why": "One methodology spine, ever. superpowers composes with o9k under a single named arbitration; SuperClaude's command suite wants the whole workflow.",
       "migrate": { "adapter": "home-config", "dirs": ["~/.superclaude", "~/.claude/superclaude"] }
     }
+  },
+  "hosts": {
+    "claude": {
+      "label": "Claude Code",
+      "bin": ["claude"],
+      "homeRel": ".claude",
+      "skillDirRel": ".claude/skills",
+      "hooksRel": ".claude/settings.json",
+      "mcpRel": ".claude.json",
+      "wireMode": "claude-plugin"
+    },
+    "codex": {
+      "label": "Codex",
+      "bin": ["codex"],
+      "homeRel": ".codex",
+      "skillDirRel": ".codex/skills",
+      "hooksRel": ".codex/hooks.json",
+      "mcpRel": ".codex/config.toml",
+      "wireMode": "hooks-json"
+    },
+    "cursor": {
+      "label": "Cursor",
+      "bin": ["cursor-agent", "agent"],
+      "homeRel": ".cursor",
+      "skillDirRel": null,
+      "rulesRel": ".cursor/rules",
+      "hooksRel": ".cursor/hooks.json",
+      "mcpRel": ".cursor/mcp.json",
+      "wireMode": "cursor-hooks"
+    },
+    "opencode": {
+      "label": "OpenCode",
+      "bin": ["opencode"],
+      "homeRel": ".config/opencode",
+      "skillDirRel": ".config/opencode/skills",
+      "hooksRel": ".config/opencode/plugins",
+      "mcpRel": ".config/opencode/opencode.json",
+      "wireMode": "opencode-plugin"
+    },
+    "hermes": {
+      "label": "Hermes",
+      "bin": ["hermes"],
+      "homeRel": ".hermes",
+      "skillDirRel": ".hermes/skills",
+      "hooksRel": ".hermes/config.yaml",
+      "mcpRel": null,
+      "wireMode": "hermes-yaml"
+    }
   }
 }

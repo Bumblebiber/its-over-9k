@@ -36,7 +36,7 @@ const REGISTRY_PATH = fileURLToPath(new URL("../compat/registry.json", import.me
 /** The compatibility registry — single source of truth for concerns/frameworks/bundles. */
 export function loadRegistry() {
   return (
-    readJsonSafe(REGISTRY_PATH) || { concerns: {}, bundles: {}, frameworks: {} }
+    readJsonSafe(REGISTRY_PATH) || { concerns: {}, bundles: {}, frameworks: {}, hosts: {} }
   );
 }
 
@@ -160,4 +160,34 @@ export function markFirstRunDone() {
   } catch {
     /* marker is best-effort; worst case the offer repeats once */
   }
+}
+
+export function listHostDefs() {
+  const hosts = loadRegistry().hosts || {};
+  return Object.entries(hosts).map(([id, h]) => ({ id, ...h }));
+}
+
+export function detectHosts(options = {}) {
+  const home = options.home || os.homedir();
+  const out = {};
+  for (const def of listHostDefs()) {
+    const bin = (def.bin || []).some((b) => onPath(b));
+    const homeDir = def.homeRel ? path.join(home, def.homeRel) : null;
+    const homeOk = !!(homeDir && fs.existsSync(homeDir));
+    const joinRel = (rel) => (rel ? path.join(home, rel) : null);
+    out[def.id] = {
+      id: def.id,
+      label: def.label || def.id,
+      present: bin || homeOk,
+      bin,
+      home: homeOk,
+      homeDir: homeOk ? homeDir : null,
+      skillDir: joinRel(def.skillDirRel),
+      hooksPath: joinRel(def.hooksRel),
+      mcpPath: def.mcpRel ? path.join(home, def.mcpRel) : null,
+      wireMode: def.wireMode,
+      rulesDir: joinRel(def.rulesRel),
+    };
+  }
+  return out;
 }
