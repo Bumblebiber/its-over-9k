@@ -141,6 +141,19 @@ export function setStatus(runId, status) {
   return state;
 }
 
+/** After roster dispatch spawns tmux, link session to run registry. */
+export function linkDispatchToRun(runId, session) {
+  if (!runId) return false;
+  const st = loadState(runId);
+  if (!st) return false;
+  st.worker = st.worker || {};
+  st.worker.tmux = session;
+  st.watcher = { ...(st.watcher || { kind: "internal_subagent" }), attached: true };
+  saveState(st);
+  setStatus(runId, "watching");
+  return true;
+}
+
 export function writeAnswer(runId, body, { source = "parent" } = {}) {
   const header = `<!-- source: ${source} -->\n`;
   atomicWriteText(path.join(mailboxDir(runId), "ANSWER.md"), header + body.trim() + "\n");

@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import {
   runsRoot, runDir, atomicWriteJson, atomicWriteText, createRun, loadState,
   classifyMailbox, writeAnswer, buildResumePlan, INJECT, buildCliArgv,
-  setStatus, resumeAll,
+  setStatus, resumeAll, linkDispatchToRun,
 } from "./runs.mjs";
 
 const RUNS_BIN = fileURLToPath(new URL("./runs.mjs", import.meta.url));
@@ -235,6 +235,20 @@ test("resumeAll lock prevents concurrent run", withTempRuns(async (dir) => {
   const lock = path.join(dir, ".resume.lock");
   fs.writeFileSync(lock, String(process.pid));
   assert.throws(() => resumeAll({ dryRun: true, logDir: dir }), /lock/);
+}));
+
+test("linkDispatchToRun sets worker.tmux and watching", withTempRuns(async () => {
+  const s = createRun({
+    cwd: "/tmp/p", role: "implementer",
+    parent: { cli: "claude", attach: "manual" },
+    worker: { cli: "codex", tmux: null },
+    prompt: "x",
+  });
+  assert.equal(linkDispatchToRun(s.runId, "o9k-sess-1"), true);
+  const st = loadState(s.runId);
+  assert.equal(st.worker.tmux, "o9k-sess-1");
+  assert.equal(st.status, "watching");
+  assert.equal(st.watcher.attached, true);
 }));
 
 test("CLI wait ceiling returns exit 2", withTempRuns(async (dir) => {
