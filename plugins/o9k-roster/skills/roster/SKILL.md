@@ -1,6 +1,6 @@
 ---
 name: roster
-description: "Role-based model selection for multi-agent delegation. Use before delegating work to another model/CLI (pick the right worker by role), when a rate-limit error appears (mark-limited), or when a session-limit warning arrives (handoff protocol). Selection is deterministic code — never reason about which model to use."
+description: "Role-based model selection for multi-agent delegation. Use before delegating work to another model/CLI (pick the right worker by role), when a rate-limit error appears (mark-limited), or when a session-limit warning arrives (handoff protocol). Cross-CLI mailbox runs use create/wait/answer/resume — spawn a cheap watcher subagent, never LLM-poll. Selection is deterministic code — never reason about which model to use."
 ---
 
 # roster — Who Does the Work
@@ -16,8 +16,9 @@ Chain entries are **CLI×model** cells, not models alone:
 
 All commands below: `ROSTER="node <marketplace>/plugins/o9k-roster/scripts/roster.mjs"`
 (in Claude Code: `node "${CLAUDE_PLUGIN_ROOT}/scripts/roster.mjs"` when this
-plugin is active). No config yet → `$ROSTER init`, then tell the user to
-curate `~/.o9k/roster.json`.
+plugin is active). Cross-CLI mailbox runs:
+`RUNS="node <marketplace>/plugins/o9k-roster/scripts/runs.mjs"`.
+No config yet → `$ROSTER init`, then tell the user to curate `~/.o9k/roster.json`.
 
 ## Roles
 
@@ -67,3 +68,20 @@ and after each phase transition.
 
 `pick`/`dispatch` exit non-zero listing every skipped model and why. Report
 that to the user verbatim and stop — never substitute your own model choice.
+
+## Cross-CLI runs (mailbox watcher)
+
+When delegating to an external CLI in tmux:
+
+1. `$RUNS create … --prompt-file …` (use `templates/worker-prompt.md` protocol; HEARTBEAT mandatory).
+2. Start worker tmux (`roster dispatch` or manual) with that PROMPT; pass `--run-id` when available so STATE gets worker.tmux.
+3. Spawn an **internal cheap subagent** whose only job:
+   - `$RUNS wait <runId>` (ONE blocking call — do not poll in a model loop)
+   - Return the printed `status` (`question|done|failed|watching`) to the parent; then exit.
+4. Parent on `question`: answer or ask human → `$RUNS answer <runId> --text "…"` → **respawn** the watcher (step 3).
+5. Parent on `done`/`failed`: read RESULT; TIM closeout only if semantically useful (no run-event spam).
+6. After host reboot: `$RUNS resume` (systemd `o9k-resume.service`). If `REATTACH_WATCHER` exists, respawn watcher; do not double-dispatch if worker tmux lives.
+
+Never use `claude --resume` as a live worker→parent callback.
+Never LLM-poll every few seconds.
+See `docs/MULTI-AGENT.md` and spec `docs/superpowers/specs/2026-07-17-cross-cli-run-resume-design.md`.
