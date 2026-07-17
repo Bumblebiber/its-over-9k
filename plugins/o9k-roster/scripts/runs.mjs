@@ -212,6 +212,92 @@ export function buildCliArgv({ cli, sessionId, coldStart }) {
   return null; // unknown → cold_start signal
 }
 
+export function resumeLockPath() {
+  return path.join(runsRoot(), ".resume.lock");
+}
+
+export function listActiveStates() {
+  const root = runsRoot();
+  if (!fs.existsSync(root)) return [];
+  const out = [];
+  for (const name of fs.readdirSync(root)) {
+    if (name.startsWith(".")) continue;
+    const st = loadState(name);
+    if (!st) continue;
+    if (["done", "failed", "cancelled"].includes(st.status)) continue;
+    out.push(st);
+  }
+  return out;
+}
+
+function shellQuote(s) {
+  return /^[A-Za-z0-9_\-./=]+$/.test(s) ? s : `'${s.replaceAll("'", `'\\''`)}'`;
+}
+
+export function executeResumeAction(action, state) {
+  if (action.kind === "parent_awaiting_attach" || action.kind === "flag_reattach_watcher") {
+    return;
+  }
+  if (action.kind !== "spawn_worker" && action.kind !== "spawn_parent") return;
+
+  let argv = buildCliArgv({
+    cli: action.cli,
+    sessionId: action.sessionId,
+    coldStart: !action.sessionId,
+  });
+  if (!argv) {
+    argv = ["bash", "-lc", `echo 'cold_start run ${state.runId}; read PROMPT at ${action.promptPath || ""}'; exec ${shellQuote(action.cli || "bash")}'`];
+    state.recovery = "cold_start";
+    saveState(state);
+  }
+  const cmd = argv.map(shellQuote).join(" ");
+  execFileSync("tmux", ["new-session", "-d", "-s", action.tmux, "-c", action.cwd || process.cwd(), cmd], {
+    stdio: "ignore",
+  });
+  const tmp = path.join(os.tmpdir(), `o9k-inject-${action.tmux}.txt`);
+  fs.writeFileSync(tmp, action.inject || "");
+  try {
+    execFileSync("bash", ["-lc", `tmux load-buffer -b o9k ${shellQuote(tmp)} && tmux paste-buffer -b o9k -t ${shellQuote(action.tmux)} && sleep 0.3 && tmux send-keys -t ${shellQuote(action.tmux)} Enter`], {
+      stdio: "ignore",
+    });
+  } finally {
+    try { fs.unlinkSync(tmp); } catch { /* */ }
+  }
+}
+
+export function resumeAll({
+  dryRun = false,
+  tmuxExists = defaultTmuxExists,
+  logDir = null,
+  now = new Date(),
+  execute = executeResumeAction,
+} = {}) {
+  fs.mkdirSync(runsRoot(), { recursive: true });
+  const lock = resumeLockPath();
+  if (fs.existsSync(lock)) throw new Error(`resume lock held: ${lock}`);
+  fs.writeFileSync(lock, `${process.pid}\n`);
+  const resolvedLogDir = logDir || path.join(os.homedir(), ".o9k/logs");
+  const report = { at: now.toISOString(), runs: [] };
+  try {
+    for (const state of listActiveStates()) {
+      const plan = buildResumePlan(state, { tmuxExists });
+      report.runs.push({ runId: state.runId, status: state.status, actions: plan.actions });
+      if (dryRun) continue;
+      for (const action of plan.actions) {
+        execute(action, state);
+      }
+      atomicWriteText(path.join(mailboxDir(state.runId), "REATTACH_WATCHER"), "1\n");
+    }
+  } finally {
+    try { fs.unlinkSync(lock); } catch { /* */ }
+  }
+  fs.mkdirSync(resolvedLogDir, { recursive: true });
+  const logFile = path.join(resolvedLogDir, `resume-${now.toISOString().replace(/[:.]/g, "-")}.log`);
+  fs.writeFileSync(logFile, `${JSON.stringify(report, null, 2)}\n`);
+  report.logFile = logFile;
+  return report;
+}
+
 export function waitMailbox(runId, { ceilingSec = 3600 } = {}) {
   const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "wait-mailbox.sh");
   const r = spawnSync(script, [mailboxDir(runId), "--ceiling-sec", String(ceilingSec)], { encoding: "utf8" });
@@ -311,12 +397,28 @@ function cmdWait(args) {
   process.exitCode = waitExit;
 }
 
+function cmdResume(args) {
+  const dryRun = args.includes("--dry-run");
+  const report = resumeAll({ dryRun });
+  for (const r of report.runs) {
+    console.log(`runId: ${r.runId} status: ${r.status}`);
+    for (const a of r.actions) {
+      const parts = [`  action: ${a.kind}`];
+      if (a.tmux) parts.push(`tmux=${a.tmux}`);
+      if (a.runId) parts.push(`runId=${a.runId}`);
+      console.log(parts.join(" "));
+    }
+  }
+  console.log(`log: ${report.logFile}`);
+}
+
 const HANDLERS = {
   create: cmdCreate,
   classify: cmdClassify,
   answer: cmdAnswer,
   "set-status": cmdSetStatus,
   wait: cmdWait,
+  resume: cmdResume,
 };
 
 function main() {
