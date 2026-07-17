@@ -56,8 +56,8 @@ session: the agent compresses its output, loads only what it needs, offloads
 noisy searches, and saves state before compaction — no commands, no reading,
 no habits to learn.
 
-What automation can't do (picking a dispatch owner when superpowers is also
-installed, a one-time `hmem init`), the agent handles conversationally:
+What automation can't do (a one-time `hmem init`, disabling legacy superpowers
+dispatch skills if still active), the agent handles conversationally:
 **`/o9k-init`** is the guided setup — it detects what's already on the
 machine, asks which companion bundle you want, installs git if you're missing
 it, and when something you already run collides with a bundle pick it explains
@@ -142,8 +142,9 @@ gets along:
 | **task-master** | ⚪ | ⚪ | ⚪ | ⚪ | ⚠️² | 🔴 | ⚪ | ⚪ | ⚠️³ | — | 🔴 |
 | **BMAD·spec-kit·SuperClaude** | ⚪ | ⚪ | ⚪ | ⚪ | 🔴 | 🔴 | ⚪ | ⚪ | ⚪ | 🔴 | —⁴ |
 
-1. **o9k × superpowers:** keep `o9k-dispatch` OR superpowers' dispatch skills —
-   one dispatch owner.
+1. **o9k × superpowers:** `o9k-dispatch` owns subagent isolation by default;
+   superpowers owns methodology. Disable stock `dispatching-parallel-agents` only
+   if it is still enabled.
 2. **superpowers × beads/task-master:** a plan *store* beats plan *files* — the
    store owns plans, disable superpowers' plan markdown. One plan owner.
 3. **plan stores × memory:** the store owns work items, memory owns

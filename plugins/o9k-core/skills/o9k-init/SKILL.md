@@ -298,7 +298,7 @@ Re-run the snapshot (subagent if flagship). Then report one screen: what got
 installed, **Hosts** status per CLI (`skills=` / `hooks=` / `mcp=`), what was
 migrated (with backup path), what was dropped and why, remaining manual steps
 (incl. codex/hermes MCP gaps when hmem-only), remaining arbitrations (e.g.
-dispatch owner if superpowers joined). Close with: `/o9k-guide` re-explains any
+plan owner when beads + superpowers plan files coexist). Close with: `/o9k-guide` re-explains any
 time, `/o9k-stats` measures the effect.
 
 ## Rules

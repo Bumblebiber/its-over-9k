@@ -37,6 +37,11 @@
   `~/projects/o9k` in wrapper (require symlink or `O9K_ROSTER_SCRIPTS`).
 
 ### Changed
+- **Dispatch owner = `o9k-dispatch` (2026-07-17).** Native `dispatch` skill owns
+  subagent isolation; superpowers `dispatching-parallel-agents` disabled/archived
+  in o9k stacks; `registry.json` lists superpowers under methodology only. Docs,
+  bundles, and installer no longer treat dispatch pick as the default open
+  arbitration.
 - **Skills: dispatch path A/B.** `dispatch` defaults to in-host RESULT
   subagents; cross-CLI mailbox + watcher only when `~/.o9k/roster.json`
   exists. `roster`, `using-o9k`, and `o9k-guide` gated the same way so

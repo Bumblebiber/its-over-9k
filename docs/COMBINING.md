@@ -57,12 +57,13 @@ Verdict is relative to a **default o9k install** (all five pillars on).
 
 | Framework | Concern it claims | vs o9k | Owner rule |
 |-----------|-------------------|:------:|------------|
+| [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me) | Spec-challenge questioning | 🟢 | New axis — o9k has no spec-review pillar. Not a methodology owner (single skill file, no hooks/state); slots into whichever spine's "plan" step wants it. |
 | [Ponytail](https://github.com/DietrichGebert/ponytail) | Code minimalism (YAGNI / smallest diff) | 🟢 | New axis — o9k has no code-volume pillar. Composes with caveman. |
 | [Context7](https://github.com/upstash/context7) | Live library-docs injection | ⚪ | None — o9k has no docs pillar. |
 | [ccusage](https://github.com/ryoppippi/ccusage) | Cost ($) / usage reporting | ⚪ | Complements `/o9k-stats` (context share ≠ dollars). |
 | pr-review / LSP / semgrep plugins | Review, code-intel, security | ⚪ | Different job entirely. |
 | [firecrawl](https://github.com/firecrawl/firecrawl) | Web scrape/search MCP | ⚪ | Route its dumps through `dispatch`; keep conclusions only. |
-| [superpowers](https://github.com/obra/superpowers) | Workflow methodology | 🟢 | Owns *process*; o9k owns *efficiency*. **One dispatch owner.** |
+| [superpowers](https://github.com/obra/superpowers) | Workflow methodology | 🟢 | Owns *process*; o9k owns *efficiency* and dispatch (`o9k-dispatch`). |
 | [beads](https://github.com/steveyegge/beads) | Task/plan graph | 🟢 | Owns "the plan". Don't duplicate into memory or markdown. |
 | [Serena](https://github.com/oraios/serena) | Symbol-level ops | 🟢 | Scout = overview, Serena = symbols. Never both per lookup. |
 | [ast-grep](https://github.com/ast-grep/ast-grep) | Structural queries | 🟢 | Feeds scout. Not an overview builder — no conflict. |
@@ -79,6 +80,7 @@ Verdict is relative to a **default o9k install** (all five pillars on).
 | [spec-kit](https://github.com/github/spec-kit) | Spec-driven methodology | 🔴 | Methodology owner. One process spine. |
 | [SuperClaude](https://github.com/SuperClaude-Org/SuperClaude_Framework) | Methodology + commands | 🔴 | Methodology owner. One process spine. |
 | [task-master](https://github.com/eyaltoledano/claude-task-master) | Task/plan store | 🔴 | Plan owner. Collides with beads. Pick one. |
+| [context-mode](https://github.com/mksglu/context-mode) | Tool-output sandboxing + memory + cross-CLI routing | 🔴 | Claims memory, scout's output-compaction, **and** dispatch at once via SessionStart/PreCompact/PreToolUse hooks. Three exclusive owners in one server — not a companion, a rival meta-framework. Pick one stack. |
 
 **Two conflicting frameworks can still coexist** if you demote one: run
 Serena for symbols *and* claude-context off (or vice versa). The rule bans two
@@ -112,12 +114,24 @@ Reads Claude Code's JSONL to report tokens and dollars per model/day/project.
 `/o9k-stats` measures *context share and cache profile* — a different axis.
 Run both; they answer different questions.
 
+**[grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me)
+(mattpocock) — spec-challenge questioning.** A single `SKILL.md`
+(`disable-model-invocation: true`, no hooks, no state) that runs an intensive
+Q&A pass against a plan or spec before build. o9k has no spec-review pillar and
+this doesn't want to be one — it's a step, not a spine, so it slots into
+whatever owns methodology (superpowers' `brainstorming`, or the Overseer's own
+Grill-Gate) rather than replacing it. Zero footprint to manage: nothing to
+detect, nothing that can collide.
+
 **[superpowers](https://github.com/obra/superpowers) (obra) — methodology.** MIT.
 Brainstorm → plan → TDD → debug → review → finish as Claude Code skills. o9k
-doesn't cover methodology at all — perfect fit. **Two conflicts to resolve once:**
-(1) it ships dispatch skills (`dispatching-parallel-agents`,
-`subagent-driven-development`) — keep those or `o9k-dispatch`, disable the other;
-(2) its plan files belong in beads if beads is installed.
+doesn't cover methodology at all — perfect fit. **In o9k stacks, `o9k-dispatch`
+owns subagent isolation** (native `dispatch` skill); superpowers contributes
+process only. If you installed upstream superpowers with
+`dispatching-parallel-agents` still enabled, disable it — that skill is a rival,
+not a dependency. **One plan conflict to resolve once:** superpowers plan files
+belong in beads if beads is installed (`subagent-driven-development` is
+methodology/plan execution, not dispatch).
 
 **[beads](https://github.com/steveyegge/beads) (steveyegge) — task graph.** MIT.
 Dependency-aware issue tracker (`bd` CLI + MCP). "The plan" leaves context
@@ -177,6 +191,25 @@ overlaps two pillars at once — output compression (`caveman`) and tool/context
 intelligence (`scout`). It's an *alternative architecture*, not a companion: run
 it **instead of** those pillars, or not at all. Don't stack two output/tool
 compressors.
+
+**[context-mode](https://github.com/mksglu/context-mode) (mksglu).** An MCP
+server, not a companion — it claims memory, scout's compaction concern, *and*
+dispatch/routing in one package, across 17+ clients. Its actual mechanism is
+worth studying even though the package itself is a rival: it doesn't compress
+tool output after the fact, it **executes analysis code in an isolated
+subprocess and returns only the result** — a 56 KB Playwright snapshot becomes
+299 B because the snapshot never enters the transcript at all. That's a
+sharper cut than scout's read-then-summarize pattern, which still pays for one
+full read. Two more ideas worth stealing regardless of the rivalry: a
+**PreCompact hook that writes a ≤2 KB prioritized-state snapshot** (o9k-memory
+relies on the backend's own checkpoint, which varies in size/quality by
+backend), and **explicit before/after numbers per scenario** (56.2 KB→299 B,
+58.9 KB→1.1 KB, …) published as a benchmark table — closer to receipts than
+`/o9k-stats`' aggregate view. None of this changes the 🔴 verdict (still three
+exclusive concerns in one hook set), but "sandbox-execute, return only the
+verdict" is a pattern scout could adopt for specific high-volume tool
+categories (test runners, linters, browser snapshots) without becoming a
+second memory/dispatch owner.
 
 **Methodology spines — superpowers vs
 [BMAD](https://github.com/bmad-code-org/BMAD-METHOD) vs
@@ -247,8 +280,9 @@ the blocking section above.
 
 **Notes:**
 
-1. **o9k × superpowers** — great pair, ONE arbitration: keep `o9k-dispatch` OR
-   superpowers' dispatch skills, disable the other.
+1. **o9k × superpowers** — great pair. **Default:** `o9k-dispatch` owns
+   subagent isolation; superpowers owns methodology. Only if stock
+   `dispatching-parallel-agents` is still enabled, disable it (one dispatch owner).
 2. **superpowers × beads/task-master** — superpowers writes plan *files*; if a
    plan *store* is installed, the store owns plans and superpowers' files are
    disabled. One plan owner.

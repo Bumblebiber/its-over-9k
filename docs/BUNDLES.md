@@ -45,7 +45,7 @@ distinct concern.
 
 | Added tool | Concern | One-owner note |
 |------------|---------|----------------|
-| [superpowers](https://github.com/obra/superpowers) | Workflow methodology | ⚠ Pick one dispatch owner: o9k-dispatch **or** superpowers' dispatch skills. |
+| [superpowers](https://github.com/obra/superpowers) | Workflow methodology | `o9k-dispatch` owns dispatch; disable `dispatching-parallel-agents` if still on. |
 | [beads](https://github.com/steveyegge/beads) | Task/plan graph | Owns "the plan" — keep it out of memory/markdown. |
 | [Serena](https://github.com/oraios/serena) | Symbol ops | Scout owns overview; Serena owns symbols. |
 
@@ -57,12 +57,15 @@ distinct concern.
 | [ast-grep](https://github.com/ast-grep/ast-grep) | Structural queries | Feeds scout — not an overview builder, so no conflict. |
 | [ccusage](https://github.com/ryoppippi/ccusage) | Cost ($) reporting | Complements `/o9k-stats` (context share ≠ dollars). |
 
-## The one arbitration you must do
+## Companion notes (`recommended` / `max`)
 
-`recommended` and `max` include **superpowers**, which ships its own dispatch
-skills while o9k ships `o9k-dispatch`. **Disable one.** This is the single
-collision the bundles can't resolve for you, because it's a preference, not a
-rule. Everything else is a distinct concern.
+**Dispatch:** `o9k-dispatch` owns subagent isolation in every o9k stack (native
+`dispatch` skill). Superpowers contributes *methodology* only. If upstream
+superpowers still has `dispatching-parallel-agents` enabled, disable it — running
+both re-introduces the collision o9k exists to prevent.
+
+**Plan owner:** with beads installed, beads owns work items; keep superpowers
+plan markdown out of the plan store's lane (see [COMBINING.md](COMBINING.md)).
 
 ## What is deliberately NOT in any bundle
 

@@ -86,7 +86,7 @@ fi
 head "Workflow methodology  (concern: methodology — ONE spine)"
 manual "superpowers (obra) — brainstorm→plan→TDD→review" \
        "in a Claude Code session: /plugin marketplace add obra/superpowers && /plugin install superpowers"
-say    "      ⚠ resolve ONE dispatch owner: keep o9k-dispatch OR superpowers' dispatch skills, disable the other."
+say    "      o9k-dispatch owns subagent isolation; disable superpowers' dispatching-parallel-agents if still enabled."
 
 head "Task / plan graph  (concern: plan — ONE owner)"
 manual "beads (steveyegge) — dependency-aware issue graph" \
@@ -105,7 +105,7 @@ say    "      Scout owns the overview map; Serena owns symbols. Never both per l
 
 if [ "$BUNDLE" = "recommended" ]; then
   head "Done (recommended)"
-  say  "One-time: pick the single dispatch owner (o9k vs superpowers)."
+  say  "Dispatch owner: o9k-dispatch (disable superpowers dispatching-parallel-agents if still on)."
   exit 0
 fi
 
@@ -119,5 +119,5 @@ step   "ccusage — token & \$ reports from Claude Code logs" \
        "npm install -g ccusage"
 
 head "Done (max)"
-say  "Everything above is conflict-free by construction. The only manual"
-say  "arbitration is the dispatch owner (o9k vs superpowers). See docs/COMBINING.md."
+say  "Conflict-free by construction. o9k-dispatch owns dispatch;"
+say  "disable superpowers dispatching-parallel-agents if still enabled. See docs/COMBINING.md."

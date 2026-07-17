@@ -46,12 +46,14 @@ concern** (see [docs/COMBINING.md](../../../../docs/COMBINING.md)).
    npm/go/brew package to script against) stays with the user — point at
    the upstream repo, don't guess an install command.
 
-## The one arbitration you must resolve
+## Companion notes (`recommended` / `max`)
 
-`recommended` and `max` include **superpowers**, which ships its own dispatch
-skills. o9k also ships `o9k-dispatch`. **Pick one dispatch owner and disable the
-other** — running both re-introduces exactly the collision o9k exists to prevent.
-Everything else in the bundles is a distinct concern and needs no arbitration.
+**Dispatch:** `o9k-dispatch` owns subagent isolation (native `dispatch` skill).
+Superpowers contributes methodology only. If upstream superpowers still has
+`dispatching-parallel-agents` enabled, disable it — do not run two dispatch owners.
+
+**Plan owner:** with beads, beads owns work items; see [BUNDLES.md](../../../../docs/BUNDLES.md)
+and [COMBINING.md](../../../../docs/COMBINING.md) for plan-store rules.
 
 ## Do not
 
