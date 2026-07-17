@@ -16,7 +16,8 @@
     "structural-search": { "exclusive": false, "desc": "AST-level queries (feeds overview, builds none)" },
     "discovery": { "exclusive": false, "desc": "scouting new companion frameworks" },
     "vcs": { "exclusive": false, "desc": "version control" },
-    "roster": { "exclusive": false, "desc": "role-based model selection + limit-aware dispatch" }
+    "roster": { "exclusive": false, "desc": "role-based model selection + limit-aware dispatch" },
+    "spec-challenge": { "exclusive": false, "desc": "adversarial questioning of a plan/spec before build; feeds methodology, owns no workflow" }
   },
 
   "bundles": {
@@ -102,6 +103,13 @@
       "concerns": ["cost"],
       "detect": { "path": ["ccusage"] },
       "install": "npm install -g ccusage"
+    },
+    "grillMe": {
+      "kind": "companion",
+      "label": "grill-me (spec-grilling skill)",
+      "concerns": ["spec-challenge"],
+      "install": "copy skills/productivity/grill-me/ from github.com/mattpocock/skills into a skills dir (no MCP/hooks/state — nothing to auto-detect)",
+      "//": "2026-07-17 scouted: single SKILL.md, disable-model-invocation:true, no hooks. Not a methodology owner — narrow spec-challenge step, composes under superpowers/whatever owns methodology."
     },
 
     "claudeMem": {
