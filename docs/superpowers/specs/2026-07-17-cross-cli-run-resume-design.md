@@ -278,7 +278,7 @@ next live parent spawns a watcher reattach.
 
 | Target | Message |
 |---|---|
-| Worker | `Host crash recovery. Read mailbox/STATUS and continue the task. Do not re-init from scratch.` |
+| Worker | `Host crash recovery. Read mailbox/STATUS and mailbox/PROMPT.md; continue the task. Do not re-init from scratch.` |
 | Parent (tmux) | `Host crash recovery. Read ~/.o9k/runs/<id>/STATE.json. Continue orchestration; do not re-dispatch if worker tmux is alive.` |
 | `waiting_human` | Append: `You were blocked on a human question — re-surface it; do not invent an answer.` |
 
