@@ -25,20 +25,20 @@ SCRIPT="$(resolve_path "$0")"
 ROOT="$(cd "$(dirname "$SCRIPT")" && pwd)"
 WATCHER="$ROOT/usage-watcher.mjs"
 
-if [[ ! -f "$WATCHER" ]]; then
-  for candidate in \
-    "${O9K_ROSTER_SCRIPTS:-}" \
-    "${HOME}/projects/o9k/plugins/o9k-roster/scripts"; do
-    [[ -z "$candidate" ]] && continue
-    if [[ -f "$candidate/usage-watcher.mjs" ]]; then
-      WATCHER="$candidate/usage-watcher.mjs"
-      break
-    fi
-  done
+if [[ ! -f "$WATCHER" && -n "${O9K_ROSTER_SCRIPTS:-}" ]]; then
+  if [[ -f "${O9K_ROSTER_SCRIPTS}/usage-watcher.mjs" ]]; then
+    WATCHER="${O9K_ROSTER_SCRIPTS}/usage-watcher.mjs"
+  fi
 fi
 
 if [[ ! -f "$WATCHER" ]]; then
-  echo "o9k-usage-watcher: usage-watcher.mjs not found (set O9K_ROSTER_SCRIPTS)" >&2
+  cat >&2 <<'EOF'
+o9k-usage-watcher: usage-watcher.mjs not found.
+
+Install one of:
+  ln -sf <o9k-repo>/plugins/o9k-roster/scripts/o9k-usage-watcher.sh ~/.local/bin/o9k-usage-watcher
+  # or set O9K_ROSTER_SCRIPTS=<o9k-repo>/plugins/o9k-roster/scripts (systemd drop-in / cron env)
+EOF
   exit 127
 fi
 

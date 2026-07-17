@@ -6,11 +6,14 @@ After=default.target
 Type=simple
 Restart=always
 RestartSec=10
-# Install wrapper (never ExecStart a bare .mjs — ENOEXEC without shebang):
-#   install -m 0755 <repo>/plugins/o9k-roster/scripts/o9k-usage-watcher.sh ~/.local/bin/o9k-usage-watcher
-# Copy installs need the scripts path; symlink is preferred:
+# Install (pick one):
 #   ln -sf <repo>/plugins/o9k-roster/scripts/o9k-usage-watcher.sh ~/.local/bin/o9k-usage-watcher
-# Or set Environment=O9K_ROSTER_SCRIPTS=<repo>/plugins/o9k-roster/scripts in a drop-in.
+#   # copy + env (foreign install path):
+#   install -m 0755 <repo>/plugins/o9k-roster/scripts/o9k-usage-watcher.sh ~/.local/bin/o9k-usage-watcher
+#   mkdir -p ~/.config/systemd/user/o9k-usage-watcher.service.d
+#   printf '[Service]\nEnvironment=O9K_ROSTER_SCRIPTS=<repo>/plugins/o9k-roster/scripts\n' \
+#     > ~/.config/systemd/user/o9k-usage-watcher.service.d/path.conf
+#   systemctl --user daemon-reload
 ExecStart=%h/.local/bin/o9k-usage-watcher
 
 [Install]

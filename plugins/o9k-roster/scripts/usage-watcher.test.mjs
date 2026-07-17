@@ -1,5 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { planCollect, advanceSchedule, computeState } from "./usage-watcher.mjs";
 
 const NOW = Date.parse("2026-07-17T12:00:00Z");
@@ -121,4 +124,13 @@ test("failed collect does not advance idle heartbeat schedule", () => {
     subscriptions: subs,
   });
   assert.equal(retry.collect.length, 3);
+});
+
+test("o9k-usage-watcher.sh has no hardcoded install path", () => {
+  const sh = fs.readFileSync(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), "o9k-usage-watcher.sh"),
+    "utf8",
+  );
+  assert.equal(sh.includes("projects/o9k"), false);
+  assert.match(sh, /O9K_ROSTER_SCRIPTS/);
 });
