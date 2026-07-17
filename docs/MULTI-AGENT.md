@@ -48,3 +48,26 @@ The active agent gets warned by limit-watch (or its own `roster usage
 (state, done, open, verification commands), runs `roster handoff`, reports
 the tmux session + attach command, and stops. The successor starts with
 "read HANDOFF.md and continue" — no work is lost to a hard limit.
+
+## Cross-CLI runs (mailbox + resume)
+
+For long-running workers that may outlive the parent session or survive a host
+reboot, o9k tracks each run on disk under `~/.o9k/runs/<runId>/` with a
+mailbox directory holding `STATUS`, `QUESTIONS.md`, `ANSWER.md`, `RESULT.md`,
+`HEARTBEAT`, and `PROMPT`.
+
+The parent spawns a cheap internal watcher that runs
+`node …/runs.mjs wait <runId>` — one blocking OS wait that returns when the
+mailbox reaches `question`, `done`, `failed`, or `watching`. On a question,
+the parent answers via `runs.mjs answer` and **respawns** the watcher; it never
+polls the mailbox itself.
+
+After a host reboot, the systemd unit `o9k-resume.service` (see
+`plugins/o9k-roster/systemd/`) runs `o9k-runs resume` agentlessly — no parent
+process required. Parent re-attach is `manual` by default (no auto-tmux).
+
+Worker prompts should use
+`plugins/o9k-roster/templates/worker-prompt.md` — HEARTBEAT updates are
+mandatory so stale runs can be detected.
+
+Full design: `docs/superpowers/specs/2026-07-17-cross-cli-run-resume-design.md`
