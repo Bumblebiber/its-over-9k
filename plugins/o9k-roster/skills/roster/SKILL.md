@@ -29,6 +29,7 @@ No config yet → `$ROSTER init`, then tell the user to curate `~/.o9k/roster.js
 
 | Role | Use for |
 |---|---|
+| advisor | sign-off, architecture review, improvement suggestions (Fable only) |
 | planner | spec grilling, plans, architecture |
 | reviewer | code review (fresh session, never the implementer) |
 | implementer | code changes following a plan |

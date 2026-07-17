@@ -7,7 +7,7 @@ Type=simple
 Restart=always
 RestartSec=10
 # Symlink after install:
-#   ln -sf <marketplace>/plugins/o9k-roster/scripts/usage-watcher.mjs ~/.local/bin/o9k-usage-watcher
+#   install -m 0755 ~/.local/bin/o9k-usage-watcher <path>/o9k-usage-watcher
 ExecStart=%h/.local/bin/o9k-usage-watcher
 
 [Install]

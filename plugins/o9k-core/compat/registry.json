@@ -73,8 +73,9 @@
     "superpowers": {
       "kind": "companion",
       "label": "superpowers (methodology plugin)",
-      "concerns": ["methodology", "dispatch"],
-      "detect": { "plugin": ["superpowers"] }
+      "concerns": ["methodology"],
+      "detect": { "plugin": ["superpowers"] },
+      "//": "2026-07-17 Benni: dispatch owner = o9k-dispatch; removed dispatch from superpowers concerns (skill dispatching-parallel-agents disabled/archived)"
     },
     "beads": {
       "kind": "companion",

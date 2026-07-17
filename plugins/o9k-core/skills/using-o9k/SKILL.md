@@ -56,7 +56,7 @@ through it and offers to apply the fix.
 | "The plan" | beads if installed, else the plan file | plan content duplicated into CLAUDE.md or memory |
 | Task/issue state | beads if installed, else memory T-entries | parallel TODO markdown files |
 | Workflow methodology (TDD, review, brainstorm) | superpowers if installed | — |
-| Subagent dispatch | `o9k-dispatch` | superpowers' dispatching-parallel-agents (pick one, disable the other) |
+| Subagent dispatch | `o9k-dispatch` | superpowers' `dispatching-parallel-agents` (disabled 2026-07-17 — owner is o9k) |
 | Cross-CLI who/spawn (optional) | `o9k-roster` if installed + configured | hard-coded model picks in prose; never a second dispatch owner |
 
 ## Exceptions that override everything

@@ -89,17 +89,23 @@
   "roles": {
     "planner": {
       "chain": [
-        "claude:claude-fable-5",
-        "codex:gpt-5.6-sol",
         "claude:claude-opus",
+        "codex:gpt-5.6-sol",
+        "claude:claude-sonnet-5",
         "codex:gpt-5.6-terra"
       ]
     },
     "reviewer": {
       "chain": [
-        "claude:claude-fable-5",
         "claude:claude-opus",
+        "claude:claude-sonnet-5",
         "codex:gpt-5.6-terra"
+      ]
+    },
+    "advisor": {
+      "chain": [
+        "claude:claude-fable-5",
+        "claude:claude-opus"
       ]
     },
     "implementer": {
