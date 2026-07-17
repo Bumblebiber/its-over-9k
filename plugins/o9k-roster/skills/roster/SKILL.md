@@ -49,6 +49,7 @@ No config yet → `$ROSTER init`, then tell the user to curate `~/.o9k/roster.js
 - **Just ask who would do it:** `$ROSTER pick --role <role>`
 - **You hit a rate-limit error from a provider:** `$ROSTER mark-limited <model|provider> --ttl 5h --reason rate-limit` — then continue with the next viable model.
 - **Check limits:** `$ROSTER usage --check`
+- **Refresh subscription usage cache:** `$ROSTER usage --refresh [--cli claude|codex|cursor]`
 - **Refresh scores/prices (OpenRouter + AA indices):** see `roster-refresh`
   skill — `$ROSTER refresh [--apply]`
 

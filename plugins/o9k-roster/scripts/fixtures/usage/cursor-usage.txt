@@ -1,0 +1,5 @@
+ Category        Current             Usage
+ Included        54% used            ████
+   Auto          52% used            ████
+   API           69% used            ████
+ On-Demand       Disabled            —

@@ -84,6 +84,26 @@ function entryLabel(model, cli) {
   return cli ? `${cli}:${model}` : model;
 }
 
+/** Resolve usage window keys that gate a model spawn. */
+export function resolveLimitWindows(_roster, modelId, model) {
+  if (Array.isArray(model?.limit_windows) && model.limit_windows.length) {
+    return model.limit_windows;
+  }
+  const out = [];
+  const clis = model?.cli || [];
+  if (clis.includes("claude")) {
+    out.push("claude:session", "claude:week", "claude:5h");
+    if (modelId.includes("fable")) out.push("claude:fable-week");
+  }
+  if (clis.includes("codex")) out.push("codex:weekly");
+  if (clis.includes("cursor")) out.push("cursor:included");
+  return out;
+}
+
+function hasWindowsData(usage) {
+  return Boolean(usage?.windows && Object.keys(usage.windows).length > 0);
+}
+
 /**
  * Walk role's chain, return first viable {model, cli, skipped}. Viability:
  * defined in roster.models, resolved CLI has a template and is listed on the
@@ -130,15 +150,32 @@ export function pick({ roster, usage, role, now = Date.now() }) {
       continue;
     }
 
-    const used = usage?.providers?.[model.provider]?.used;
-    if (typeof used === "number" && used >= handoff_at) {
-      skipped.push({ model: label, reason: `provider ${model.provider} at ${Math.round(used * 100)}%` });
-      continue;
-    }
-    const cliUsed = usage?.providers?.[cli]?.used;
-    if (typeof cliUsed === "number" && cliUsed >= handoff_at) {
-      skipped.push({ model: label, reason: `cli ${cli} at ${Math.round(cliUsed * 100)}%` });
-      continue;
+    const limitWindows = resolveLimitWindows(roster, name, model);
+    if (hasWindowsData(usage) && limitWindows.length) {
+      let blocked = false;
+      for (const wkey of limitWindows) {
+        const wUsed = usage.windows[wkey]?.used;
+        if (typeof wUsed === "number" && wUsed >= handoff_at) {
+          skipped.push({
+            model: label,
+            reason: `window ${wkey} at ${Math.round(wUsed * 100)}%`,
+          });
+          blocked = true;
+          break;
+        }
+      }
+      if (blocked) continue;
+    } else {
+      const used = usage?.providers?.[model.provider]?.used;
+      if (typeof used === "number" && used >= handoff_at) {
+        skipped.push({ model: label, reason: `provider ${model.provider} at ${Math.round(used * 100)}%` });
+        continue;
+      }
+      const cliUsed = usage?.providers?.[cli]?.used;
+      if (typeof cliUsed === "number" && cliUsed >= handoff_at) {
+        skipped.push({ model: label, reason: `cli ${cli} at ${Math.round(cliUsed * 100)}%` });
+        continue;
+      }
     }
     if (markedUntil(usage, name, now)) {
       skipped.push({ model: label, reason: `marked limited until ${usage.marked[name].until}` });
@@ -183,14 +220,28 @@ export function checkThresholds({ roster, usage, now = Date.now() }) {
   const { warn_at, handoff_at } = limits(roster);
   const lines = [];
   let handoff = false;
-  for (const [provider, info] of Object.entries(usage?.providers || {})) {
-    if (typeof info?.used !== "number") continue;
-    const pct = Math.round(info.used * 100);
-    if (info.used >= handoff_at) {
-      lines.push(`⛔ o9k-roster: ${provider} at ${pct}% — session limit reached.`);
-      handoff = true;
-    } else if (info.used >= warn_at) {
-      lines.push(`⚠️ o9k-roster: ${provider} at ${pct}% — prepare for handoff: converge to a checkpointable state.`);
+
+  if (hasWindowsData(usage)) {
+    for (const [wkey, info] of Object.entries(usage.windows)) {
+      if (typeof info?.used !== "number") continue;
+      const pct = Math.round(info.used * 100);
+      if (info.used >= handoff_at) {
+        lines.push(`⛔ o9k-roster: ${wkey} at ${pct}% — session limit reached.`);
+        handoff = true;
+      } else if (info.used >= warn_at) {
+        lines.push(`⚠️ o9k-roster: ${wkey} at ${pct}% — prepare for handoff: converge to a checkpointable state.`);
+      }
+    }
+  } else {
+    for (const [provider, info] of Object.entries(usage?.providers || {})) {
+      if (typeof info?.used !== "number") continue;
+      const pct = Math.round(info.used * 100);
+      if (info.used >= handoff_at) {
+        lines.push(`⛔ o9k-roster: ${provider} at ${pct}% — session limit reached.`);
+        handoff = true;
+      } else if (info.used >= warn_at) {
+        lines.push(`⚠️ o9k-roster: ${provider} at ${pct}% — prepare for handoff: converge to a checkpointable state.`);
+      }
     }
   }
   for (const [target, mark] of Object.entries(usage?.marked || {})) {
@@ -273,6 +324,9 @@ function cmdMarkLimited(args) {
 
 function cmdUsage(args) {
   const roster = requireRoster();
+  if (args.includes("--refresh")) {
+    return cmdUsageRefresh(args);
+  }
   const usage = loadJson(usagePath());
   if (args.includes("--check")) {
     const out = checkThresholds({ roster, usage });
@@ -283,12 +337,27 @@ function cmdUsage(args) {
     console.log(`no usage data at ${usagePath()} (no known limits — chains run in config order)`);
     return;
   }
+  for (const [wkey, info] of Object.entries(usage.windows || {})) {
+    console.log(`${wkey}: ${Math.round((info.used ?? 0) * 100)}%${info.updated ? ` (as of ${info.updated})` : ""}`);
+  }
   for (const [p, info] of Object.entries(usage.providers || {})) {
     console.log(`${p}: ${Math.round((info.used ?? 0) * 100)}%${info.updated ? ` (as of ${info.updated})` : ""}`);
   }
   for (const [t, m] of Object.entries(usage.marked || {})) {
     console.log(`marked ${t}: until ${m.until}${m.reason ? ` (${m.reason})` : ""}`);
   }
+}
+
+async function cmdUsageRefresh(args) {
+  const { collectUsage } = await import("./usage-collect.mjs");
+  const cli = argValue(args, "--cli");
+  const roster = requireRoster();
+  const results = await collectUsage({ clis: cli ? [cli] : undefined, roster });
+  for (const r of results) {
+    if (r.ok) console.log(`refreshed ${r.cli}: ${Object.keys(r.windows).join(", ")}`);
+    else console.log(`skip ${r.cli}: ${r.reason}`);
+  }
+  if (!results.some((r) => r.ok)) process.exit(1);
 }
 
 export function buildCommand({ roster, model, cli, prompt }) {
@@ -306,13 +375,28 @@ export function tmuxArgs({ session, dir, argv }) {
   return ["new-session", "-d", "-s", session, "-c", dir, argv.map(shellQuote).join(" ")];
 }
 
-function spawnInTmux({ roster, role, dir, prompt, runId }) {
-  const usage = loadJson(usagePath());
-  const r = pick({ roster, usage, role });
+async function spawnInTmux({ roster, role, dir, prompt, runId }) {
+  let usage = loadJson(usagePath());
+  let r = pick({ roster, usage, role });
   for (const s of r.skipped) console.log(`skipped ${s.model}: ${s.reason}`);
   if (!r.model) {
     console.error(`chain exhausted for role ${role} — no viable model`);
     process.exit(2);
+  }
+  try {
+    const { collectUsageForCli } = await import("./usage-collect.mjs");
+    const refreshed = await collectUsageForCli({ cli: r.cli });
+    if (refreshed.ok) {
+      usage = loadJson(usagePath());
+      r = pick({ roster, usage, role });
+      for (const s of r.skipped) console.log(`skipped ${s.model}: ${s.reason}`);
+      if (!r.model) {
+        console.error(`chain exhausted for role ${role} after usage refresh`);
+        process.exit(2);
+      }
+    }
+  } catch {
+    // stale cache — proceed
   }
   const argv = buildCommand({ roster, model: r.model, cli: r.cli, prompt });
   const session = `o9k-${role}-${Date.now().toString(36)}`;
@@ -323,7 +407,7 @@ function spawnInTmux({ roster, role, dir, prompt, runId }) {
   console.log(`attach: tmux attach -t ${session}`);
 }
 
-function cmdDispatch(args) {
+async function cmdDispatch(args) {
   const role = argValue(args, "--role");
   const promptFile = argValue(args, "--prompt-file");
   const dir = argValue(args, "--dir") || process.cwd();
@@ -333,10 +417,10 @@ function cmdDispatch(args) {
     process.exit(1);
   }
   const prompt = fs.readFileSync(promptFile, "utf8").trim();
-  spawnInTmux({ roster: requireRoster(), role, dir, prompt, runId });
+  await spawnInTmux({ roster: requireRoster(), role, dir, prompt, runId });
 }
 
-function cmdHandoff(args) {
+async function cmdHandoff(args) {
   const role = argValue(args, "--role");
   const dir = argValue(args, "--dir") || process.cwd();
   if (!role) {
@@ -347,7 +431,7 @@ function cmdHandoff(args) {
     console.error(`no HANDOFF.md in ${dir} — write it first (state, done, open, verification), then re-run`);
     process.exit(1);
   }
-  spawnInTmux({
+  await spawnInTmux({
     roster: requireRoster(),
     role,
     dir,

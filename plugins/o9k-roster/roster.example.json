@@ -7,11 +7,17 @@
     "opencode": { "cmd": ["opencode", "--model", "{model}", "--prompt", "{prompt}"] },
     "hermes": { "cmd": ["hermes", "chat", "-q", "{prompt}", "--model", "{model}"] }
   },
+  "subscriptions": ["claude", "codex", "cursor"],
+  "usage_watcher": {
+    "tick_sec": 60,
+    "intervals": { "idle_heartbeat_hours": 24, "active_min": 20, "busy_min": 8 }
+  },
   "models": {
     "claude-fable-5": {
       "provider": "anthropic",
       "tier": "frontier",
       "cli": ["claude"],
+      "limit_windows": ["claude:session", "claude:week", "claude:5h", "claude:fable-week"],
       "price": { "in": null, "out": null, "note": "fill in per effort level" },
       "strengths": ["architecture", "review"],
       "weaknesses": ["cost"]
@@ -19,42 +25,50 @@
     "claude-opus": {
       "provider": "anthropic",
       "tier": "high",
-      "cli": ["claude"]
+      "cli": ["claude"],
+      "limit_windows": ["claude:session", "claude:week", "claude:5h"]
     },
     "claude-sonnet-5": {
       "provider": "anthropic",
       "tier": "mid",
-      "cli": ["claude"]
+      "cli": ["claude"],
+      "limit_windows": ["claude:session", "claude:week", "claude:5h"]
     },
     "claude-haiku": {
       "provider": "anthropic",
       "tier": "low",
-      "cli": ["claude"]
+      "cli": ["claude"],
+      "limit_windows": ["claude:session", "claude:week", "claude:5h"]
     },
     "gpt-5.6-sol": {
       "provider": "openai",
       "tier": "frontier",
-      "cli": ["codex"]
+      "cli": ["codex"],
+      "limit_windows": ["codex:weekly"]
     },
     "gpt-5.6-terra": {
       "provider": "openai",
       "tier": "high",
-      "cli": ["codex"]
+      "cli": ["codex"],
+      "limit_windows": ["codex:weekly"]
     },
     "gpt-5.6-luna": {
       "provider": "openai",
       "tier": "mid",
-      "cli": ["codex"]
+      "cli": ["codex"],
+      "limit_windows": ["codex:weekly"]
     },
     "gpt-5.4-mini": {
       "provider": "openai",
       "tier": "low",
-      "cli": ["codex"]
+      "cli": ["codex"],
+      "limit_windows": ["codex:weekly"]
     },
     "composer-2.5": {
       "provider": "cursor",
       "tier": "mid",
-      "cli": ["cursor"]
+      "cli": ["cursor"],
+      "limit_windows": ["cursor:included"]
     },
     "grok-4.5-high": {
       "provider": "xai",

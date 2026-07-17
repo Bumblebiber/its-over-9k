@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   pick, parseTtl, markLimited, checkThresholds, buildCommand, tmuxArgs,
-  parseChainEntry, firstPositional,
+  parseChainEntry, firstPositional, resolveLimitWindows,
 } from "./roster.mjs";
 import { fileURLToPath } from "node:url";
 
@@ -242,4 +242,62 @@ test("tmuxArgs builds a detached session with cwd and shell-quoted command", () 
     "new-session", "-d", "-s", "o9k-implementer-abc", "-c", "/tmp/task",
     `claude --model m 'it'\\''s a prompt'`,
   ]);
+});
+
+test("pick skips fable model when fable-week hot but opus remains", () => {
+  const roster = {
+    ...ROSTER,
+    models: {
+      ...ROSTER.models,
+      "claude-fable": { provider: "anthropic", cli: ["claude"] },
+      "claude-opus": { provider: "anthropic", cli: ["claude"] },
+    },
+    roles: { reviewer: { chain: ["claude-fable", "claude-opus"] } },
+  };
+  const usage = {
+    windows: {
+      "claude:session": { used: 0.1 },
+      "claude:week": { used: 0.5 },
+      "claude:5h": { used: 0.1 },
+      "claude:fable-week": { used: 0.97 },
+    },
+  };
+  const r = pick({ roster, usage, role: "reviewer", now: NOW });
+  assert.equal(r.model, "claude-opus");
+  assert.match(r.skipped[0].reason, /fable-week/);
+});
+
+test("pick skips all claude models when 5h window hot", () => {
+  const roster = {
+    ...ROSTER,
+    models: {
+      "claude-opus": { provider: "anthropic", cli: ["claude"] },
+      "model-c": { provider: "deepseek", cli: ["hermes"] },
+    },
+    roles: { planner: { chain: ["claude-opus", "model-c"] } },
+  };
+  const usage = {
+    windows: {
+      "claude:session": { used: 0.1 },
+      "claude:week": { used: 0.2 },
+      "claude:5h": { used: 0.96 },
+    },
+  };
+  const r = pick({ roster, usage, role: "planner", now: NOW });
+  assert.equal(r.model, "model-c");
+  assert.match(r.skipped[0].reason, /claude:5h/);
+});
+
+test("resolveLimitWindows adds fable-week only for fable models", () => {
+  assert.ok(resolveLimitWindows({}, "claude-fable-5", { cli: ["claude"] }).includes("claude:fable-week"));
+  assert.ok(!resolveLimitWindows({}, "claude-opus", { cli: ["claude"] }).includes("claude:fable-week"));
+});
+
+test("checkThresholds warns on hot usage windows", () => {
+  const warn = checkThresholds({
+    roster: ROSTER,
+    usage: { windows: { "claude:5h": { used: 0.92 } } },
+    now: NOW,
+  });
+  assert.match(warn, /claude:5h at 92%/);
 });
