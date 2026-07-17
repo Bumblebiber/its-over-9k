@@ -4,7 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
-  runsRoot, runDir, atomicWriteJson, createRun, loadState,
+  runsRoot, runDir, atomicWriteJson, atomicWriteText, createRun, loadState,
+  classifyMailbox, writeAnswer,
 } from "./runs.mjs";
 
 function withTempRuns(fn) {
@@ -53,4 +54,45 @@ test("createRun writes STATE + mailbox skeleton", withTempRuns(async () => {
   assert.equal(fs.readFileSync(path.join(rd, "mailbox", "STATUS"), "utf8").trim(), "starting");
   assert.match(fs.readFileSync(path.join(rd, "mailbox", "PROMPT.md"), "utf8"), /Do the thing/);
   assert.deepEqual(loadState(state.runId).runId, state.runId);
+}));
+
+test("classifyMailbox prefers question over watching", withTempRuns(async () => {
+  const s = createRun({
+    cwd: "/tmp/p", role: "implementer",
+    parent: { cli: "claude", attach: "manual" },
+    worker: { cli: "codex", tmux: "t1" },
+    prompt: "x",
+  });
+  const mb = path.join(runDir(s.runId), "mailbox");
+  atomicWriteText(path.join(mb, "STATUS"), "waiting_human");
+  atomicWriteText(path.join(mb, "QUESTIONS.md"), "Which DB?\n");
+  const c = classifyMailbox(s.runId);
+  assert.equal(c.status, "question");
+  assert.match(c.question, /Which DB/);
+}));
+
+test("classifyMailbox returns done when RESULT present", withTempRuns(async () => {
+  const s = createRun({
+    cwd: "/tmp/p", role: "implementer",
+    parent: { cli: "claude", attach: "manual" },
+    worker: { cli: "codex", tmux: "t1" },
+    prompt: "x",
+  });
+  const mb = path.join(runDir(s.runId), "mailbox");
+  atomicWriteText(path.join(mb, "STATUS"), "done");
+  atomicWriteText(path.join(mb, "RESULT.md"), "# ok\n");
+  assert.equal(classifyMailbox(s.runId).status, "done");
+}));
+
+test("writeAnswer sets waiting path for worker", withTempRuns(async () => {
+  const s = createRun({
+    cwd: "/tmp/p", role: "implementer",
+    parent: { cli: "claude", attach: "manual" },
+    worker: { cli: "codex", tmux: "t1" },
+    prompt: "x",
+  });
+  writeAnswer(s.runId, "Use SQLite.", { source: "parent" });
+  const ans = fs.readFileSync(path.join(runDir(s.runId), "mailbox", "ANSWER.md"), "utf8");
+  assert.match(ans, /Use SQLite/);
+  assert.equal(loadState(s.runId).status, "watching");
 }));

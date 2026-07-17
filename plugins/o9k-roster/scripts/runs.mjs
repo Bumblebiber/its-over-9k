@@ -89,6 +89,66 @@ export function saveState(state) {
   return state;
 }
 
+export function mailboxDir(runId) {
+  return path.join(runDir(runId), "mailbox");
+}
+
+function readMaybe(filePath) {
+  try {
+    return fs.readFileSync(filePath, "utf8");
+  } catch (e) {
+    if (e.code === "ENOENT") return null;
+    throw e;
+  }
+}
+
+/** Inspect mailbox once; return { status, question?, resultPath?, error? }. */
+export function classifyMailbox(runId) {
+  const mb = mailboxDir(runId);
+  const statusLine = (readMaybe(path.join(mb, "STATUS")) || "").trim();
+  const questions = readMaybe(path.join(mb, "QUESTIONS.md"));
+  const result = readMaybe(path.join(mb, "RESULT.md"));
+  const resultPath = path.join(mb, "RESULT.md");
+
+  if (statusLine === "failed") {
+    return { status: "failed", error: "STATUS=failed", resultPath: result ? resultPath : null };
+  }
+  if (statusLine === "done" && result) {
+    return { status: "done", resultPath, summary: result.slice(0, 500) };
+  }
+  if (questions && questions.trim() && statusLine !== "done") {
+    const qStat = fs.statSync(path.join(mb, "QUESTIONS.md"));
+    const aPath = path.join(mb, "ANSWER.md");
+    let answered = false;
+    try {
+      const aStat = fs.statSync(aPath);
+      answered = aStat.mtimeMs >= qStat.mtimeMs;
+    } catch { /* no answer yet */ }
+    if (!answered) {
+      return { status: "question", question: questions.trim().slice(0, 2000) };
+    }
+  }
+  if (statusLine === "waiting_human" && questions?.trim()) {
+    return { status: "question", question: questions.trim().slice(0, 2000) };
+  }
+  return { status: "watching" };
+}
+
+export function setStatus(runId, status) {
+  const state = loadState(runId);
+  if (!state) throw new Error(`unknown run ${runId}`);
+  state.status = status;
+  saveState(state);
+  atomicWriteText(path.join(mailboxDir(runId), "STATUS"), status);
+  return state;
+}
+
+export function writeAnswer(runId, body, { source = "parent" } = {}) {
+  const header = `<!-- source: ${source} -->\n`;
+  atomicWriteText(path.join(mailboxDir(runId), "ANSWER.md"), header + body.trim() + "\n");
+  return setStatus(runId, "watching");
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   // CLI subcommands added in later tasks.
 }
