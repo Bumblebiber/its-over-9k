@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+- **Sandbox extract (o9k-scout).** `scout-extract.mjs --profile vitest` digests
+  vitest JSON reporter output into a ≤2 KB failure summary with stderr
+  `SCOUT_EXTRACT` receipts; skill documents the redirect→extract one-liner.
+  Spec: `docs/superpowers/specs/2026-07-17-o9k-scout-sandbox-extract-design.md`.
+
 ## [0.11.0] — 2026-07-17
 
 ### Added

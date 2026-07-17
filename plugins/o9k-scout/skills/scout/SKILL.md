@@ -39,6 +39,23 @@ edits go through it: `find_symbol` / `find_references` / targeted insert replace
 an 8-step grep-and-read loop with one call. Scout owns the *overview*; Serena
 owns the *symbols*. Never run both for the same question.
 
+## High-volume shell output
+
+Never diagnose with bare `npm test`, `vitest run`, or `eslint .` when the runner
+can dump tens of KB into the transcript. Redirect → extract → act on summary.
+
+```bash
+TMP="${TMPDIR:-/tmp}/o9k-scout-extract-$$.json"
+vitest run --reporter=json >"$TMP" 2>&1
+node path/to/o9k-scout/scripts/scout-extract.mjs --profile vitest "$TMP"
+# Use stdout only. Receipt is on stderr. Full log path only when WARN: appears.
+```
+
+- Profile v1: `vitest` (JSON reporter). Input capped at 1 MiB (truncate + WARN).
+- Kill switch: `O9K_SCOUT_EXTRACT=off` → literal pass-through (file → stdout), for
+  raw debugging — do not leave on.
+- Broad codebase search still goes to `dispatch`; extract is for **command output**.
+
 ## Budget instinct
 
 Before any read, estimate: "does the value of this content exceed its rent?"
