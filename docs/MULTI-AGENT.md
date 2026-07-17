@@ -18,6 +18,12 @@ Hermes) with role-based model selection.
   indices + prices (incl. hosted open-weight for Hermes/OpenCode) into
   `~/.o9k/roster-scores.json`; `--apply` semiauto-promotes chain heads when
   score rises and cost does not. See skill `roster-refresh`.
+- **Subscription usage collector** (optional): maintains multi-window
+  `~/.o9k/usage.json` for Claude/Codex/Cursor; `pick` skips models when any
+  applicable window ≥ `handoff_at`. Refresh via `roster usage --refresh` or the
+  adaptive watcher (`o9k-usage-watcher.sh`, cron, or systemd user unit). Foreign
+  installs: symlink the wrapper from the repo **or** set `O9K_ROSTER_SCRIPTS` in
+  a systemd drop-in (see `plugins/o9k-roster/systemd/`).
 
 ## The standard pipeline (plan → implement → review)
 

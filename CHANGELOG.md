@@ -2,13 +2,39 @@
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-07-17
+
 ### Added
+- **Subscription usage collector (o9k-roster).** Multi-window
+  `~/.o9k/usage.json` (`claude:session/week/5h/fable-week`, `codex:weekly`,
+  `cursor:included`, …); `usage-collect.mjs` + adaptive `usage-watcher.mjs`
+  (idle heartbeat / active / busy intervals); `roster usage --refresh`; per-model
+  `pick` gating via `usage-windows.mjs`; pre-dispatch freshness refresh with
+  re-pick; global PTY flock; `o9k-usage-watcher.sh` + systemd unit. Spec:
+  `docs/superpowers/specs/2026-07-17-o9k-roster-usage-collector-design.md`.
 - **Cross-CLI runs + agentless resume (o9k-roster).** Disk registry
   `~/.o9k/runs/<id>/` with mailbox protocol; `runs.mjs`
   (`create|classify|answer|wait|resume`); blocking `wait-mailbox.sh`;
   systemd `o9k-resume.service`; watcher return/respawn contract in roster
   skill. Spec:
   `docs/superpowers/specs/2026-07-17-cross-cli-run-resume-design.md`.
+- **Advisor role (o9k-roster)** — Fable-only sign-off chain; Fable removed from
+  default planner/reviewer heads in `roster.example.json`.
+- **Stop-hook usage collect (o9k-roster phase 2)** — `usage-stop-collect.mjs` on
+  Claude Code `Stop` when roster is enabled.
+- **Skill drift detection (o9k-core)** — update-check flags when installed
+  pillar skills diverge from marketplace copies.
+
+### Fixed
+- **Usage collector review hardening (o9k-roster)** — systemd ENOEXEC (bash
+  wrapper, never bare `.mjs`); idle-collect storm (`last_collect` on all
+  scheduled collects); per-model window gating with provider fallback; sticky
+  100% windows (`resets_at` + `updated` staleness ceiling); EPERM-safe PTY lock
+  via `runs.mjs` `isPidAlive`; hermes/non-subscription CLIs skip collect;
+  `O9K_USAGE_COLLECT` env exclusion in process counts; watcher journals schedule
+  only on successful collect; UTC Codex reset parsing with year rollover;
+  re-pick after dispatch refresh with probe-inflation pin; no hardcoded
+  `~/projects/o9k` in wrapper (require symlink or `O9K_ROSTER_SCRIPTS`).
 
 ### Changed
 - **Skills: dispatch path A/B.** `dispatch` defaults to in-host RESULT

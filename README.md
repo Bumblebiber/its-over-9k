@@ -29,7 +29,7 @@ the pieces multiply instead of colliding.
 | **Subagent isolation** | `o9k-dispatch` | Cost-gated fan-out: offload searches and decomposable work to isolated subagents that return results, not transcripts. | [Anthropic multi-agent research](https://www.anthropic.com/engineering/multi-agent-research-system), superpowers' dispatch skills |
 | **Memory** | `o9k-memory` | A memory MCP so sessions never start from zero — compact briefing at session start, deep recall on demand, save-before-compact. | **[hmem](https://github.com/Bumblebiber/hmem)** (available default), [TIM](https://github.com/Bumblebiber/tim) (planned) |
 | **Discovery** | `o9k-recon` | Find and classify companion frameworks; one-command companion bundle installs. | — |
-| **Multi-agent roster** | `o9k-roster` | Role→CLI×model fallback chains (deterministic `pick`/`dispatch`/`handoff`), usage-limit watch + handoff protocol, optional OpenRouter/AA score refresh. See [docs/MULTI-AGENT.md](docs/MULTI-AGENT.md). | — |
+| **Multi-agent roster** | `o9k-roster` | Role→CLI×model fallback chains, subscription usage collector (multi-window `~/.o9k/usage.json`), adaptive watcher, limit-watch + handoff, optional OpenRouter/AA score refresh, cross-CLI mailbox runs. See [docs/MULTI-AGENT.md](docs/MULTI-AGENT.md). | — |
 
 Each pillar is an independent plugin. Install all seven or cherry-pick — `o9k-core`
 is the only one the others assume.
@@ -203,9 +203,19 @@ hosts above.
   / `hmem checkpoint`) in the background before compaction summarizes the
   session away. Never blocks or delays compaction.
 - **Limit watch (o9k-roster)** — reads `~/.o9k/usage.json` (no provider API
-  calls) and warns / instructs handoff when a provider or CLI crosses
-  `limits.handoff_at`. Wired on all hosts; model choice stays in
-  `roster.mjs`, never in LLM reasoning.
+  calls) and warns / instructs handoff when a provider, CLI, or **usage window**
+  (e.g. `claude:5h`, `codex:weekly`) crosses `limits.handoff_at`. Wired on all
+  hosts; model choice stays in `roster.mjs`, never in LLM reasoning.
+- **Subscription usage collector (o9k-roster)** — optional adaptive watcher +
+  `roster usage --refresh` populate per-window fractions for Claude/Codex/Cursor
+  (`claude -p "/usage"` fast path; PTY for interactive tables). `pick`/`dispatch`
+  gate per model; pre-dispatch refresh when cache is stale. Install:
+  `o9k-usage-watcher.sh` (symlink or `O9K_ROSTER_SCRIPTS` + systemd drop-in).
+  Spec: `docs/superpowers/specs/2026-07-17-o9k-roster-usage-collector-design.md`.
+- **Cross-CLI runs (o9k-roster, opt-in)** — disk mailbox under
+  `~/.o9k/runs/<id>/`, blocking `runs.mjs wait`, systemd `o9k-resume.service`.
+  Only when `~/.o9k/roster.json` exists; single-agent installs stay on dispatch
+  path A. Spec: `docs/superpowers/specs/2026-07-17-cross-cli-run-resume-design.md`.
 
 `o9k-core` also ships **`/o9k-guide`** (personalized setup orientation backed by
 a read-only detector script), **`/o9k-update`** (check pillars & companions for
