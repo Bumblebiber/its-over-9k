@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export function runsRoot() {
@@ -145,6 +145,71 @@ export function writeAnswer(runId, body, { source = "parent" } = {}) {
   const header = `<!-- source: ${source} -->\n`;
   atomicWriteText(path.join(mailboxDir(runId), "ANSWER.md"), header + body.trim() + "\n");
   return setStatus(runId, "watching");
+}
+
+export const INJECT = {
+  worker: "Host crash recovery. Read mailbox/STATUS and continue the task. Do not re-init from scratch.",
+  parent: (runId) =>
+    `Host crash recovery. Read ${path.join(runsRoot(), runId, "STATE.json")}. Continue orchestration; do not re-dispatch if worker tmux is alive.`,
+  waitingHuman: " You were blocked on a human question — re-surface it; do not invent an answer.",
+};
+
+function defaultTmuxExists(name) {
+  try {
+    execFileSync("tmux", ["has-session", "-t", name], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Returns { actions: [...] } without spawning. */
+export function buildResumePlan(state, { tmuxExists = defaultTmuxExists } = {}) {
+  if (["done", "failed", "cancelled"].includes(state.status)) {
+    return { actions: [] };
+  }
+  const actions = [];
+  const injectWorker = INJECT.worker;
+  let injectParent = INJECT.parent(state.runId);
+  if (state.status === "waiting_human") injectParent += INJECT.waitingHuman;
+
+  if (state.worker?.tmux && !tmuxExists(state.worker.tmux)) {
+    actions.push({
+      kind: "spawn_worker",
+      tmux: state.worker.tmux,
+      cwd: state.cwd,
+      cli: state.worker.cli,
+      sessionId: state.worker.sessionId,
+      inject: injectWorker,
+      promptPath: path.join(runDir(state.runId), "mailbox", "PROMPT.md"),
+    });
+  }
+  if (state.parent?.attach === "tmux" && state.parent.tmux && !tmuxExists(state.parent.tmux)) {
+    actions.push({
+      kind: "spawn_parent",
+      tmux: state.parent.tmux,
+      cwd: state.cwd,
+      cli: state.parent.cli,
+      sessionId: state.parent.sessionId,
+      inject: injectParent,
+    });
+  } else if (state.parent?.attach === "manual") {
+    actions.push({ kind: "parent_awaiting_attach", runId: state.runId, sessionId: state.parent.sessionId });
+  }
+  actions.push({ kind: "flag_reattach_watcher", runId: state.runId });
+  return { actions };
+}
+
+export function buildCliArgv({ cli, sessionId, coldStart }) {
+  if (cli === "claude") {
+    if (sessionId && !coldStart) return ["claude", "--resume", sessionId];
+    return ["claude"];
+  }
+  if (cli === "codex") {
+    if (sessionId && !coldStart) return ["codex", "resume", sessionId];
+    return ["codex"];
+  }
+  return null; // unknown → cold_start signal
 }
 
 export function waitMailbox(runId, { ceilingSec = 3600 } = {}) {

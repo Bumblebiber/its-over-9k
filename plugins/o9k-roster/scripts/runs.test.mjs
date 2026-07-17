@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   runsRoot, runDir, atomicWriteJson, atomicWriteText, createRun, loadState,
-  classifyMailbox, writeAnswer,
+  classifyMailbox, writeAnswer, buildResumePlan, INJECT, buildCliArgv,
 } from "./runs.mjs";
 
 const RUNS_BIN = fileURLToPath(new URL("./runs.mjs", import.meta.url));
@@ -159,6 +159,62 @@ test("CLI answer then classify watching", withTempRuns(async (dir) => {
   });
   assert.match(c, /status:\s+watching/);
 }));
+
+test("buildResumePlan skips terminal runs", () => {
+  const plan = buildResumePlan({
+    status: "done",
+    runId: "r1",
+    cwd: "/tmp/p",
+    parent: { attach: "manual" },
+    worker: { cli: "codex", tmux: "w1" },
+  });
+  assert.deepEqual(plan.actions, []);
+});
+
+test("buildResumePlan restores worker tmux when missing", () => {
+  const plan = buildResumePlan({
+    status: "watching",
+    runId: "r1",
+    cwd: "/tmp/p",
+    parent: { attach: "manual", cli: "claude" },
+    worker: { cli: "claude", sessionId: "abc", tmux: "w1" },
+  }, { tmuxExists: () => false });
+  assert.equal(plan.actions[0].kind, "spawn_worker");
+  assert.equal(plan.actions[0].tmux, "w1");
+  assert.match(plan.actions[0].inject, /Host crash recovery/);
+});
+
+test("buildResumePlan noops worker when tmux exists", () => {
+  const plan = buildResumePlan({
+    status: "watching",
+    runId: "r1",
+    cwd: "/tmp/p",
+    parent: { attach: "manual", cli: "claude" },
+    worker: { cli: "codex", tmux: "w1" },
+  }, { tmuxExists: (n) => n === "w1" });
+  assert.ok(!plan.actions.some((a) => a.kind === "spawn_worker"));
+  assert.ok(plan.actions.some((a) => a.kind === "parent_awaiting_attach"));
+  assert.ok(plan.actions.some((a) => a.kind === "flag_reattach_watcher"));
+});
+
+test("buildResumePlan parent tmux when attach=tmux", () => {
+  const plan = buildResumePlan({
+    status: "waiting_human",
+    runId: "r1",
+    cwd: "/tmp/p",
+    parent: { attach: "tmux", cli: "claude", sessionId: "p1", tmux: "parent-1" },
+    worker: { cli: "codex", tmux: "w1" },
+  }, { tmuxExists: () => false });
+  const kinds = plan.actions.map((a) => a.kind);
+  assert.ok(kinds.includes("spawn_worker"));
+  assert.ok(kinds.includes("spawn_parent"));
+  assert.match(plan.actions.find((a) => a.kind === "spawn_parent").inject, /human question/);
+});
+
+test("buildCliArgv claude resume", () => {
+  assert.deepEqual(buildCliArgv({ cli: "claude", sessionId: "abc", coldStart: false }), ["claude", "--resume", "abc"]);
+  assert.equal(buildCliArgv({ cli: "cursor", sessionId: null, coldStart: true }), null);
+});
 
 test("CLI wait ceiling returns exit 2", withTempRuns(async (dir) => {
   const pf = path.join(dir, "prompt.md");
