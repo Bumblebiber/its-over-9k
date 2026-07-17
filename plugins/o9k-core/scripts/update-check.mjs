@@ -34,6 +34,7 @@ import os from "node:os";
 import path from "node:path";
 import { detectPillars, detectCompanions } from "./detect.mjs";
 import { refreshHosts } from "./refresh-hosts.mjs";
+import { skillDrift } from "./skills-sync.mjs";
 
 const CACHE = path.join(os.homedir(), ".claude", "o9k-update-cache.json");
 const MODE = (process.env.O9K_UPDATE_CHECK || "notify").toLowerCase();
@@ -161,12 +162,14 @@ function performCheck(apply) {
     }
   }
 
+  const drift = skillDrift();
   const cache = {
     checkedAt: new Date().toISOString(),
     mode: MODE,
     npm,
     o9kRepo: o9kRepoStatus(), // notify-only; never auto-pulled
     npmAvailable: npmOk,
+    skills: drift,
   };
   writeCache(cache);
   return cache;
@@ -209,6 +212,11 @@ function hookDirective(cache) {
         "suggest `/plugin marketplace update o9k`, then " +
         '`node "$CLAUDE_PLUGIN_ROOT/scripts/update-check.mjs" --refresh-hosts` ' +
         "(o9k plugins are never auto-updated)."
+    );
+  }
+  if (cache?.skills && !cache.skills.ok) {
+    lines.push(
+      "o9k skills need refresh — run /o9k-update for details."
     );
   }
   return lines.join("\n");
@@ -276,6 +284,30 @@ if (flag === "--report" || flag === "--apply") {
             `\n  then: node "$CLAUDE_PLUGIN_ROOT/scripts/update-check.mjs" --refresh-hosts`
         : "o9k repo: up to date."
     );
+  }
+  if (cache.skills) {
+    if (cache.skills.ok) {
+      console.log("skills: up to date.");
+    } else {
+      if (cache.skills.newPillars?.length) {
+        console.log(
+          `NEW PILLAR: ${cache.skills.newPillars.join(", ")} — skills not wired to any host. Run /o9k-init.`
+        );
+      }
+      if (cache.skills.missingCanonical?.length) {
+        console.log(
+          `skills missing canonical: ${cache.skills.missingCanonical.join(" ")} — Run: node "$CLAUDE_PLUGIN_ROOT/scripts/update-check.mjs" --refresh-hosts`
+        );
+      }
+      if (cache.skills.missingLinks?.length) {
+        const links = cache.skills.missingLinks
+          .map((l) => `${l.host}:${l.name}`)
+          .join(" ");
+        console.log(
+          `skills missing links: ${links} — Run: node "$CLAUDE_PLUGIN_ROOT/scripts/update-check.mjs" --refresh-hosts`
+        );
+      }
+    }
   }
   console.log("");
   if (flag === "--report" && upd.length) {

@@ -8,7 +8,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { detectHosts, PILLARS } from "./detect.mjs";
+import { detectHosts, detectPillars, PILLARS } from "./detect.mjs";
 
 /**
  * Discover [pillar, skillName] pairs by walking plugins/<pillar>/skills/ for
@@ -190,6 +190,79 @@ export function syncSkills(options = {}) {
   }
 
   return { canonical, linked, rules, errors };
+}
+
+export function skillDrift(options = {}) {
+  const home = options.home ?? os.homedir();
+  const pluginRoot =
+    options.pluginRoot ?? fileURLToPath(new URL("..", import.meta.url));
+  const marketplaceRoot = options.marketplaceRoot ?? path.join(pluginRoot, "..");
+
+  const pillars = detectPillars(); // no pluginRoot → honest "can't tell" instead of disk fallback
+  const skillSources = discoverSkillSources(marketplaceRoot).filter(
+    ([pillar]) => pillars[pillar]
+  );
+  const hosts = detectHosts({ home });
+  const canonical = path.join(home, ".agents/skills/o9k");
+
+  const skillsByPillar = new Map();
+  for (const [pillar, name] of skillSources) {
+    if (!skillsByPillar.has(pillar)) skillsByPillar.set(pillar, []);
+    skillsByPillar.get(pillar).push(name);
+  }
+
+  const newPillars = [];
+  const missingCanonical = [];
+
+  for (const [pillar, names] of skillsByPillar) {
+    const withCanonical = names.filter((name) =>
+      fs.existsSync(path.join(canonical, name))
+    );
+    if (withCanonical.length === 0) {
+      newPillars.push(pillar);
+    } else {
+      for (const name of names) {
+        if (!fs.existsSync(path.join(canonical, name))) {
+          missingCanonical.push(name);
+        }
+      }
+    }
+  }
+
+  const missingLinks = [];
+
+  for (const [, name] of skillSources) {
+    const canonicalDir = path.join(canonical, name);
+    if (!fs.existsSync(canonicalDir)) continue;
+
+    for (const host of Object.values(hosts)) {
+      if (!host.present) continue;
+
+      if (host.skillDir) {
+        const linkPath = path.join(host.skillDir, `o9k-${name}`);
+        if (!isIdenticalSymlink(linkPath, canonicalDir)) {
+          missingLinks.push({ host: host.id, name });
+        }
+      }
+
+      if (host.rulesDir) {
+        const rulePath = path.join(host.rulesDir, `o9k-${name}.mdc`);
+        if (!fs.existsSync(rulePath)) {
+          missingLinks.push({ host: host.id, name });
+        }
+      }
+    }
+  }
+
+  return {
+    newPillars,
+    missingCanonical,
+    missingLinks,
+    ok:
+      newPillars.length === 0 &&
+      missingCanonical.length === 0 &&
+      missingLinks.length === 0,
+  };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

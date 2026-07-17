@@ -51,6 +51,31 @@ marketplace scripts. It deliberately does **not** touch:
 Offer to run the `/plugin marketplace update` for the user when the report flags
 the o9k repo as behind — and chain `--refresh-hosts` immediately after.
 
+## Skill / host currency
+
+`--report` and `--apply` now also check that every enabled pillar's skills are
+wired to the actual hosts you use (Claude Code, Cursor, Codex, OpenCode,
+Hermes). The check is a local fs walk — instant, no network.
+
+Three drift cases, three remedies:
+
+| Case | Signal | Fix |
+|------|--------|-----|
+| **New pillar** (enabled pillar has skills in the marketplace but none wired to any host yet) | `NEW PILLAR` in report | Run `/o9k-init` — new pillars may need MCP arbitration, config files, and wiring that `--refresh-hosts` alone can't cover. |
+| **Missing canonical** (existing pillar gained a new upstream skill; some skills wired, some not) | `skills missing canonical` in report | Run `--refresh-hosts` — copies the new skill into `~/.agents/skills/o9k/` and wires hosts. |
+| **Missing links** (canonical skills exist but a host's symlink or Cursor rule is missing/wrong) | `skills missing links` in report | Run `--refresh-hosts` — re-syncs canonical skills + re-wires host hooks. |
+
+Concrete example (2026-07-17): `o9k-roster` installed as a plugin; source skills
+present under `plugins/o9k-roster/skills/` but NOT exposed under
+`~/.claude/skills/` or `~/.agents/skills/o9k/`. Old `/o9k-update` saw nothing
+wrong (npm companions current). Now `--report` flags it as **NEW PILLAR** →
+recommends `/o9k-init`.
+
+After a marketplace update (`/plugin marketplace update o9k`), always run
+`--refresh-hosts` to re-bake non-Claude hosts. The skill check here is a
+separate safety net — it catches drift regardless of how the pillar arrived
+(plugin install, git pull, manual copy).
+
 ## Modes (tell the user, don't decide for them)
 
 | `O9K_UPDATE_CHECK` | Behaviour |
@@ -65,6 +90,7 @@ those stay notify-only by design.
 
 ## Presenting results
 
-Apply caveman brevity. A clean report is one line ("everything up to date").
-When updates exist, list them compactly and offer the apply — never dump the
-raw script output verbatim if a one-line summary conveys it.
+Apply caveman brevity. A clean report is one line ("everything up to date")
+only when npm companions, o9k repo, **and** skills/host wiring are all current.
+When updates or skills drift exist, list them compactly and offer the apply —
+never dump the raw script output verbatim if a one-line summary conveys it.

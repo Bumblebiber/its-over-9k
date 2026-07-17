@@ -8,7 +8,9 @@ description: "Guided first-install and reconfiguration flow for o9k. Use when th
 The one flow that takes a machine from "just added the marketplace" to a
 complete, conflict-free o9k stack. It detects before it asks, asks before it
 acts, and never destroys data. `/o9k-guide` explains a setup; **`/o9k-init`
-builds one.**
+builds one.** After `/o9k-update` reports a **NEW PILLAR**, re-run this flow to
+wire its skills, hooks and config — `--refresh-hosts` alone only syncs existing
+pillars.
 
 ## Step 0 — model check (do this before anything else)
 
