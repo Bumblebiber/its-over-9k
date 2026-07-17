@@ -96,3 +96,20 @@ test("writeAnswer sets waiting path for worker", withTempRuns(async () => {
   assert.match(ans, /Use SQLite/);
   assert.equal(loadState(s.runId).status, "watching");
 }));
+
+test("classifyMailbox skips question when ANSWER is newer", withTempRuns(async () => {
+  const s = createRun({
+    cwd: "/tmp/p", role: "implementer",
+    parent: { cli: "claude", attach: "manual" },
+    worker: { cli: "codex", tmux: "t1" },
+    prompt: "x",
+  });
+  const mb = path.join(runDir(s.runId), "mailbox");
+  atomicWriteText(path.join(mb, "QUESTIONS.md"), "Which DB?\n");
+  // ensure ANSWER is strictly newer
+  const t0 = Date.now();
+  while (Date.now() <= t0) { /* spin */ }
+  atomicWriteText(path.join(mb, "ANSWER.md"), "<!-- source: parent -->\nSQLite\n");
+  atomicWriteText(path.join(mb, "STATUS"), "waiting_human");
+  assert.equal(classifyMailbox(s.runId).status, "watching");
+}));

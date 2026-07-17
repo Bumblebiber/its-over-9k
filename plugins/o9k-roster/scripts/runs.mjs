@@ -128,9 +128,6 @@ export function classifyMailbox(runId) {
       return { status: "question", question: questions.trim().slice(0, 2000) };
     }
   }
-  if (statusLine === "waiting_human" && questions?.trim()) {
-    return { status: "question", question: questions.trim().slice(0, 2000) };
-  }
   return { status: "watching" };
 }
 
