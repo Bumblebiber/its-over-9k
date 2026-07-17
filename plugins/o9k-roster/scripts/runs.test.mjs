@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import {
   runsRoot, runDir, atomicWriteJson, atomicWriteText, createRun, loadState,
   classifyMailbox, writeAnswer, buildResumePlan, INJECT, buildCliArgv,
-  setStatus, resumeAll, linkDispatchToRun,
+  setStatus, resumeAll, linkDispatchToRun, listActiveStates,
 } from "./runs.mjs";
 
 const RUNS_BIN = fileURLToPath(new URL("./runs.mjs", import.meta.url));
@@ -216,6 +216,26 @@ test("buildCliArgv claude resume", () => {
   assert.deepEqual(buildCliArgv({ cli: "claude", sessionId: "abc", coldStart: false }), ["claude", "--resume", "abc"]);
   assert.equal(buildCliArgv({ cli: "cursor", sessionId: null, coldStart: true }), null);
 });
+
+test("listActiveStates skips corrupt STATE.json", withTempRuns(async (dir) => {
+  const s = createRun({
+    cwd: "/tmp/p", role: "implementer",
+    parent: { cli: "claude", attach: "manual" },
+    worker: { cli: "codex", tmux: "t1" },
+    prompt: "x",
+  });
+  setStatus(s.runId, "watching");
+  const bad = path.join(dir, "corrupt-run");
+  fs.mkdirSync(bad, { recursive: true });
+  fs.writeFileSync(path.join(bad, "STATE.json"), "{not-json");
+  const skipped = [];
+  const active = listActiveStates({ onCorrupt: (id, e) => skipped.push(id) });
+  assert.ok(active.some((r) => r.runId === s.runId));
+  assert.ok(skipped.includes("corrupt-run"));
+  // resumeAll must not throw
+  const report = resumeAll({ dryRun: true, tmuxExists: () => true, logDir: dir });
+  assert.ok(report.runs.some((r) => r.runId === s.runId));
+}));
 
 test("resumeAll dry-run lists actions without tmux", withTempRuns(async (dir) => {
   const s = createRun({

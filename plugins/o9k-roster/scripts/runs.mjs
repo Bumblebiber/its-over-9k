@@ -229,13 +229,20 @@ export function resumeLockPath() {
   return path.join(runsRoot(), ".resume.lock");
 }
 
-export function listActiveStates() {
+export function listActiveStates({ onCorrupt } = {}) {
   const root = runsRoot();
   if (!fs.existsSync(root)) return [];
   const out = [];
   for (const name of fs.readdirSync(root)) {
     if (name.startsWith(".")) continue;
-    const st = loadState(name);
+    let st;
+    try {
+      st = loadState(name);
+    } catch (e) {
+      if (typeof onCorrupt === "function") onCorrupt(name, e);
+      else console.error(`skip corrupt run ${name}: ${e.message}`);
+      continue;
+    }
     if (!st) continue;
     if (["done", "failed", "cancelled"].includes(st.status)) continue;
     out.push(st);
