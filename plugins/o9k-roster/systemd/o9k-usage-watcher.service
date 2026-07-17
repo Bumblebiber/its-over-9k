@@ -8,7 +8,9 @@ Restart=always
 RestartSec=10
 # Install wrapper (never ExecStart a bare .mjs — ENOEXEC without shebang):
 #   install -m 0755 <repo>/plugins/o9k-roster/scripts/o9k-usage-watcher.sh ~/.local/bin/o9k-usage-watcher
-# Or symlink the repo script if it stays on a fixed path.
+# Copy installs need the scripts path; symlink is preferred:
+#   ln -sf <repo>/plugins/o9k-roster/scripts/o9k-usage-watcher.sh ~/.local/bin/o9k-usage-watcher
+# Or set Environment=O9K_ROSTER_SCRIPTS=<repo>/plugins/o9k-roster/scripts in a drop-in.
 ExecStart=%h/.local/bin/o9k-usage-watcher
 
 [Install]

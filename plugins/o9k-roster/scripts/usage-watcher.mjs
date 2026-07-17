@@ -31,10 +31,10 @@ function parseIso(s) {
 }
 
 /**
- * Pure transition + interval logic.
- * @returns {{ collect: string[], next: object, state: string }}
+ * Pure: which CLIs to collect this tick (does not advance schedule).
+ * @returns {{ collect: string[], state: string }}
  */
-export function decideCollect({
+export function planCollect({
   counts,
   prevCounts,
   state,
@@ -42,14 +42,9 @@ export function decideCollect({
   lastCollect,
   nextDue,
   now = Date.now(),
-  config = DEFAULT_CONFIG,
   subscriptions = ["claude", "codex", "cursor"],
 }) {
   const collect = new Set();
-  const next = {
-    last_collect: { ...lastCollect },
-    next_due: { ...nextDue },
-  };
 
   for (const cli of subscriptions) {
     if (collecting?.[cli]) continue;
@@ -59,10 +54,6 @@ export function decideCollect({
     if (prev > 0 && cur === 0) collect.add(cli);
   }
 
-  const intervalMin =
-    state === "busy" ? config.intervals.busy_min : config.intervals.active_min;
-  const hbMs = config.intervals.idle_heartbeat_hours * 3_600_000;
-
   for (const cli of subscriptions) {
     if ((counts[cli] ?? 0) === 0) continue;
     const due = parseIso(nextDue[cli]);
@@ -70,6 +61,7 @@ export function decideCollect({
   }
 
   if (state === "idle") {
+    const hbMs = DEFAULT_CONFIG.intervals.idle_heartbeat_hours * 3_600_000;
     for (const cli of subscriptions) {
       if (collecting?.[cli]) continue;
       const t = parseIso(lastCollect[cli]);
@@ -77,16 +69,51 @@ export function decideCollect({
     }
   }
 
-  for (const cli of collect) {
+  return { collect: [...collect], state };
+}
+
+/** @deprecated alias */
+export function decideCollect(opts) {
+  const plan = planCollect(opts);
+  const advanced = advanceSchedule({
+    successful: plan.collect,
+    state: plan.state,
+    lastCollect: opts.lastCollect || {},
+    nextDue: opts.nextDue || {},
+    now: opts.now,
+    config: opts.config || DEFAULT_CONFIG,
+  });
+  return { ...plan, next: advanced };
+}
+
+/**
+ * Advance last_collect/next_due only for CLIs whose collect succeeded.
+ */
+export function advanceSchedule({
+  successful,
+  state,
+  lastCollect,
+  nextDue,
+  now = Date.now(),
+  config = DEFAULT_CONFIG,
+}) {
+  const intervalMin =
+    state === "busy" ? config.intervals.busy_min : config.intervals.active_min;
+  const hbMs = config.intervals.idle_heartbeat_hours * 3_600_000;
+  const next = {
+    last_collect: { ...lastCollect },
+    next_due: { ...nextDue },
+  };
+
+  for (const cli of successful) {
     next.last_collect[cli] = new Date(now).toISOString();
-    if (state === "idle") {
-      next.next_due[cli] = new Date(now + hbMs).toISOString();
-    } else {
-      next.next_due[cli] = new Date(now + intervalMin * 60_000).toISOString();
-    }
+    next.next_due[cli] =
+      state === "idle"
+        ? new Date(now + hbMs).toISOString()
+        : new Date(now + intervalMin * 60_000).toISOString();
   }
 
-  return { collect: [...collect], next, state };
+  return next;
 }
 
 function loadState() {
@@ -122,7 +149,7 @@ export function tickOnce({ roster, now = Date.now(), dryRun = false } = {}) {
   const counts = countAgentProcesses();
   const state = computeState(counts);
 
-  const decision = decideCollect({
+  const plan = planCollect({
     counts,
     prevCounts: stateDoc.prev_counts || stateDoc.counts,
     state,
@@ -130,11 +157,11 @@ export function tickOnce({ roster, now = Date.now(), dryRun = false } = {}) {
     lastCollect: stateDoc.last_collect || {},
     nextDue: stateDoc.next_due || {},
     now,
-    config: cfg,
     subscriptions: subs,
   });
 
-  const toCollect = [...new Set(decision.collect)].filter((c) => subs.includes(c));
+  const toCollect = [...new Set(plan.collect)].filter((c) => subs.includes(c));
+  const successful = [];
 
   if (!dryRun) {
     for (const cli of toCollect) {
@@ -142,21 +169,30 @@ export function tickOnce({ roster, now = Date.now(), dryRun = false } = {}) {
       saveState(stateDoc);
       try {
         runCollect(cli);
+        successful.push(cli);
       } catch (e) {
         console.error(`collect failed ${cli}:`, e.message || e);
       } finally {
         stateDoc.collecting = { ...stateDoc.collecting, [cli]: false };
       }
     }
+    const advanced = advanceSchedule({
+      successful,
+      state,
+      lastCollect: stateDoc.last_collect || {},
+      nextDue: stateDoc.next_due || {},
+      now,
+      config: cfg,
+    });
     stateDoc.counts = counts;
     stateDoc.prev_counts = stateDoc.counts;
     stateDoc.state = state;
-    stateDoc.last_collect = decision.next.last_collect;
-    stateDoc.next_due = decision.next.next_due;
+    stateDoc.last_collect = advanced.last_collect;
+    stateDoc.next_due = advanced.next_due;
     saveState(stateDoc);
   }
 
-  return { counts, state, collect: toCollect };
+  return { counts, state, collect: toCollect, successful };
 }
 
 async function main() {
@@ -175,7 +211,7 @@ async function main() {
   for (;;) {
     try {
       const r = tickOnce({ roster });
-      if (r.collect.length) console.log(`collected: ${r.collect.join(", ")}`);
+      if (r.collect.length) console.log(`collected: ${r.successful.join(", ") || "(none ok)"}`);
     } catch (e) {
       console.error("watcher tick error:", e.message || e);
     }

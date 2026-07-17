@@ -14,7 +14,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { linkDispatchToRun } from "./runs.mjs";
-import { modelUsageGate, windowIsBlocking, parseResetAt } from "./usage-windows.mjs";
+import { modelUsageGate, windowIsBlocking, effectiveResetAt } from "./usage-windows.mjs";
 
 /** First non-flag argv token; skips values that belong to --flags. */
 export function firstPositional(args) {
@@ -215,7 +215,7 @@ export function checkThresholds({ roster, usage, now = Date.now() }) {
   if (hasWindowsData(usage)) {
     for (const [wkey, info] of Object.entries(usage.windows)) {
       if (typeof info?.used !== "number") continue;
-      const resetAt = parseResetAt(info.resets_at, now);
+      const resetAt = effectiveResetAt(info, wkey, handoff_at, now);
       if (resetAt !== null && now >= resetAt) continue;
       const pct = Math.round(info.used * 100);
       if (windowIsBlocking(wkey, usage, handoff_at, now)) {
@@ -368,22 +368,93 @@ export function tmuxArgs({ session, dir, argv }) {
   return ["new-session", "-d", "-s", session, "-c", dir, argv.map(shellQuote).join(" ")];
 }
 
+function modelUsageBlocked({ roster, usage, modelName, cli, handoffAt, now }) {
+  const model = roster.models?.[modelName];
+  if (!model) return false;
+  return modelUsageGate({
+    usage,
+    limitWindows: resolveLimitWindows(roster, modelName, model),
+    provider: model.provider,
+    cli,
+    handoffAt,
+    now,
+  }).blocked;
+}
+
+/**
+ * Re-pick after a successful pre-dispatch collect. Pins the prior pick when the
+ * collect probe alone pushed usage over handoff (pre-clear, post-blocked).
+ */
+export function resolvePickAfterRefresh({
+  roster,
+  preUsage,
+  postUsage,
+  priorPick,
+  role,
+  now = Date.now(),
+}) {
+  const { handoff_at } = limits(roster);
+  const r2 = pick({ roster, usage: postUsage, role, now });
+  if (r2.model) return r2;
+  if (
+    priorPick.model &&
+    !modelUsageBlocked({
+      roster,
+      usage: preUsage,
+      modelName: priorPick.model,
+      cli: priorPick.cli,
+      handoffAt: handoff_at,
+      now,
+    }) &&
+    modelUsageBlocked({
+      roster,
+      usage: postUsage,
+      modelName: priorPick.model,
+      cli: priorPick.cli,
+      handoffAt: handoff_at,
+      now,
+    })
+  ) {
+    return priorPick;
+  }
+  return { model: null, cli: null, skipped: r2.skipped };
+}
+
 async function spawnInTmux({ roster, role, dir, prompt, runId }) {
-  const usage = loadJson(usagePath());
-  const r = pick({ roster, usage, role });
+  const now = Date.now();
+  let usage = loadJson(usagePath());
+  let r = pick({ roster, usage, role, now });
   for (const s of r.skipped) console.log(`skipped ${s.model}: ${s.reason}`);
   if (!r.model) {
     console.error(`chain exhausted for role ${role} — no viable model`);
     process.exit(2);
   }
+  const priorPick = { model: r.model, cli: r.cli, skipped: r.skipped };
   try {
     const { isSubscriptionCli, collectUsageForCli } = await import("./usage-collect.mjs");
     const { isCliUsageFresh } = await import("./usage-windows.mjs");
     if (
       isSubscriptionCli(r.cli, roster) &&
-      !isCliUsageFresh(r.cli, usage, dispatchFreshnessMs(roster) * 1000)
+      !isCliUsageFresh(r.cli, usage, dispatchFreshnessMs(roster) * 1000, now)
     ) {
-      await collectUsageForCli({ cli: r.cli, roster });
+      const refreshed = await collectUsageForCli({ cli: r.cli, roster });
+      if (refreshed.ok) {
+        const preUsage = usage;
+        usage = loadJson(usagePath());
+        r = resolvePickAfterRefresh({
+          roster,
+          preUsage,
+          postUsage: usage,
+          priorPick,
+          role,
+          now,
+        });
+        for (const s of r.skipped) console.log(`skipped ${s.model}: ${s.reason}`);
+        if (!r.model) {
+          console.error(`chain exhausted for role ${role} after usage refresh`);
+          process.exit(2);
+        }
+      }
     }
   } catch {
     // stale cache — proceed with pick above

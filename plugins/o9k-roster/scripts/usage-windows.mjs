@@ -1,25 +1,72 @@
 // usage-windows.mjs — shared window gating, reset expiry, freshness checks.
 
-/** Best-effort parse of CLI /usage reset strings. null = unknown (do not expire). */
-export function parseResetAt(str, now = Date.now()) {
-  if (!str || typeof str !== "string") return null;
-  const direct = Date.parse(str);
-  if (Number.isFinite(direct)) return direct;
-  // "17:26 on 23 Jul" (codex)
-  const codex = /(\d{1,2}):(\d{2})\s+on\s+(\d{1,2})\s+(\w+)/i.exec(str);
-  if (codex) {
-    const year = new Date(now).getFullYear();
-    const attempt = Date.parse(`${codex[3]} ${codex[4]} ${year} ${codex[1]}:${codex[2]}:00`);
-    if (Number.isFinite(attempt)) return attempt;
-  }
-  return null;
+const MONTH = {
+  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+};
+
+/** Conservative max age per window key when resets_at is missing (hot windows only). */
+export const WINDOW_MAX_AGE_MS = {
+  "claude:session": 5 * 3_600_000,
+  "claude:5h": 5 * 3_600_000,
+  "claude:week": 7 * 86_400_000,
+  "claude:fable-week": 7 * 86_400_000,
+  "codex:weekly": 7 * 86_400_000,
+  "cursor:included": 30 * 86_400_000,
+  "cursor:auto": 30 * 86_400_000,
+  "cursor:api": 30 * 86_400_000,
+};
+
+export function windowMaxAgeMs(wkey) {
+  if (WINDOW_MAX_AGE_MS[wkey]) return WINDOW_MAX_AGE_MS[wkey];
+  const prefix = wkey.split(":")[0];
+  if (prefix === "claude") return 7 * 86_400_000;
+  if (prefix === "codex") return 7 * 86_400_000;
+  if (prefix === "cursor") return 30 * 86_400_000;
+  return 7 * 86_400_000;
 }
 
-/** Window blocks only when used ≥ threshold AND reset has not passed. */
+function parseCodexResetUtc(str, now) {
+  const m = /^(\d{1,2}):(\d{2})\s+on\s+(\d{1,2})\s+([A-Za-z]+)/i.exec(str.trim());
+  if (!m) return null;
+  const hour = Number(m[1]);
+  const min = Number(m[2]);
+  const day = Number(m[3]);
+  const month = MONTH[m[4].toLowerCase().slice(0, 3)];
+  if (month === undefined) return null;
+  const year = new Date(now).getUTCFullYear();
+  let ts = Date.UTC(year, month, day, hour, min, 0);
+  if (ts < now) ts = Date.UTC(year + 1, month, day, hour, min, 0);
+  return ts;
+}
+
+/** Best-effort parse of CLI /usage reset strings. null = unknown (no timed expiry). */
+export function parseResetAt(str, now = Date.now()) {
+  if (!str || typeof str !== "string") return null;
+  const trimmed = str.trim();
+  const direct = Date.parse(trimmed);
+  if (Number.isFinite(direct)) return direct;
+  return parseCodexResetUtc(trimmed, now);
+}
+
+/**
+ * When resets_at is missing/unparseable, hot windows (≥ handoffAt) still expire
+ * after windowMaxAgeMs from updated so 100% readings cannot stick forever.
+ */
+export function effectiveResetAt(w, wkey, handoffAt = 0.95, now = Date.now()) {
+  const parsed = parseResetAt(w?.resets_at, now);
+  if (parsed !== null) return parsed;
+  if (typeof w?.used !== "number" || w.used < handoffAt) return null;
+  const updated = Date.parse(w?.updated || "");
+  if (!Number.isFinite(updated)) return null;
+  return updated + windowMaxAgeMs(wkey);
+}
+
+/** Window blocks only when used ≥ threshold AND reset/staleness ceiling has not passed. */
 export function windowIsBlocking(wkey, usage, handoffAt, now = Date.now()) {
   const w = usage?.windows?.[wkey];
   if (!w || typeof w.used !== "number") return false;
-  const resetAt = parseResetAt(w.resets_at, now);
+  const resetAt = effectiveResetAt(w, wkey, handoffAt, now);
   if (resetAt !== null && now >= resetAt) return false;
   return w.used >= handoffAt;
 }

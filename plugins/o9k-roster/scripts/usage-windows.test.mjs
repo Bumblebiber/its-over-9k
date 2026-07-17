@@ -5,14 +5,23 @@ import {
   windowIsBlocking,
   modelUsageGate,
   isCliUsageFresh,
+  effectiveResetAt,
+  WINDOW_MAX_AGE_MS,
 } from "./usage-windows.mjs";
 
 const NOW = Date.parse("2026-07-17T12:00:00Z");
 
-test("parseResetAt parses ISO and codex-style reset strings", () => {
+test("parseResetAt parses ISO and codex-style reset strings in UTC", () => {
   assert.equal(parseResetAt("2026-07-23T17:26:00Z", NOW), Date.parse("2026-07-23T17:26:00Z"));
   const codex = parseResetAt("17:26 on 23 Jul", NOW);
+  assert.equal(codex, Date.UTC(2026, 6, 23, 17, 26, 0));
   assert.ok(codex > NOW);
+});
+
+test("parseResetAt rolls codex date to next year when month/day already passed", () => {
+  const winter = Date.parse("2026-12-15T12:00:00Z");
+  const codex = parseResetAt("17:26 on 23 Jul", winter);
+  assert.equal(codex, Date.UTC(2027, 6, 23, 17, 26, 0));
 });
 
 test("windowIsBlocking ignores windows past resets_at", () => {
@@ -22,6 +31,32 @@ test("windowIsBlocking ignores windows past resets_at", () => {
     },
   };
   assert.equal(windowIsBlocking("codex:weekly", usage, 0.95, NOW), false);
+});
+
+test("windowIsBlocking expires hot windows without resets_at after max age from updated", () => {
+  const updated = new Date(NOW - WINDOW_MAX_AGE_MS["codex:weekly"] - 60_000).toISOString();
+  const usage = {
+    windows: {
+      "codex:weekly": { used: 1.0, updated },
+    },
+  };
+  assert.equal(windowIsBlocking("codex:weekly", usage, 0.95, NOW), false);
+});
+
+test("windowIsBlocking keeps sub-threshold windows without resets_at", () => {
+  const usage = {
+    windows: {
+      "codex:weekly": { used: 0.5, updated: "2020-01-01T00:00:00Z" },
+    },
+  };
+  assert.equal(windowIsBlocking("codex:weekly", usage, 0.95, NOW), false);
+});
+
+test("effectiveResetAt uses updated+maxAge only for hot windows", () => {
+  const hot = { used: 1.0, updated: "2026-07-17T10:00:00Z" };
+  const cool = { used: 0.5, updated: "2026-07-17T10:00:00Z" };
+  assert.ok(effectiveResetAt(hot, "codex:weekly", 0.95, NOW) > NOW);
+  assert.equal(effectiveResetAt(cool, "codex:weekly", 0.95, NOW), null);
 });
 
 test("modelUsageGate falls back to provider when model has no window data", () => {

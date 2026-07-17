@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   pick, parseTtl, markLimited, checkThresholds, buildCommand, tmuxArgs,
-  parseChainEntry, firstPositional, resolveLimitWindows,
+  parseChainEntry, firstPositional, resolveLimitWindows, resolvePickAfterRefresh,
 } from "./roster.mjs";
 import { fileURLToPath } from "node:url";
 
@@ -341,4 +341,57 @@ test("checkThresholds ignores expired windows at resets_at", () => {
     now: NOW,
   });
   assert.equal(out, "");
+});
+
+test("resolvePickAfterRefresh re-picks with fresh usage", () => {
+  const roster = {
+    ...ROSTER,
+    models: {
+      "model-a": { provider: "anthropic", cli: ["claude"] },
+      "model-b": { provider: "openai", cli: ["codex"] },
+    },
+    roles: { planner: { chain: ["model-a", "model-b"] } },
+  };
+  const preUsage = {
+    windows: {
+      "claude:5h": { used: 0.5 },
+      "codex:weekly": { used: 0.5 },
+    },
+  };
+  const postUsage = {
+    windows: {
+      "claude:5h": { used: 0.99 },
+      "codex:weekly": { used: 0.5 },
+    },
+  };
+  const priorPick = pick({ roster, usage: preUsage, role: "planner", now: NOW });
+  const resolved = resolvePickAfterRefresh({
+    roster,
+    preUsage,
+    postUsage,
+    priorPick,
+    role: "planner",
+    now: NOW,
+  });
+  assert.equal(resolved.model, "model-b");
+});
+
+test("resolvePickAfterRefresh pins when collect probe alone blocks prior pick", () => {
+  const roster = {
+    ...ROSTER,
+    models: { "model-a": { provider: "anthropic", cli: ["claude"] } },
+    roles: { planner: { chain: ["model-a"] } },
+  };
+  const preUsage = { windows: { "claude:5h": { used: 0.94 } } };
+  const postUsage = { windows: { "claude:5h": { used: 0.97 } } };
+  const priorPick = pick({ roster, usage: preUsage, role: "planner", now: NOW });
+  const resolved = resolvePickAfterRefresh({
+    roster,
+    preUsage,
+    postUsage,
+    priorPick,
+    role: "planner",
+    now: NOW,
+  });
+  assert.equal(resolved.model, "model-a");
 });
