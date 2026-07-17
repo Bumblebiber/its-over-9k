@@ -61,23 +61,28 @@ export function decideCollect({
 
   const intervalMin =
     state === "busy" ? config.intervals.busy_min : config.intervals.active_min;
+  const hbMs = config.intervals.idle_heartbeat_hours * 3_600_000;
 
   for (const cli of subscriptions) {
     if ((counts[cli] ?? 0) === 0) continue;
     const due = parseIso(nextDue[cli]);
     if (due === null || now >= due) collect.add(cli);
-    if (collect.has(cli)) {
-      next.last_collect[cli] = new Date(now).toISOString();
-      next.next_due[cli] = new Date(now + intervalMin * 60_000).toISOString();
-    }
   }
 
   if (state === "idle") {
-    const hbMs = config.intervals.idle_heartbeat_hours * 3_600_000;
     for (const cli of subscriptions) {
       if (collecting?.[cli]) continue;
       const t = parseIso(lastCollect[cli]);
       if (t === null || now - t >= hbMs) collect.add(cli);
+    }
+  }
+
+  for (const cli of collect) {
+    next.last_collect[cli] = new Date(now).toISOString();
+    if (state === "idle") {
+      next.next_due[cli] = new Date(now + hbMs).toISOString();
+    } else {
+      next.next_due[cli] = new Date(now + intervalMin * 60_000).toISOString();
     }
   }
 

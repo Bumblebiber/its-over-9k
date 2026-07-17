@@ -36,3 +36,12 @@ test("countAgentProcesses uses fixture cmdlines", () => {
   assert.equal(counts.codex, 1);
   assert.equal(counts.cursor, 1);
 });
+
+test("countAgentProcesses excludes processes with O9K_USAGE_COLLECT in environ", () => {
+  const counts = countAgentProcesses({
+    listPids: () => [10],
+    readCmdline: () => "/usr/bin/claude --model sonnet",
+    hasEnvMarker: () => true,
+  });
+  assert.equal(counts.claude, 0);
+});

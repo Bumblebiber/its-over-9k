@@ -301,3 +301,44 @@ test("checkThresholds warns on hot usage windows", () => {
   });
   assert.match(warn, /claude:5h at 92%/);
 });
+
+test("pick uses provider fallback when only other-cli windows exist", () => {
+  const roster = {
+    ...ROSTER,
+    roles: { planner: { chain: ["model-b", "model-c"] } },
+  };
+  const usage = {
+    windows: { "claude:5h": { used: 0.1 } },
+    providers: { openai: { used: 0.99 } },
+  };
+  const r = pick({ roster, usage, role: "planner", now: NOW });
+  assert.equal(r.model, "model-c");
+  assert.match(r.skipped[0].reason, /provider openai/);
+});
+
+test("pick allows codex when weekly window expired at resets_at", () => {
+  const roster = {
+    ...ROSTER,
+    roles: { planner: { chain: ["model-b"] } },
+  };
+  const usage = {
+    windows: {
+      "codex:weekly": { used: 1.0, resets_at: "2026-07-16T10:00:00Z" },
+    },
+  };
+  const r = pick({ roster, usage, role: "planner", now: NOW });
+  assert.equal(r.model, "model-b");
+});
+
+test("checkThresholds ignores expired windows at resets_at", () => {
+  const out = checkThresholds({
+    roster: ROSTER,
+    usage: {
+      windows: {
+        "codex:weekly": { used: 1.0, resets_at: "2026-07-16T10:00:00Z" },
+      },
+    },
+    now: NOW,
+  });
+  assert.equal(out, "");
+});

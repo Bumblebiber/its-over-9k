@@ -14,6 +14,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { linkDispatchToRun } from "./runs.mjs";
+import { modelUsageGate, windowIsBlocking, parseResetAt } from "./usage-windows.mjs";
 
 /** First non-flag argv token; skips values that belong to --flags. */
 export function firstPositional(args) {
@@ -104,6 +105,10 @@ function hasWindowsData(usage) {
   return Boolean(usage?.windows && Object.keys(usage.windows).length > 0);
 }
 
+function dispatchFreshnessMs(roster) {
+  return roster?.usage_watcher?.dispatch_freshness_sec ?? 300;
+}
+
 /**
  * Walk role's chain, return first viable {model, cli, skipped}. Viability:
  * defined in roster.models, resolved CLI has a template and is listed on the
@@ -151,31 +156,17 @@ export function pick({ roster, usage, role, now = Date.now() }) {
     }
 
     const limitWindows = resolveLimitWindows(roster, name, model);
-    if (hasWindowsData(usage) && limitWindows.length) {
-      let blocked = false;
-      for (const wkey of limitWindows) {
-        const wUsed = usage.windows[wkey]?.used;
-        if (typeof wUsed === "number" && wUsed >= handoff_at) {
-          skipped.push({
-            model: label,
-            reason: `window ${wkey} at ${Math.round(wUsed * 100)}%`,
-          });
-          blocked = true;
-          break;
-        }
-      }
-      if (blocked) continue;
-    } else {
-      const used = usage?.providers?.[model.provider]?.used;
-      if (typeof used === "number" && used >= handoff_at) {
-        skipped.push({ model: label, reason: `provider ${model.provider} at ${Math.round(used * 100)}%` });
-        continue;
-      }
-      const cliUsed = usage?.providers?.[cli]?.used;
-      if (typeof cliUsed === "number" && cliUsed >= handoff_at) {
-        skipped.push({ model: label, reason: `cli ${cli} at ${Math.round(cliUsed * 100)}%` });
-        continue;
-      }
+    const gate = modelUsageGate({
+      usage,
+      limitWindows,
+      provider: model.provider,
+      cli,
+      handoffAt: handoff_at,
+      now,
+    });
+    if (gate.blocked) {
+      skipped.push({ model: label, reason: gate.reason });
+      continue;
     }
     if (markedUntil(usage, name, now)) {
       skipped.push({ model: label, reason: `marked limited until ${usage.marked[name].until}` });
@@ -224,8 +215,10 @@ export function checkThresholds({ roster, usage, now = Date.now() }) {
   if (hasWindowsData(usage)) {
     for (const [wkey, info] of Object.entries(usage.windows)) {
       if (typeof info?.used !== "number") continue;
+      const resetAt = parseResetAt(info.resets_at, now);
+      if (resetAt !== null && now >= resetAt) continue;
       const pct = Math.round(info.used * 100);
-      if (info.used >= handoff_at) {
+      if (windowIsBlocking(wkey, usage, handoff_at, now)) {
         lines.push(`⛔ o9k-roster: ${wkey} at ${pct}% — session limit reached.`);
         handoff = true;
       } else if (info.used >= warn_at) {
@@ -376,27 +369,24 @@ export function tmuxArgs({ session, dir, argv }) {
 }
 
 async function spawnInTmux({ roster, role, dir, prompt, runId }) {
-  let usage = loadJson(usagePath());
-  let r = pick({ roster, usage, role });
+  const usage = loadJson(usagePath());
+  const r = pick({ roster, usage, role });
   for (const s of r.skipped) console.log(`skipped ${s.model}: ${s.reason}`);
   if (!r.model) {
     console.error(`chain exhausted for role ${role} — no viable model`);
     process.exit(2);
   }
   try {
-    const { collectUsageForCli } = await import("./usage-collect.mjs");
-    const refreshed = await collectUsageForCli({ cli: r.cli });
-    if (refreshed.ok) {
-      usage = loadJson(usagePath());
-      r = pick({ roster, usage, role });
-      for (const s of r.skipped) console.log(`skipped ${s.model}: ${s.reason}`);
-      if (!r.model) {
-        console.error(`chain exhausted for role ${role} after usage refresh`);
-        process.exit(2);
-      }
+    const { isSubscriptionCli, collectUsageForCli } = await import("./usage-collect.mjs");
+    const { isCliUsageFresh } = await import("./usage-windows.mjs");
+    if (
+      isSubscriptionCli(r.cli, roster) &&
+      !isCliUsageFresh(r.cli, usage, dispatchFreshnessMs(roster) * 1000)
+    ) {
+      await collectUsageForCli({ cli: r.cli, roster });
     }
   } catch {
-    // stale cache — proceed
+    // stale cache — proceed with pick above
   }
   const argv = buildCommand({ roster, model: r.model, cli: r.cli, prompt });
   const session = `o9k-${role}-${Date.now().toString(36)}`;

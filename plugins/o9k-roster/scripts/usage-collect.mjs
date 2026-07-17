@@ -14,6 +14,17 @@ import { runPtyCollect, COLLECT_ENV } from "./usage-pty.mjs";
 
 const DEFAULT_SUBSCRIPTIONS = ["claude", "codex", "cursor"];
 
+export function subscriptionsFromRoster(roster) {
+  if (Array.isArray(roster?.subscriptions) && roster.subscriptions.length) {
+    return roster.subscriptions;
+  }
+  return DEFAULT_SUBSCRIPTIONS;
+}
+
+export function isSubscriptionCli(cli, roster) {
+  return subscriptionsFromRoster(roster || loadJson(configPath()) || {}).includes(cli);
+}
+
 export function mergeUsageWindows(existing, parsed) {
   const base = existing ? structuredClone(existing) : { windows: {}, marked: {} };
   base.windows = base.windows || {};
@@ -67,6 +78,10 @@ function collectCliTranscript(cli) {
  */
 export async function collectUsageForCli(opts) {
   const { cli, dryRun = false } = opts;
+  const roster = opts.roster || loadJson(configPath()) || {};
+  if (!isSubscriptionCli(cli, roster)) {
+    return { cli, ok: false, reason: "not-subscription" };
+  }
   const lock = await withPtyLock(async () => collectCliTranscript(cli));
   if (!lock.ok) {
     return { cli, ok: false, reason: "pty-lock-contention" };
@@ -80,13 +95,6 @@ export async function collectUsageForCli(opts) {
     writeUsageAtomic(merged);
   }
   return { cli, ok: true, windows: parsed };
-}
-
-export function subscriptionsFromRoster(roster) {
-  if (Array.isArray(roster?.subscriptions) && roster.subscriptions.length) {
-    return roster.subscriptions;
-  }
-  return DEFAULT_SUBSCRIPTIONS;
 }
 
 /**

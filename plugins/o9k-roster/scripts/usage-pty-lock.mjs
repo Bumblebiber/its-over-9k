@@ -4,18 +4,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { isPidAlive } from "./runs.mjs";
+
 export function ptyLockPath() {
   return process.env.O9K_PTY_LOCK || path.join(os.homedir(), ".o9k/.usage-pty.lock");
-}
-
-function isPidAlive(pid) {
-  if (!Number.isInteger(pid) || pid <= 0) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /** @returns {boolean} */

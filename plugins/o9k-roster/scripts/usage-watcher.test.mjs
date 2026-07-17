@@ -38,3 +38,30 @@ test("decideCollect ignores transitions while collecting flag set", () => {
   });
   assert.equal(d.collect.includes("claude"), false);
 });
+
+test("decideCollect idle heartbeat updates last_collect and does not re-fire within 24h", () => {
+  const first = decideCollect({
+    counts: { claude: 0, codex: 0, cursor: 0 },
+    prevCounts: { claude: 0, codex: 0, cursor: 0 },
+    state: "idle",
+    collecting: { claude: false, codex: false, cursor: false },
+    lastCollect: { claude: null, codex: null, cursor: null },
+    nextDue: { claude: null, codex: null, cursor: null },
+    now: NOW,
+    subscriptions: subs,
+  });
+  assert.equal(first.collect.length, 3);
+  assert.ok(first.next.last_collect.claude);
+
+  const second = decideCollect({
+    counts: { claude: 0, codex: 0, cursor: 0 },
+    prevCounts: { claude: 0, codex: 0, cursor: 0 },
+    state: "idle",
+    collecting: { claude: false, codex: false, cursor: false },
+    lastCollect: first.next.last_collect,
+    nextDue: first.next.next_due,
+    now: NOW + 60_000,
+    subscriptions: subs,
+  });
+  assert.deepEqual(second.collect, []);
+});

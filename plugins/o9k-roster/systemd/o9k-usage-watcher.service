@@ -6,8 +6,9 @@ After=default.target
 Type=simple
 Restart=always
 RestartSec=10
-# Symlink after install:
-#   install -m 0755 ~/.local/bin/o9k-usage-watcher <path>/o9k-usage-watcher
+# Install wrapper (never ExecStart a bare .mjs — ENOEXEC without shebang):
+#   install -m 0755 <repo>/plugins/o9k-roster/scripts/o9k-usage-watcher.sh ~/.local/bin/o9k-usage-watcher
+# Or symlink the repo script if it stays on a fixed path.
 ExecStart=%h/.local/bin/o9k-usage-watcher
 
 [Install]
