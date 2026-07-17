@@ -50,6 +50,9 @@ edit), **offer to do it right now** — the user should never have to copy-paste
 - `/o9k-update` — check pillars & companions for updates, apply the safe ones.
 - `/o9k-guide` — this orientation, any time.
 - `framework-scout` skill — scouts GitHub for new companion frameworks.
+- Multi-agent roster (only if they opted in at `/o9k-init` and have
+  `~/.o9k/roster.json`): cross-CLI workers via mailbox runs — see
+  `docs/MULTI-AGENT.md`. Single-agent users can ignore this entirely.
 - Settings, only if asked: `O9K_UPDATE_CHECK=off|notify|auto` (update policy),
   kill switches `O9K_CORE_HOOK=off`, `O9K_MEMORY_HOOK=off`.
 

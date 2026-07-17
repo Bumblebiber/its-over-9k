@@ -15,9 +15,13 @@ gets re-read on every subsequent turn — waste compounds.
 |-----------|--------|-------|
 | Writing any response | Output compression | `caveman` |
 | About to open/read/explore code | Context discipline | `scout` |
-| A search, lookup, or decomposable task | Subagent isolation | `dispatch` |
+| A search, lookup, or decomposable task | Subagent isolation | `dispatch` (path A) |
+| External CLI worker in tmux (opt-in) | Multi-agent roster | `roster` + `dispatch` path B — only if `~/.o9k/roster.json` exists |
 | Session start, project questions, "what was the state?" | Memory | `memory` |
 | Conflict between any of the above | Arbitration | this skill |
+
+Most installs never use the roster row. Missing `roster.json` → ignore it;
+ordinary dispatch stays in-host RESULT subagents.
 
 ## Core rules (always on)
 
@@ -53,6 +57,7 @@ through it and offers to apply the fix.
 | Task/issue state | beads if installed, else memory T-entries | parallel TODO markdown files |
 | Workflow methodology (TDD, review, brainstorm) | superpowers if installed | — |
 | Subagent dispatch | `o9k-dispatch` | superpowers' dispatching-parallel-agents (pick one, disable the other) |
+| Cross-CLI who/spawn (optional) | `o9k-roster` if installed + configured | hard-coded model picks in prose; never a second dispatch owner |
 
 ## Exceptions that override everything
 

@@ -10,6 +10,12 @@
   skill. Spec:
   `docs/superpowers/specs/2026-07-17-cross-cli-run-resume-design.md`.
 
+### Changed
+- **Skills: dispatch path A/B.** `dispatch` defaults to in-host RESULT
+  subagents; cross-CLI mailbox + watcher only when `~/.o9k/roster.json`
+  exists. `roster`, `using-o9k`, and `o9k-guide` gated the same way so
+  single-agent installs are not pushed into multi-agent flows.
+
 ## [0.10.3] — 2026-07-16
 
 ### Added

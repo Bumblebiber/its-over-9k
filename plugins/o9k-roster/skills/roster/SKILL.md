@@ -1,9 +1,14 @@
 ---
 name: roster
-description: "Role-based model selection for multi-agent delegation. Use before delegating work to another model/CLI (pick the right worker by role), when a rate-limit error appears (mark-limited), or when a session-limit warning arrives (handoff protocol). Cross-CLI mailbox runs use create/wait/answer/resume — spawn a cheap watcher subagent, never LLM-poll. Selection is deterministic code — never reason about which model to use."
+description: "Role-based model selection for multi-agent delegation. Use only when o9k-roster is installed and ~/.o9k/roster.json exists — before delegating to another model/CLI, on rate-limit errors (mark-limited), session-limit handoff, or cross-CLI mailbox runs (create/wait/answer/resume). Not for ordinary in-host search subagents (see dispatch path A). Selection is deterministic code — never reason about which model to use."
 ---
 
 # roster — Who Does the Work
+
+**Prerequisite:** this pillar is optional. If `~/.o9k/roster.json` is missing,
+do not invent multi-agent flows — use `dispatch` path A (in-host RESULT
+subagents) only. Users who never enabled the roster at `/o9k-init` should
+never see these commands.
 
 Model choice is config + code, not judgment. One primary role per task; the
 role's chain IS the fallback mechanism. Never pick a model by reasoning —
@@ -38,8 +43,9 @@ No config yet → `$ROSTER init`, then tell the user to curate `~/.o9k/roster.js
 ## Commands
 
 - **Delegate a task** (preferred — you never see the model choice):
-  `$ROSTER dispatch --role implementer --prompt-file plan.md --dir <taskdir>`
+  `$ROSTER dispatch --role implementer --prompt-file plan.md --dir <taskdir> [--run-id <id>]`
   Spawns the worker in tmux; report the printed session + attach command to the user.
+  Pass `--run-id` when you created a mailbox run (see below).
 - **Just ask who would do it:** `$ROSTER pick --role <role>`
 - **You hit a rate-limit error from a provider:** `$ROSTER mark-limited <model|provider> --ttl 5h --reason rate-limit` — then continue with the next viable model.
 - **Check limits:** `$ROSTER usage --check`
@@ -71,15 +77,16 @@ that to the user verbatim and stop — never substitute your own model choice.
 
 ## Cross-CLI runs (mailbox watcher)
 
-When delegating to an external CLI in tmux:
+**Only when** you are spawning an **external** CLI worker in tmux under this
+roster (not for in-host greps/summaries — those stay on `dispatch` path A).
 
 1. `$RUNS create … --prompt-file …` (use `templates/worker-prompt.md` protocol; HEARTBEAT mandatory).
-2. Start worker tmux (`roster dispatch` or manual) with that PROMPT; pass `--run-id` when available so STATE gets worker.tmux.
+2. Start worker tmux (`$ROSTER dispatch … --run-id <id>` preferred) with that PROMPT.
 3. Spawn an **internal cheap subagent** whose only job:
    - `$RUNS wait <runId>` (ONE blocking call — do not poll in a model loop)
    - Return the printed `status` (`question|done|failed|watching`) to the parent; then exit.
 4. Parent on `question`: answer or ask human → `$RUNS answer <runId> --text "…"` → **respawn** the watcher (step 3).
-5. Parent on `done`/`failed`: read RESULT; TIM closeout only if semantically useful (no run-event spam).
+5. Parent on `done`/`failed`: read RESULT; TIM/memory closeout only if semantically useful (no run-event spam).
 6. After host reboot: `$RUNS resume` (systemd `o9k-resume.service`). If `REATTACH_WATCHER` exists, respawn watcher; do not double-dispatch if worker tmux lives.
 
 Never use `claude --resume` as a live worker→parent callback.

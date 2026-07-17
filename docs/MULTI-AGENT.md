@@ -51,12 +51,17 @@ the tmux session + attach command, and stops. The successor starts with
 
 ## Cross-CLI runs (mailbox + resume)
 
+**Opt-in.** Only for installs with `~/.o9k/roster.json`. Single-agent users
+stay on `dispatch` path A (in-host RESULT subagents) and can ignore this
+section. Skills: `dispatch` (path B) + `roster` § Cross-CLI runs.
+
 For long-running workers that may outlive the parent session or survive a host
 reboot, o9k tracks each run on disk under `~/.o9k/runs/<runId>/` with a
 mailbox directory holding `STATUS`, `QUESTIONS.md`, `ANSWER.md`, `RESULT.md`,
-`HEARTBEAT`, and `PROMPT`.
+`HEARTBEAT`, and `PROMPT.md`.
 
-The parent spawns a cheap internal watcher that runs
+The parent creates the run (`runs.mjs create`), starts the worker
+(`roster dispatch --run-id …`), then spawns a cheap internal watcher that runs
 `node …/runs.mjs wait <runId>` — one blocking OS wait that returns when the
 mailbox reaches `question`, `done`, `failed`, or `watching`. On a question,
 the parent answers via `runs.mjs answer` and **respawns** the watcher; it never
