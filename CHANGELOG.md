@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Cross-CLI runs + agentless resume (o9k-roster).** Disk registry
+  `~/.o9k/runs/<id>/` with mailbox protocol; `runs.mjs`
+  (`create|classify|answer|wait|resume`); blocking `wait-mailbox.sh`;
+  systemd `o9k-resume.service`; watcher return/respawn contract in roster
+  skill. Spec:
+  `docs/superpowers/specs/2026-07-17-cross-cli-run-resume-design.md`.
+
 ## [0.10.3] — 2026-07-16
 
 ### Added

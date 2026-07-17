@@ -13,6 +13,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL, fileURLToPath } from "node:url";
+import { linkDispatchToRun } from "./runs.mjs";
 
 /** First non-flag argv token; skips values that belong to --flags. */
 export function firstPositional(args) {
@@ -305,7 +306,7 @@ export function tmuxArgs({ session, dir, argv }) {
   return ["new-session", "-d", "-s", session, "-c", dir, argv.map(shellQuote).join(" ")];
 }
 
-function spawnInTmux({ roster, role, dir, prompt }) {
+function spawnInTmux({ roster, role, dir, prompt, runId }) {
   const usage = loadJson(usagePath());
   const r = pick({ roster, usage, role });
   for (const s of r.skipped) console.log(`skipped ${s.model}: ${s.reason}`);
@@ -316,6 +317,7 @@ function spawnInTmux({ roster, role, dir, prompt }) {
   const argv = buildCommand({ roster, model: r.model, cli: r.cli, prompt });
   const session = `o9k-${role}-${Date.now().toString(36)}`;
   execFileSync("tmux", tmuxArgs({ session, dir, argv }), { stdio: "inherit" });
+  linkDispatchToRun(runId, session);
   console.log(`model: ${r.model} (${r.cli})`);
   console.log(`tmux session: ${session}`);
   console.log(`attach: tmux attach -t ${session}`);
@@ -325,12 +327,13 @@ function cmdDispatch(args) {
   const role = argValue(args, "--role");
   const promptFile = argValue(args, "--prompt-file");
   const dir = argValue(args, "--dir") || process.cwd();
+  const runId = argValue(args, "--run-id");
   if (!role || !promptFile) {
-    console.error("usage: roster.mjs dispatch --role <role> --prompt-file <file> [--dir <taskdir>]");
+    console.error("usage: roster.mjs dispatch --role <role> --prompt-file <file> [--dir <taskdir>] [--run-id <id>]");
     process.exit(1);
   }
   const prompt = fs.readFileSync(promptFile, "utf8").trim();
-  spawnInTmux({ roster: requireRoster(), role, dir, prompt });
+  spawnInTmux({ roster: requireRoster(), role, dir, prompt, runId });
 }
 
 function cmdHandoff(args) {
