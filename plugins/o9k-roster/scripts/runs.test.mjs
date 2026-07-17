@@ -1,12 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   runsRoot, runDir, atomicWriteJson, atomicWriteText, createRun, loadState,
   classifyMailbox, writeAnswer,
 } from "./runs.mjs";
+
+const RUNS_BIN = fileURLToPath(new URL("./runs.mjs", import.meta.url));
 
 function withTempRuns(fn) {
   return async () => {
@@ -112,4 +116,65 @@ test("classifyMailbox skips question when ANSWER is newer", withTempRuns(async (
   atomicWriteText(path.join(mb, "ANSWER.md"), "<!-- source: parent -->\nSQLite\n");
   atomicWriteText(path.join(mb, "STATUS"), "waiting_human");
   assert.equal(classifyMailbox(s.runId).status, "watching");
+}));
+
+test("CLI create prints runId", withTempRuns(async (dir) => {
+  const pf = path.join(dir, "prompt.md");
+  fs.writeFileSync(pf, "## Task\nHi\n");
+  const out = execFileSync("node", [
+    RUNS_BIN, "create",
+    "--cwd", "/tmp/p",
+    "--role", "implementer",
+    "--parent-cli", "claude",
+    "--parent-attach", "manual",
+    "--worker-cli", "codex",
+    "--worker-tmux", "o9k-w-1",
+    "--prompt-file", pf,
+  ], { env: { ...process.env, O9K_RUNS: dir }, encoding: "utf8" });
+  assert.match(out, /runId:\s+\S+/);
+  const id = out.match(/runId:\s+(\S+)/)[1];
+  const c = execFileSync("node", [RUNS_BIN, "classify", id], {
+    env: { ...process.env, O9K_RUNS: dir }, encoding: "utf8",
+  });
+  assert.match(c, /status:\s+watching/);
+}));
+
+test("CLI answer then classify watching", withTempRuns(async (dir) => {
+  const pf = path.join(dir, "prompt.md");
+  fs.writeFileSync(pf, "x\n");
+  const out = execFileSync("node", [
+    RUNS_BIN, "create", "--cwd", "/tmp/p", "--role", "implementer",
+    "--parent-cli", "claude", "--parent-attach", "manual",
+    "--worker-cli", "codex", "--worker-tmux", "t1", "--prompt-file", pf,
+  ], { env: { ...process.env, O9K_RUNS: dir }, encoding: "utf8" });
+  const id = out.match(/runId:\s+(\S+)/)[1];
+  const mb = path.join(dir, id, "mailbox");
+  fs.writeFileSync(path.join(mb, "QUESTIONS.md"), "Q?\n");
+  fs.writeFileSync(path.join(mb, "STATUS"), "waiting_human\n");
+  execFileSync("node", [RUNS_BIN, "answer", id, "--text", "A"], {
+    env: { ...process.env, O9K_RUNS: dir }, encoding: "utf8",
+  });
+  const c = execFileSync("node", [RUNS_BIN, "classify", id], {
+    env: { ...process.env, O9K_RUNS: dir }, encoding: "utf8",
+  });
+  assert.match(c, /status:\s+watching/);
+}));
+
+test("CLI wait ceiling returns exit 2", withTempRuns(async (dir) => {
+  const pf = path.join(dir, "prompt.md");
+  fs.writeFileSync(pf, "x\n");
+  const out = execFileSync("node", [
+    RUNS_BIN, "create", "--cwd", "/tmp/p", "--role", "implementer",
+    "--parent-cli", "claude", "--parent-attach", "manual",
+    "--worker-cli", "codex", "--worker-tmux", "t1", "--prompt-file", pf,
+  ], { env: { ...process.env, O9K_RUNS: dir }, encoding: "utf8" });
+  const id = out.match(/runId:\s+(\S+)/)[1];
+  try {
+    execFileSync("node", [RUNS_BIN, "wait", id, "--ceiling-sec", "2"], {
+      env: { ...process.env, O9K_RUNS: dir }, encoding: "utf8",
+    });
+    assert.fail("expected non-zero exit");
+  } catch (e) {
+    assert.equal(e.status, 2);
+  }
 }));

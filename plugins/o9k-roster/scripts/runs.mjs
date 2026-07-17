@@ -5,7 +5,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 export function runsRoot() {
   return process.env.O9K_RUNS || path.join(os.homedir(), ".o9k/runs");
@@ -146,6 +147,123 @@ export function writeAnswer(runId, body, { source = "parent" } = {}) {
   return setStatus(runId, "watching");
 }
 
+export function waitMailbox(runId, { ceilingSec = 3600 } = {}) {
+  const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "wait-mailbox.sh");
+  const r = spawnSync(script, [mailboxDir(runId), "--ceiling-sec", String(ceilingSec)], { encoding: "utf8" });
+  const classified = classifyMailbox(runId);
+  return { waitExit: r.status ?? 1, classified };
+}
+
+function argValue(args, flag) {
+  const i = args.indexOf(flag);
+  if (i === -1 || i + 1 >= args.length) return undefined;
+  return args[i + 1];
+}
+
+function printClassified(c) {
+  console.log(`status: ${c.status}`);
+  if (c.question) console.log(`question: ${c.question}`);
+}
+
+function cmdCreate(args) {
+  const promptFile = argValue(args, "--prompt-file");
+  const cwd = argValue(args, "--cwd");
+  const role = argValue(args, "--role");
+  const parentCli = argValue(args, "--parent-cli");
+  const parentAttach = argValue(args, "--parent-attach");
+  const workerCli = argValue(args, "--worker-cli");
+  if (!cwd || !role || !parentCli || !parentAttach || !workerCli || !promptFile) {
+    console.error(
+      "usage: runs.mjs create --cwd <dir> --role <role> --parent-cli <cli> --parent-attach <mode>"
+      + " [--parent-session <id>] [--parent-tmux <name>] --worker-cli <cli>"
+      + " [--worker-model <model>] [--worker-tmux <name>] --prompt-file <file> [--project <id>]",
+    );
+    process.exit(1);
+  }
+  const prompt = fs.readFileSync(promptFile, "utf8");
+  const state = createRun({
+    cwd,
+    project: argValue(args, "--project"),
+    role,
+    parent: {
+      cli: parentCli,
+      sessionId: argValue(args, "--parent-session"),
+      tmux: argValue(args, "--parent-tmux"),
+      attach: parentAttach,
+    },
+    worker: {
+      cli: workerCli,
+      model: argValue(args, "--worker-model"),
+      tmux: argValue(args, "--worker-tmux"),
+    },
+    prompt,
+  });
+  console.log(`runId: ${state.runId}`);
+  console.log(`dir: ${runDir(state.runId)}`);
+  console.log(`mailbox: ${mailboxDir(state.runId)}`);
+}
+
+function cmdClassify(args) {
+  const runId = args[0];
+  if (!runId) {
+    console.error("usage: runs.mjs classify <runId>");
+    process.exit(1);
+  }
+  printClassified(classifyMailbox(runId));
+}
+
+function cmdAnswer(args) {
+  const runId = args[0];
+  const text = argValue(args, "--text");
+  const file = argValue(args, "--file");
+  if (!runId || (!text && !file)) {
+    console.error("usage: runs.mjs answer <runId> --text <text> | --file <path>");
+    process.exit(1);
+  }
+  const body = text ?? fs.readFileSync(file, "utf8");
+  writeAnswer(runId, body);
+}
+
+function cmdSetStatus(args) {
+  const [runId, status] = args;
+  if (!runId || !status) {
+    console.error("usage: runs.mjs set-status <runId> <status>");
+    process.exit(1);
+  }
+  setStatus(runId, status);
+}
+
+function cmdWait(args) {
+  const runId = args[0];
+  const ceilingRaw = argValue(args, "--ceiling-sec");
+  if (!runId) {
+    console.error("usage: runs.mjs wait <runId> [--ceiling-sec N]");
+    process.exit(1);
+  }
+  const ceilingSec = ceilingRaw ? Number(ceilingRaw) : 3600;
+  const { waitExit, classified } = waitMailbox(runId, { ceilingSec });
+  printClassified(classified);
+  process.exitCode = waitExit;
+}
+
+const HANDLERS = {
+  create: cmdCreate,
+  classify: cmdClassify,
+  answer: cmdAnswer,
+  "set-status": cmdSetStatus,
+  wait: cmdWait,
+};
+
+function main() {
+  const [cmd, ...args] = process.argv.slice(2);
+  const handler = HANDLERS[cmd];
+  if (!handler) {
+    console.error(`usage: runs.mjs <${Object.keys(HANDLERS).join("|")}> [options]`);
+    process.exit(1);
+  }
+  handler(args);
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  // CLI subcommands added in later tasks.
+  main();
 }
