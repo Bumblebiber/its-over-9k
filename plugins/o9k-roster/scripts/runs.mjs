@@ -161,7 +161,8 @@ export function writeAnswer(runId, body, { source = "parent" } = {}) {
 }
 
 export const INJECT = {
-  worker: "Host crash recovery. Read mailbox/STATUS and continue the task. Do not re-init from scratch.",
+  worker:
+    "Host crash recovery. Read mailbox/STATUS and mailbox/PROMPT.md; continue the task. Do not re-init from scratch.",
   parent: (runId) =>
     `Host crash recovery. Read ${path.join(runsRoot(), runId, "STATE.json")}. Continue orchestration; do not re-dispatch if worker tmux is alive.`,
   waitingHuman: " You were blocked on a human question — re-surface it; do not invent an answer.",
@@ -250,11 +251,104 @@ export function listActiveStates({ onCorrupt } = {}) {
   return out;
 }
 
-function shellQuote(s) {
+export function shellQuote(s) {
   return /^[A-Za-z0-9_\-./=]+$/.test(s) ? s : `'${s.replaceAll("'", `'\\''`)}'`;
 }
 
-export function executeResumeAction(action, state) {
+/** Unknown-CLI cold start: echo hint then exec. No nested-quote traps. */
+export function buildColdStartArgv({ runId, promptPath, cli }) {
+  const msg = `cold_start run ${runId}; read mailbox/PROMPT.md at ${promptPath || "(none)"}`;
+  return ["bash", "-lc", `echo ${shellQuote(msg)}; exec ${shellQuote(cli || "bash")}`];
+}
+
+export function isPidAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    if (e.code === "ESRCH") return false;
+    if (e.code === "EPERM") return true;
+    throw e;
+  }
+}
+
+/** Acquire lock; steal if holder PID is dead (host-crash mid-resume). */
+export function acquireResumeLock(lockPath = resumeLockPath()) {
+  if (fs.existsSync(lockPath)) {
+    const raw = fs.readFileSync(lockPath, "utf8").trim();
+    const pid = Number.parseInt(raw, 10);
+    if (Number.isInteger(pid) && pid > 0 && isPidAlive(pid)) {
+      throw new Error(`resume lock held: ${lockPath} (pid ${pid})`);
+    }
+    try {
+      fs.unlinkSync(lockPath);
+    } catch {
+      /* raced */
+    }
+  }
+  fs.writeFileSync(lockPath, `${process.pid}\n`);
+}
+
+export function captureTmuxPane(session) {
+  try {
+    return execFileSync("tmux", ["capture-pane", "-t", session, "-p"], { encoding: "utf8" });
+  } catch {
+    return "";
+  }
+}
+
+function sleepMs(ms) {
+  const sec = Math.max(0.05, ms / 1000);
+  execFileSync("sleep", [String(sec)], { stdio: "ignore" });
+}
+
+/** Poll pane until non-empty or timeout (CLI TUI boot). */
+export function waitTmuxReady(session, {
+  timeoutMs = 10000,
+  intervalMs = 500,
+  capture = captureTmuxPane,
+  sleep = sleepMs,
+} = {}) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const pane = capture(session);
+    if (pane && pane.trim().length > 0) return true;
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    sleep(Math.min(intervalMs, remaining));
+  }
+  return false;
+}
+
+export function pasteInject(session, text, {
+  waitReady = waitTmuxReady,
+  readyTimeoutMs = 10000,
+} = {}) {
+  waitReady(session, { timeoutMs: readyTimeoutMs });
+  const tmp = path.join(os.tmpdir(), `o9k-inject-${session}-${process.pid}.txt`);
+  fs.writeFileSync(tmp, text || "");
+  try {
+    execFileSync(
+      "bash",
+      [
+        "-lc",
+        `tmux load-buffer -b o9k ${shellQuote(tmp)} && tmux paste-buffer -b o9k -t ${shellQuote(session)} && sleep 0.3 && tmux send-keys -t ${shellQuote(session)} Enter`,
+      ],
+      { stdio: "ignore" },
+    );
+  } finally {
+    try {
+      fs.unlinkSync(tmp);
+    } catch {
+      /* */
+    }
+  }
+}
+
+export function executeResumeAction(action, state, {
+  waitReady = waitTmuxReady,
+  readyTimeoutMs = 10000,
+} = {}) {
   if (action.kind === "parent_awaiting_attach" || action.kind === "flag_reattach_watcher") {
     return;
   }
@@ -266,7 +360,11 @@ export function executeResumeAction(action, state) {
     coldStart: !action.sessionId,
   });
   if (!argv) {
-    argv = ["bash", "-lc", `echo 'cold_start run ${state.runId}; read PROMPT at ${action.promptPath || ""}'; exec ${shellQuote(action.cli || "bash")}'`];
+    argv = buildColdStartArgv({
+      runId: state.runId,
+      promptPath: action.promptPath,
+      cli: action.cli,
+    });
     state.recovery = "cold_start";
     saveState(state);
   }
@@ -274,15 +372,7 @@ export function executeResumeAction(action, state) {
   execFileSync("tmux", ["new-session", "-d", "-s", action.tmux, "-c", action.cwd || process.cwd(), cmd], {
     stdio: "ignore",
   });
-  const tmp = path.join(os.tmpdir(), `o9k-inject-${action.tmux}.txt`);
-  fs.writeFileSync(tmp, action.inject || "");
-  try {
-    execFileSync("bash", ["-lc", `tmux load-buffer -b o9k ${shellQuote(tmp)} && tmux paste-buffer -b o9k -t ${shellQuote(action.tmux)} && sleep 0.3 && tmux send-keys -t ${shellQuote(action.tmux)} Enter`], {
-      stdio: "ignore",
-    });
-  } finally {
-    try { fs.unlinkSync(tmp); } catch { /* */ }
-  }
+  pasteInject(action.tmux, action.inject || "", { waitReady, readyTimeoutMs });
 }
 
 export function resumeAll({
@@ -294,8 +384,7 @@ export function resumeAll({
 } = {}) {
   fs.mkdirSync(runsRoot(), { recursive: true });
   const lock = resumeLockPath();
-  if (fs.existsSync(lock)) throw new Error(`resume lock held: ${lock}`);
-  fs.writeFileSync(lock, `${process.pid}\n`);
+  acquireResumeLock(lock);
   const resolvedLogDir = logDir || path.join(os.homedir(), ".o9k/logs");
   const report = { at: now.toISOString(), runs: [] };
   try {
@@ -309,7 +398,11 @@ export function resumeAll({
       atomicWriteText(path.join(mailboxDir(state.runId), "REATTACH_WATCHER"), "1\n");
     }
   } finally {
-    try { fs.unlinkSync(lock); } catch { /* */ }
+    try {
+      fs.unlinkSync(lock);
+    } catch {
+      /* */
+    }
   }
   fs.mkdirSync(resolvedLogDir, { recursive: true });
   const logFile = path.join(resolvedLogDir, `resume-${now.toISOString().replace(/[:.]/g, "-")}.log`);

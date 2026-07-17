@@ -9,6 +9,7 @@ import {
   runsRoot, runDir, atomicWriteJson, atomicWriteText, createRun, loadState,
   classifyMailbox, writeAnswer, buildResumePlan, INJECT, buildCliArgv,
   setStatus, resumeAll, linkDispatchToRun, listActiveStates,
+  buildColdStartArgv, acquireResumeLock, resumeLockPath, waitTmuxReady,
 } from "./runs.mjs";
 
 const RUNS_BIN = fileURLToPath(new URL("./runs.mjs", import.meta.url));
@@ -217,6 +218,53 @@ test("buildCliArgv claude resume", () => {
   assert.equal(buildCliArgv({ cli: "cursor", sessionId: null, coldStart: true }), null);
 });
 
+test("buildColdStartArgv has no stray quote after exec", () => {
+  const argv = buildColdStartArgv({
+    runId: "r1",
+    promptPath: "/tmp/run/mailbox/PROMPT.md",
+    cli: "cursor-agent",
+  });
+  assert.equal(argv[0], "bash");
+  assert.equal(argv[1], "-lc");
+  assert.match(argv[2], /exec cursor-agent$/);
+  assert.doesNotMatch(argv[2], /exec cursor-agent'/);
+  assert.match(argv[2], /PROMPT\.md/);
+});
+
+test("buildColdStartArgv quotes cli with spaces", () => {
+  const argv = buildColdStartArgv({ runId: "r1", promptPath: "/p", cli: "my cli" });
+  assert.match(argv[2], /exec 'my cli'$/);
+});
+
+test("INJECT.worker mentions PROMPT.md", () => {
+  assert.match(INJECT.worker, /PROMPT\.md/);
+});
+
+test("waitTmuxReady returns true when pane non-empty", () => {
+  let calls = 0;
+  const ok = waitTmuxReady("sess", {
+    timeoutMs: 1000,
+    intervalMs: 10,
+    capture: () => {
+      calls++;
+      return calls >= 2 ? "❯ ready\n" : "";
+    },
+    sleep: () => {},
+  });
+  assert.equal(ok, true);
+  assert.ok(calls >= 2);
+});
+
+test("waitTmuxReady returns false on timeout", () => {
+  const ok = waitTmuxReady("sess", {
+    timeoutMs: 30,
+    intervalMs: 10,
+    capture: () => "",
+    sleep: () => {},
+  });
+  assert.equal(ok, false);
+});
+
 test("listActiveStates skips corrupt STATE.json", withTempRuns(async (dir) => {
   const s = createRun({
     cwd: "/tmp/p", role: "implementer",
@@ -255,6 +303,23 @@ test("resumeAll lock prevents concurrent run", withTempRuns(async (dir) => {
   const lock = path.join(dir, ".resume.lock");
   fs.writeFileSync(lock, String(process.pid));
   assert.throws(() => resumeAll({ dryRun: true, logDir: dir }), /lock/);
+}));
+
+test("resumeAll steals stale lock from dead pid", withTempRuns(async (dir) => {
+  const lock = resumeLockPath();
+  fs.writeFileSync(lock, "2147483646\n"); // almost certainly dead
+  const report = resumeAll({ dryRun: true, tmuxExists: () => true, logDir: dir });
+  assert.ok(report.logFile);
+  assert.ok(!fs.existsSync(lock)); // released in finally
+}));
+
+test("acquireResumeLock steals then holds", withTempRuns(async (dir) => {
+  const lock = path.join(dir, ".resume.lock");
+  fs.writeFileSync(lock, "2147483646\n");
+  acquireResumeLock(lock);
+  assert.equal(fs.readFileSync(lock, "utf8").trim(), String(process.pid));
+  assert.throws(() => acquireResumeLock(lock), /lock held/);
+  fs.unlinkSync(lock);
 }));
 
 test("linkDispatchToRun sets worker.tmux and watching", withTempRuns(async () => {
