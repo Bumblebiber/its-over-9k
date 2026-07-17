@@ -4,6 +4,7 @@ import {
   HOOK_WRAPPERS,
   buildWrapperScript,
   installWrapper,
+  limitWatchWrapperEnv,
   resolveRoots,
   writeFileWithBackup,
 } from "./common.mjs";
@@ -208,6 +209,7 @@ export function wireHermes({ home, marketplaceRoot, dryRun = false }) {
       runHookPath,
       target,
       guardName: GUARDED_NAMES.has(name) ? name : undefined,
+      env: name === "o9k-roster-limit-watch" ? limitWatchWrapperEnv("hermes") : undefined,
     });
     if (installWrapper({ hooksDir, name, content, dryRun })) installed.push(name);
   }

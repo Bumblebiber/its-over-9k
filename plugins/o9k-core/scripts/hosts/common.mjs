@@ -71,18 +71,39 @@ export const HOOK_WRAPPERS = [
  * `guardName`, when set, adds a once-per-Hermes-session marker-file guard
  * (Hermes re-runs pre_llm_call wrappers on every LLM call; other hosts only
  * fire SessionStart once, so they never pass this).
+ * `env`, when set, exports key/value pairs before invoking the hook runner.
  */
-export function buildWrapperScript({ marketplaceRoot, runHookPath, target, guardName }) {
+export function buildWrapperScript({ marketplaceRoot, runHookPath, target, guardName, env }) {
   const root = marketplaceRoot.replace(/"/g, '\\"');
   const runner = runHookPath.replace(/"/g, '\\"');
   const guard = guardName
     ? `MARKER="\${TMPDIR:-/tmp}/o9k-hermes-$PPID-${guardName}"\n[ -f "$MARKER" ] && exit 0\ntouch "$MARKER"\n`
     : "";
+  const envExports = env && Object.keys(env).length
+    ? `${Object.entries(env)
+      .map(([k, v]) => `export ${k}="${String(v).replace(/"/g, '\\"')}"`)
+      .join("\n")}\n`
+    : "";
   return `#!/usr/bin/env bash
-${guard}export O9K_MARKETPLACE_ROOT="${root}"
+${guard}${envExports}export O9K_MARKETPLACE_ROOT="${root}"
 exec bash "${runner}" ${target}
 `;
 }
+
+/** Env exports for host-scoped limit-watch wrappers. */
+export function limitWatchWrapperEnv(hostId) {
+  const cli = LIMIT_WATCH_CLI_BY_HOST[hostId];
+  return cli ? { O9K_LIMIT_WATCH_CLI: cli } : undefined;
+}
+
+/** Host ids wired by o9k-init map to roster CLI slugs for usage windows. */
+export const LIMIT_WATCH_CLI_BY_HOST = {
+  claude: "claude",
+  codex: "codex",
+  cursor: "cursor",
+  hermes: "hermes",
+  opencode: "opencode",
+};
 
 function wrapperContentMatches(filePath, expected) {
   try {

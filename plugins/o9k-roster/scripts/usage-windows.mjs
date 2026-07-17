@@ -17,6 +17,18 @@ export const WINDOW_MAX_AGE_MS = {
   "cursor:api": 30 * 86_400_000,
 };
 
+/** CLI slug from a window key (`claude:session` → `claude`). */
+export function windowCliPrefix(wkey) {
+  const i = wkey.indexOf(":");
+  return i === -1 ? wkey : wkey.slice(0, i);
+}
+
+/** True when a usage window belongs to the active host CLI. */
+export function windowAppliesToCli(wkey, cli) {
+  if (!cli) return true;
+  return windowCliPrefix(wkey) === cli;
+}
+
 export function windowMaxAgeMs(wkey) {
   if (WINDOW_MAX_AGE_MS[wkey]) return WINDOW_MAX_AGE_MS[wkey];
   const prefix = wkey.split(":")[0];

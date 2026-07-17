@@ -58,6 +58,10 @@ No config yet → `$ROSTER init`, then tell the user to curate `~/.o9k/roster.js
 
 When a limit warning arrives (hook injection, or your own `usage --check`):
 
+- The **limit-watch hook** is scoped to the **active host CLI** (Claude sees
+  `claude:*` windows only; Codex sees `codex:*`, etc.). Use `roster usage
+  --check` for the global picture across all CLIs.
+
 - **≥ warn threshold:** converge — finish the current unit, commit, keep state checkpointable.
 - **≥ handoff threshold:**
   1. Write `HANDOFF.md` in the working directory: current state, completed steps, open steps (exact), verification commands, relevant paths.

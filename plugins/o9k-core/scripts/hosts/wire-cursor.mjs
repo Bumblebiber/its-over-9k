@@ -5,6 +5,7 @@ import {
   HOOK_WRAPPERS,
   buildWrapperScript,
   installWrapper,
+  limitWatchWrapperEnv,
   readJsonSafe,
   resolveRoots,
   writeFileWithBackup,
@@ -56,6 +57,7 @@ export function wireCursor({ home, marketplaceRoot, dryRun = false }) {
       marketplaceRoot: resolvedMarketplace,
       runHookPath,
       target,
+      env: name === "o9k-roster-limit-watch" ? limitWatchWrapperEnv("cursor") : undefined,
     });
     if (installWrapper({ hooksDir, name, content, dryRun })) installed.push(name);
   }

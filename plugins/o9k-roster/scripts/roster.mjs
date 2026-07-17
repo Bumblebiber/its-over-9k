@@ -14,7 +14,12 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { linkDispatchToRun } from "./runs.mjs";
-import { modelUsageGate, windowIsBlocking, effectiveResetAt } from "./usage-windows.mjs";
+import {
+  modelUsageGate,
+  windowIsBlocking,
+  effectiveResetAt,
+  windowAppliesToCli,
+} from "./usage-windows.mjs";
 
 /** First non-flag argv token; skips values that belong to --flags. */
 export function firstPositional(args) {
@@ -203,17 +208,40 @@ export function markLimited({ usage, target, ttlMs, now = Date.now(), reason }) 
   return base;
 }
 
+/** Providers that gate models spawnable on `cli` (legacy usage.providers path). */
+export function providersForCli(roster, cli) {
+  const out = new Set();
+  for (const m of Object.values(roster?.models || {})) {
+    if (m.cli?.includes(cli) && m.provider) out.add(m.provider);
+  }
+  return out;
+}
+
+/** Whether a mark-limited target is actionable in a host-scoped session. */
+export function isMarkedRelevantToCli(target, roster, cli) {
+  if (!cli) return true;
+  if (target === cli) return true;
+  const model = roster?.models?.[target];
+  if (model?.cli?.includes(cli)) return true;
+  for (const m of Object.values(roster?.models || {})) {
+    if (m.provider === target && m.cli?.includes(cli)) return true;
+  }
+  return false;
+}
+
 /**
  * Threshold check shared by `usage --check` and limit-watch.mjs.
  * Empty string when all providers are below warn_at.
+ * When `cli` is set (limit-watch), only windows/markers for that host CLI apply.
  */
-export function checkThresholds({ roster, usage, now = Date.now() }) {
+export function checkThresholds({ roster, usage, now = Date.now(), cli = null }) {
   const { warn_at, handoff_at } = limits(roster);
   const lines = [];
   let handoff = false;
 
   if (hasWindowsData(usage)) {
     for (const [wkey, info] of Object.entries(usage.windows)) {
+      if (cli && !windowAppliesToCli(wkey, cli)) continue;
       if (typeof info?.used !== "number") continue;
       const resetAt = effectiveResetAt(info, wkey, handoff_at, now);
       if (resetAt !== null && now >= resetAt) continue;
@@ -225,8 +253,21 @@ export function checkThresholds({ roster, usage, now = Date.now() }) {
         lines.push(`⚠️ o9k-roster: ${wkey} at ${pct}% — prepare for handoff: converge to a checkpointable state.`);
       }
     }
-  } else {
+  } else if (!cli) {
     for (const [provider, info] of Object.entries(usage?.providers || {})) {
+      if (typeof info?.used !== "number") continue;
+      const pct = Math.round(info.used * 100);
+      if (info.used >= handoff_at) {
+        lines.push(`⛔ o9k-roster: ${provider} at ${pct}% — session limit reached.`);
+        handoff = true;
+      } else if (info.used >= warn_at) {
+        lines.push(`⚠️ o9k-roster: ${provider} at ${pct}% — prepare for handoff: converge to a checkpointable state.`);
+      }
+    }
+  } else {
+    const relevant = providersForCli(roster, cli);
+    for (const provider of relevant) {
+      const info = usage?.providers?.[provider];
       if (typeof info?.used !== "number") continue;
       const pct = Math.round(info.used * 100);
       if (info.used >= handoff_at) {
@@ -238,7 +279,7 @@ export function checkThresholds({ roster, usage, now = Date.now() }) {
     }
   }
   for (const [target, mark] of Object.entries(usage?.marked || {})) {
-    if (Date.parse(mark.until) > now) {
+    if (Date.parse(mark.until) > now && isMarkedRelevantToCli(target, roster, cli)) {
       lines.push(`ℹ️ o9k-roster: ${target} marked limited until ${mark.until}${mark.reason ? ` (${mark.reason})` : ""}`);
     }
   }

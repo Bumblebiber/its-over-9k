@@ -17,10 +17,12 @@ const SESSION_START_TARGETS = [
 ] as const;
 
 function runHook(target: string): string | undefined {
+  const env: NodeJS.ProcessEnv = { ...process.env, O9K_MARKETPLACE_ROOT: MARKETPLACE };
+  if (target === "roster/limit-watch") env.O9K_LIMIT_WATCH_CLI = "opencode";
   const result = spawnSync("bash", [RUN_HOOK, target], {
     stdio: ["ignore", "pipe", "pipe"],
     encoding: "utf8",
-    env: { ...process.env, O9K_MARKETPLACE_ROOT: MARKETPLACE },
+    env,
   });
   const out = result.stdout?.trim();
   return out || undefined;

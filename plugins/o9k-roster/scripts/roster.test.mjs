@@ -343,6 +343,39 @@ test("checkThresholds ignores expired windows at resets_at", () => {
   assert.equal(out, "");
 });
 
+test("checkThresholds with cli scopes windows to that host", () => {
+  const usage = {
+    windows: {
+      "claude:session": { used: 0.92 },
+      "codex:weekly": { used: 1.0, resets_at: "2026-12-01T00:00:00Z" },
+    },
+  };
+  const claudeOnly = checkThresholds({ roster: ROSTER, usage, now: NOW, cli: "claude" });
+  assert.match(claudeOnly, /claude:session at 92%/);
+  assert.doesNotMatch(claudeOnly, /codex:weekly/);
+  assert.doesNotMatch(claudeOnly, /HANDOFF\.md/);
+
+  const codexOnly = checkThresholds({ roster: ROSTER, usage, now: NOW, cli: "codex" });
+  assert.doesNotMatch(codexOnly, /claude:session/);
+  assert.match(codexOnly, /codex:weekly at 100%/);
+  assert.match(codexOnly, /HANDOFF\.md/);
+});
+
+test("checkThresholds without cli still reports all hot windows", () => {
+  const out = checkThresholds({
+    roster: ROSTER,
+    usage: {
+      windows: {
+        "claude:session": { used: 0.92 },
+        "codex:weekly": { used: 1.0, resets_at: "2026-12-01T00:00:00Z" },
+      },
+    },
+    now: NOW,
+  });
+  assert.match(out, /claude:session/);
+  assert.match(out, /codex:weekly/);
+});
+
 test("resolvePickAfterRefresh re-picks with fresh usage", () => {
   const roster = {
     ...ROSTER,

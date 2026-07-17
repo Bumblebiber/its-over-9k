@@ -7,6 +7,7 @@ import {
   HOOK_WRAPPERS,
   buildWrapperScript,
   installWrapper,
+  limitWatchWrapperEnv,
   readJsonSafe,
   resolveRoots,
   writeFileWithBackup,
@@ -91,6 +92,21 @@ test("buildWrapperScript adds a marker guard only when guardName is set", () => 
     target: "core/session-start",
   });
   assert.doesNotMatch(noGuard, /MARKER=/);
+});
+
+test("buildWrapperScript exports env vars before invoking the hook runner", () => {
+  const script = buildWrapperScript({
+    marketplaceRoot: "/mp",
+    runHookPath: "/mp/run.sh",
+    target: "roster/limit-watch",
+    env: { O9K_LIMIT_WATCH_CLI: "codex" },
+  });
+  assert.match(script, /export O9K_LIMIT_WATCH_CLI="codex"/);
+});
+
+test("limitWatchWrapperEnv maps host ids to roster CLI slugs", () => {
+  assert.deepEqual(limitWatchWrapperEnv("codex"), { O9K_LIMIT_WATCH_CLI: "codex" });
+  assert.equal(limitWatchWrapperEnv("nosuch"), undefined);
 });
 
 test("installWrapper skips rewriting an unchanged wrapper, writes on change", () => {

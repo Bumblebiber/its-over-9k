@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/limit-watch.mjs\"",
+            "command": "O9K_LIMIT_WATCH_CLI=claude node \"${CLAUDE_PLUGIN_ROOT}/scripts/limit-watch.mjs\"",
             "timeout": 10
           }
         ]

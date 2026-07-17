@@ -7,9 +7,16 @@ import {
   isCliUsageFresh,
   effectiveResetAt,
   WINDOW_MAX_AGE_MS,
+  windowAppliesToCli,
 } from "./usage-windows.mjs";
 
 const NOW = Date.parse("2026-07-17T12:00:00Z");
+
+test("windowAppliesToCli matches window prefix to host cli", () => {
+  assert.equal(windowAppliesToCli("claude:session", "claude"), true);
+  assert.equal(windowAppliesToCli("codex:weekly", "claude"), false);
+  assert.equal(windowAppliesToCli("codex:weekly", null), true);
+});
 
 test("parseResetAt parses ISO and codex-style reset strings in UTC", () => {
   assert.equal(parseResetAt("2026-07-23T17:26:00Z", NOW), Date.parse("2026-07-23T17:26:00Z"));
