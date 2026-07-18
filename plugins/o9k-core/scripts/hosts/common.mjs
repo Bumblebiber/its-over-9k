@@ -67,6 +67,15 @@ export const HOOK_WRAPPERS = [
 ];
 
 /**
+ * Session-start hook targets for hosts that run everything on one event
+ * (OpenCode). Derived from HOOK_WRAPPERS so a new hook shows up everywhere;
+ * pre-compact is excluded — it wires to the host's compacting event.
+ */
+export const SESSION_START_TARGETS = HOOK_WRAPPERS.filter(
+  (w) => w.target !== "memory/pre-compact"
+).map((w) => w.target);
+
+/**
  * Build a wrapper shell script that execs run-o9k-hook.sh for `target`.
  * `guardName`, when set, adds a once-per-Hermes-session marker-file guard
  * (Hermes re-runs pre_llm_call wrappers on every LLM call; other hosts only

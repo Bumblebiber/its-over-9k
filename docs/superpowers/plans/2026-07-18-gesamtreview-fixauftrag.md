@@ -108,7 +108,7 @@ field inside the newest `.jsonl` lines instead of failing.
 **Fix:** probe `bin`, `bin.exe`, `bin.cmd`, `bin.bat` when
 `process.platform === "win32"`.
 
-### 12. OpenCode adapter target list is hand-synced
+### 12. OpenCode adapter target list is hand-synced — **fixed**
 `opencode-o9k.ts` keeps `SESSION_START_TARGETS` "in sync by hand" with
 `common.mjs` `HOOK_WRAPPERS` — classic drift risk.
 **Fix:** have `wire-opencode.mjs` inject the target list at wire time (it
