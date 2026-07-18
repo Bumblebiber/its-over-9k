@@ -1,7 +1,7 @@
 # o9k Statusline — Opt-in, Selectable Elements, Host Translation
 
 **Date:** 2026-07-18
-**Status:** Draft (awaiting user review of this file)
+**Status:** Approved (2026-07-18)
 **Home:** `plugins/o9k-core/scripts/statusline/` (Approach 1 — not a new pillar)
 **Related:** `docs/superpowers/specs/2026-07-16-o9k-init-multi-cli-design.md`, host `wire-*.mjs` adapters
 
