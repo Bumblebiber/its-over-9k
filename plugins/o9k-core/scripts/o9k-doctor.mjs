@@ -67,9 +67,11 @@ function checkStatuslineCommandHost({ hostId, settingsPath, wireHosts, artifacts
   }
   if (isTimStatuslineCommand(cmd)) {
     artifacts.push({ kind: "statusline", host: hostId, path: settingsPath, state: "tim" });
-    problems.push(
-      `TIM statusline still wired on ${hostId}; re-run /o9k-init migrate or remove manually: ${settingsPath}`
-    );
+    if (wireHosts?.[hostId]) {
+      problems.push(
+        `TIM statusline still wired on ${hostId}; re-run /o9k-init migrate or remove manually: ${settingsPath}`
+      );
+    }
     return;
   }
   if (cmd) {

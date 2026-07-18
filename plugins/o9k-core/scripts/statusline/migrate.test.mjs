@@ -128,6 +128,36 @@ test("action keep-tim on Claude keeps TIM command and skips o9k wire for claude"
   );
   assert.equal(r.wireResults?.claude?.skipped, true);
   assert.equal(r.warnings.length, 0);
+  // config.hosts must reflect the real per-host decision, not a blanket
+  // default — otherwise doctor treats "kept TIM" as "should be wired".
+  assert.equal(loadConfig().hosts.claude, false);
+  delete process.env.O9K_STATUSLINE;
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
+test("action remove-tim with foreignKeep preserves a non-TIM command on that host", () => {
+  const home = tmpHome();
+  fs.mkdirSync(path.join(home, ".claude"), { recursive: true });
+  fs.writeFileSync(
+    path.join(home, ".claude/settings.json"),
+    JSON.stringify({ statusLine: { type: "command", command: "echo foreign" } }),
+  );
+  process.env.O9K_STATUSLINE = path.join(home, ".o9k/statusline.json");
+  const r = migrateTimStatusline({
+    home,
+    marketplaceRoot,
+    action: "remove-tim",
+    elements: ["model"],
+    hostsPresent: { claude: true, cursor: false, hermes: false },
+    foreignKeep: { claude: true },
+  });
+  assert.equal(
+    JSON.parse(fs.readFileSync(path.join(home, ".claude/settings.json"), "utf8")).statusLine
+      .command,
+    "echo foreign",
+  );
+  assert.equal(r.wireResults?.claude?.skipped, true);
+  assert.equal(loadConfig().hosts.claude, false);
   delete process.env.O9K_STATUSLINE;
   fs.rmSync(home, { recursive: true, force: true });
 });

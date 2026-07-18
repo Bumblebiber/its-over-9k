@@ -202,6 +202,25 @@ test("stripTim removes Hermes TIM method and script, keeps o9k patch", () => {
   fs.rmSync(home, { recursive: true, force: true });
 });
 
+test("stripTim fallback regex keeps @staticmethod decorator of the next method", () => {
+  // Method-only fixture, no blank line before the next method's decorator —
+  // the fallback regex must not swallow "@staticmethod" along with the TIM
+  // method it's removing (regression for a lazy-lookahead bug).
+  const source = [
+    "class X:",
+    "    def _get_tim_status(self):",
+    "        return {}",
+    "    @staticmethod",
+    "    def _status_bar_display_width(text):",
+    "        return len(text)",
+    "",
+  ].join("\n");
+  const { source: out, changed } = stripTimFromCliPy(source);
+  assert.equal(changed, true);
+  assert.equal(out.includes("_get_tim_status"), false);
+  assert.ok(out.includes("@staticmethod\n    def _status_bar_display_width"));
+});
+
 test("stripTim dryRun leaves files unchanged", () => {
   const home = tmpHome();
   fs.mkdirSync(path.join(home, ".claude"), { recursive: true });

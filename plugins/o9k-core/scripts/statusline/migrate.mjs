@@ -19,14 +19,16 @@ import { wireAllStatusline, defaultMarketplaceRoot } from "./wire-all.mjs";
 const HOST_IDS = ["claude", "cursor", "hermes"];
 
 /** Per-host wire mode for one host under the given action/detection state. */
-function decideMode({ host, action, hostsPresent, detect }) {
+function decideMode({ host, action, hostsPresent, detect, foreignKeep }) {
   if (!hostsPresent[host]) return "skip";
-  if (action !== "keep-tim") return "replace";
   // Hermes has no "keep" wire mode that still installs o9k — replace always
   // stacks alongside any existing (TIM/foreign) patch. Claude/Cursor's
-  // "keep" mode leaves an existing non-o9k command (TIM's) untouched.
+  // "keep" mode leaves an existing non-o9k command (TIM's or a foreign one
+  // the interview asked about) untouched.
   if (host === "hermes") return "replace";
-  return detect[host] ? "keep" : "replace";
+  if (action === "keep-tim" && detect[host]) return "keep";
+  if (!detect[host] && foreignKeep?.[host]) return "keep";
+  return "replace";
 }
 
 /**
@@ -36,6 +38,9 @@ function decideMode({ host, action, hostsPresent, detect }) {
  * @param {"remove-tim"|"keep-tim"|"abort"} opts.action
  * @param {string[]} [opts.elements]
  * @param {{claude?: boolean, cursor?: boolean, hermes?: boolean}} [opts.hostsPresent]
+ * @param {{claude?: boolean, cursor?: boolean, hermes?: boolean}} [opts.foreignKeep]
+ *   Per-host "keep the existing non-TIM, non-o9k command" answer from the
+ *   interview (Claude/Cursor only — Hermes has no keep mode, see decideMode).
  * @param {boolean} [opts.dryRun]
  */
 export function migrateTimStatusline({
@@ -44,6 +49,7 @@ export function migrateTimStatusline({
   action,
   elements,
   hostsPresent = { claude: true, cursor: true, hermes: true },
+  foreignKeep = {},
   dryRun = false,
 }) {
   if (action === "abort") {
@@ -68,7 +74,7 @@ export function migrateTimStatusline({
 
   const hostModes = {};
   for (const host of HOST_IDS) {
-    hostModes[host] = decideMode({ host, action, hostsPresent, detect });
+    hostModes[host] = decideMode({ host, action, hostsPresent, detect, foreignKeep });
   }
 
   if (action === "keep-tim" && hostsPresent.hermes && detect.hermes) {
@@ -76,7 +82,9 @@ export function migrateTimStatusline({
   }
 
   if (!dryRun) {
-    saveConfig(defaultConfig({ enabled: true, ...(elements ? { elements } : {}) }));
+    const hosts = {};
+    for (const host of HOST_IDS) hosts[host] = hostModes[host] === "replace";
+    saveConfig(defaultConfig({ enabled: true, hosts, ...(elements ? { elements } : {}) }));
   }
 
   const { results } = wireAllStatusline({ home, marketplaceRoot, hosts: hostModes, dryRun });
@@ -99,6 +107,7 @@ function parseCli(argv) {
   let marketplaceRoot;
   let home = os.homedir();
   let hostsPresentSpec;
+  let foreignKeepSpec;
   let dryRun = false;
 
   for (let i = 0; i < argv.length; i++) {
@@ -123,6 +132,10 @@ function parseCli(argv) {
       hostsPresentSpec = argv[++i];
       continue;
     }
+    if (arg === "--foreign-keep") {
+      foreignKeepSpec = argv[++i];
+      continue;
+    }
     if (arg === "--dry-run") {
       dryRun = true;
       continue;
@@ -132,7 +145,7 @@ function parseCli(argv) {
 
   if (!action) {
     throw new Error(
-      "usage: migrate.mjs --action remove-tim|keep-tim|abort --elements a,b,c [--marketplace <dir>] [--home DIR] [--hosts-present claude,cursor,hermes] [--dry-run]",
+      "usage: migrate.mjs --action remove-tim|keep-tim|abort --elements a,b,c [--marketplace <dir>] [--home DIR] [--hosts-present claude,cursor,hermes] [--foreign-keep claude,cursor] [--dry-run]",
     );
   }
 
@@ -143,12 +156,20 @@ function parseCli(argv) {
     }
   }
 
+  const foreignKeep = { claude: false, cursor: false, hermes: false };
+  if (foreignKeepSpec) {
+    for (const host of parseListArg(foreignKeepSpec)) {
+      foreignKeep[host] = true;
+    }
+  }
+
   return {
     home,
     marketplaceRoot: marketplaceRoot ?? defaultMarketplaceRoot(),
     action,
     elements: elementsSpec ? parseListArg(elementsSpec) : undefined,
     hostsPresent,
+    foreignKeep,
     dryRun,
   };
 }

@@ -254,7 +254,25 @@ test("doctor: hermes statusline clean when cli.py is patched", () => {
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
-test("doctor: TIM Claude command while o9k statusline enabled is a problem", () => {
+test("doctor: TIM Claude command while claude should be wired is a problem", () => {
+  const { tmp, pathEnv } = makeStatuslineHome();
+  saveStatuslineConfig(tmp, { hosts: { claude: true } });
+  fs.writeFileSync(
+    path.join(tmp, ".claude/settings.json"),
+    JSON.stringify(
+      { statusLine: { type: "command", command: "bash /x/tim-statusline.sh" } },
+      null,
+      2
+    )
+  );
+  const r = doctor({ home: tmp, pathEnv });
+  const artifact = r.artifacts.find((a) => a.kind === "statusline" && a.host === "claude");
+  assert.equal(artifact.state, "tim");
+  assert.ok(r.problems.some((p) => /TIM statusline still wired/.test(p)));
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("doctor: TIM Claude command the user deliberately kept (hosts.claude=false) is not a problem", () => {
   const { tmp, pathEnv } = makeStatuslineHome();
   saveStatuslineConfig(tmp, { hosts: { claude: false } });
   fs.writeFileSync(
@@ -268,7 +286,7 @@ test("doctor: TIM Claude command while o9k statusline enabled is a problem", () 
   const r = doctor({ home: tmp, pathEnv });
   const artifact = r.artifacts.find((a) => a.kind === "statusline" && a.host === "claude");
   assert.equal(artifact.state, "tim");
-  assert.ok(r.problems.some((p) => /TIM statusline still wired/.test(p)));
+  assert.ok(!r.problems.some((p) => /TIM statusline still wired/.test(p)));
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 

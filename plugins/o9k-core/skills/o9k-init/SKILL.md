@@ -123,7 +123,8 @@ Ask, don't lecture. One question at a time, options not essays. In order:
         - Claude / Cursor / Hermes: if a non-TIM, non-o9k statusline is
           detected → ask **keep** / **replace** per host (replace backs up
           first). Under action B, TIM hosts are already `keep` — do not
-          re-ask.
+          re-ask. Pass a "keep" answer for Claude/Cursor through
+          `--foreign-keep` (Hermes has no keep mode — see flag table).
         - Codex / OpenCode: report `statusline: unsupported` — do not pretend
           to wire.
      5. During Step 5, **always** run `migrate.mjs` for the Yes path (never
@@ -135,6 +136,7 @@ Ask, don't lecture. One question at a time, options not essays. In order:
           --elements tim,model,... \
           --marketplace "${CLAUDE_PLUGIN_ROOT}/.." \
           --hosts-present claude,cursor,hermes \
+          [--foreign-keep claude,cursor] \
           [--dry-run]
         ```
         Omit absent hosts from `--hosts-present`. Surface `warnings` (e.g.
@@ -148,6 +150,7 @@ Ask, don't lecture. One question at a time, options not essays. In order:
      | `--marketplace` | no | Marketplace root (defaults beside plugin) |
      | `--home` | no | Home dir (default `$HOME`) |
      | `--hosts-present` | no | Comma list of hosts to consider (`claude`, `cursor`, `hermes`) |
+     | `--foreign-keep` | no | Comma list of hosts (`claude`, `cursor`) whose existing non-TIM, non-o9k command the user asked to keep untouched (ignored for `hermes`, which has no keep mode) |
      | `--dry-run` | no | Plan only — no config write, no strip, no wire |
    - **Hard rule:** `--refresh-hosts`, SessionStart hooks, and plugin enable
      **must never** wire or strip statusline — only this interview path may
@@ -367,12 +370,14 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/migrate.mjs" --dry-run \
   --action remove-tim|keep-tim|abort \
   --elements tim,model,... \
   --marketplace "${CLAUDE_PLUGIN_ROOT}/.." \
-  --hosts-present claude,cursor,hermes
+  --hosts-present claude,cursor,hermes \
+  [--foreign-keep claude,cursor]
 node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/migrate.mjs" \
   --action remove-tim|keep-tim|abort \
   --elements tim,model,... \
   --marketplace "${CLAUDE_PLUGIN_ROOT}/.." \
-  --hosts-present claude,cursor,hermes
+  --hosts-present claude,cursor,hermes \
+  [--foreign-keep claude,cursor]
 ```
 
 - **Action** from Step 2: A → `remove-tim`, B → `keep-tim`, C → `abort`.
@@ -382,9 +387,11 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/migrate.mjs" \
   `claude,hermes` when Cursor absent).
 - Read stdout JSON: on `aborted: true`, skip; else report `warnings`,
   `stripResults`, and per-host `wireResults`.
-- Non-TIM foreign statuslines: fold per-host keep/replace into host modes
-  only when action is `remove-tim` and no TIM collision — otherwise migrate
-  decides modes from action + TIM detect.
+- Non-TIM foreign statuslines: pass the Step 4 per-host **keep** answers via
+  `--foreign-keep` (Claude/Cursor only). `migrate.mjs` honors this only when
+  the host has no TIM collision; TIM-detected hosts are always decided from
+  `action` (already `keep` under B). Hermes has no keep mode — o9k always
+  wires there (stacking alongside any existing patch).
 
 Skip this block entirely when the user chose **Skip** — no config file, no
 migrate, no wire.

@@ -94,7 +94,7 @@ const TIM_FRAGS_OLD_SUFFIX = "                    ]";
 // Fallback for minimal method-only fixtures (existing tests / hand-rolled
 // stubs) that don't carry TIM's exact literal shape: remove from
 // `def _get_tim_status` through the next sibling `def ` at the same indent.
-const TIM_METHOD_FALLBACK_RE = /    def _get_tim_status[\s\S]*?(?=\n    def )/;
+const TIM_METHOD_FALLBACK_RE = /    def _get_tim_status[\s\S]*?(?=\n    (?:@\w+\n    )*def )/;
 
 function revertTimFrags(source) {
   if (source.includes(TIM_WIDE_FRAGS_NEW)) {
