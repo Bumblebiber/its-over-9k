@@ -114,7 +114,7 @@ field inside the newest `.jsonl` lines instead of failing.
 **Fix:** have `wire-opencode.mjs` inject the target list at wire time (it
 already rewrites `__O9K_MARKETPLACE_ROOT__`).
 
-### 13. Benchmark claims vs sample size
+### 13. Benchmark claims vs sample size — **fixed**
 `benchmarks/results/*` are single runs from one day; README's "~50–65 %"
 figure is inherited from upstream caveman.
 **Fix:** note n=1 in benchmarks/README.md, and let `run-bench.sh` take a
