@@ -40,7 +40,7 @@ does not — point Windows users at WSL.
 `/o9k-init` (SKILL.md step: report unsupported host OS instead of silently
 wiring half a stack).
 
-### 3. macOS: no launchd equivalents for the two systemd units
+### 3. macOS: no launchd equivalents for the two systemd units — **fixed**
 `plugins/o9k-roster/systemd/{o9k-usage-watcher,o9k-resume}.service` have no
 macOS counterpart, so watcher + boot-resume don't exist there.
 **Fix:** ship `launchd/` plists (`o9k.usage-watcher.plist` with

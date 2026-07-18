@@ -21,9 +21,11 @@ Hermes) with role-based model selection.
 - **Subscription usage collector** (optional): maintains multi-window
   `~/.o9k/usage.json` for Claude/Codex/Cursor; `pick` skips models when any
   applicable window ≥ `handoff_at`. Refresh via `roster usage --refresh` or the
-  adaptive watcher (`o9k-usage-watcher.sh`, cron, or systemd user unit). Foreign
-  installs: symlink the wrapper from the repo **or** set `O9K_ROSTER_SCRIPTS` in
-  a systemd drop-in (see `plugins/o9k-roster/systemd/`).
+  adaptive watcher (`o9k-usage-watcher.sh`, cron, systemd user unit on Linux,
+  or launchd agent on macOS — see `plugins/o9k-roster/systemd/` and
+  `plugins/o9k-roster/launchd/`). Foreign installs: symlink the wrapper from
+  the repo **or** set `O9K_ROSTER_SCRIPTS` in a systemd drop-in / plist
+  `EnvironmentVariables`.
 
 ## The standard pipeline (plan → implement → review)
 
@@ -73,8 +75,10 @@ mailbox reaches `question`, `done`, `failed`, or `watching`. On a question,
 the parent answers via `runs.mjs answer` and **respawns** the watcher; it never
 polls the mailbox itself.
 
-After a host reboot, the systemd unit `o9k-resume.service` (see
-`plugins/o9k-roster/systemd/`) runs `o9k-runs resume` agentlessly — no parent
+After a host reboot, the systemd unit `o9k-resume.service` (Linux, see
+`plugins/o9k-roster/systemd/`) or the launchd agent `com.o9k.resume.plist`
+(macOS, see `plugins/o9k-roster/launchd/`) runs `o9k-runs resume`
+agentlessly — no parent
 process required. Parent re-attach is `manual` by default (no auto-tmux).
 
 Worker prompts should use
