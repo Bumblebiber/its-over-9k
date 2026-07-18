@@ -6,6 +6,7 @@ import {
   modelUsageGate,
   isCliUsageFresh,
   effectiveResetAt,
+  resolveHandoffAt,
   WINDOW_MAX_AGE_MS,
 } from "./usage-windows.mjs";
 
@@ -101,6 +102,25 @@ test("modelUsageGate blocks only this model's windows when present", () => {
   });
   assert.equal(hot.blocked, true);
   assert.equal(cool.blocked, false);
+});
+
+test("resolveHandoffAt uses handoff_at_burst for 5h/session windows, handoff_at otherwise", () => {
+  const limits = { handoff_at: 0.95, handoff_at_burst: 0.8 };
+  assert.equal(resolveHandoffAt("claude:5h", limits), 0.8);
+  assert.equal(resolveHandoffAt("claude:session", limits), 0.8);
+  assert.equal(resolveHandoffAt("claude:week", limits), 0.95);
+  assert.equal(resolveHandoffAt("codex:weekly", limits), 0.95);
+  // bare number stays a flat threshold for legacy callers
+  assert.equal(resolveHandoffAt("claude:5h", 0.9), 0.9);
+  // missing handoff_at_burst falls back to its own 0.8 default
+  assert.equal(resolveHandoffAt("claude:5h", { handoff_at: 0.95 }), 0.8);
+});
+
+test("windowIsBlocking honors the burst threshold for claude:5h", () => {
+  const limits = { handoff_at: 0.95, handoff_at_burst: 0.8 };
+  const usage = { windows: { "claude:5h": { used: 0.81 } } };
+  assert.equal(windowIsBlocking("claude:5h", usage, limits, NOW), true);
+  assert.equal(windowIsBlocking("claude:week", { windows: { "claude:week": { used: 0.81 } } }, limits, NOW), false);
 });
 
 test("isCliUsageFresh respects per-cli window updated timestamps", () => {

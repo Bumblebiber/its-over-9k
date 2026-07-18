@@ -289,6 +289,29 @@ test("pick skips all claude models when 5h window hot", () => {
   assert.match(r.skipped[0].reason, /claude:5h/);
 });
 
+test("pick skips a burst window (claude:5h) at 80% but keeps a week window until 95%", () => {
+  const roster = {
+    ...ROSTER,
+    models: {
+      "claude-opus": { provider: "anthropic", cli: ["claude"] },
+      "model-c": { provider: "deepseek", cli: ["hermes"] },
+    },
+    roles: { planner: { chain: ["claude-opus", "model-c"] } },
+  };
+  const burstUsage = {
+    windows: { "claude:session": { used: 0.1 }, "claude:week": { used: 0.2 }, "claude:5h": { used: 0.81 } },
+  };
+  const weekUsage = {
+    windows: { "claude:session": { used: 0.1 }, "claude:week": { used: 0.81 }, "claude:5h": { used: 0.1 } },
+  };
+  const burstBlocked = pick({ roster, usage: burstUsage, role: "planner", now: NOW });
+  assert.equal(burstBlocked.model, "model-c");
+  assert.match(burstBlocked.skipped[0].reason, /claude:5h/);
+
+  const weekOk = pick({ roster, usage: weekUsage, role: "planner", now: NOW });
+  assert.equal(weekOk.model, "claude-opus");
+});
+
 test("resolveLimitWindows adds fable-week only for fable models", () => {
   assert.ok(resolveLimitWindows({}, "claude-fable-5", { cli: ["claude"] }).includes("claude:fable-week"));
   assert.ok(!resolveLimitWindows({}, "claude-opus", { cli: ["claude"] }).includes("claude:fable-week"));
@@ -383,8 +406,10 @@ test("resolvePickAfterRefresh pins when collect probe alone blocks prior pick", 
     models: { "model-a": { provider: "anthropic", cli: ["claude"] } },
     roles: { planner: { chain: ["model-a"] } },
   };
-  const preUsage = { windows: { "claude:5h": { used: 0.94 } } };
-  const postUsage = { windows: { "claude:5h": { used: 0.97 } } };
+  // claude:5h is a burst window (handoff_at_burst default 0.8) — pre below,
+  // post at/over that threshold.
+  const preUsage = { windows: { "claude:5h": { used: 0.74 } } };
+  const postUsage = { windows: { "claude:5h": { used: 0.85 } } };
   const priorPick = pick({ roster, usage: preUsage, role: "planner", now: NOW });
   const resolved = resolvePickAfterRefresh({
     roster,

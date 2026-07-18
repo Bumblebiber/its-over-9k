@@ -49,13 +49,35 @@ export function parseResetAt(str, now = Date.now()) {
   return parseCodexResetUtc(trimmed, now);
 }
 
+/** Burst-type windows (session/5h) reset in hours, not days — waiting one out
+ * is cheap, unlike a blown weekly/monthly quota, so they hand off earlier. */
+function isBurstWindow(wkey) {
+  return /:(5h|session)$/.test(wkey);
+}
+
 /**
- * When resets_at is missing/unparseable, hot windows (≥ handoffAt) still expire
- * after windowMaxAgeMs from updated so 100% readings cannot stick forever.
+ * Resolve the handoff threshold for one window key. `handoff_at_burst`
+ * (default 0.8) applies to 5h/session windows; `handoff_at` (default 0.95)
+ * applies to everything else (week/weekly/monthly). Accepts either a limits
+ * object ({handoff_at, handoff_at_burst}) or a bare number for callers that
+ * don't distinguish window types (legacy scalar path).
  */
-export function effectiveResetAt(w, wkey, handoffAt = 0.95, now = Date.now()) {
+export function resolveHandoffAt(wkey, limits) {
+  if (typeof limits === "number") return limits;
+  const handoffAt = limits?.handoff_at ?? 0.95;
+  const burstAt = limits?.handoff_at_burst ?? 0.8;
+  return isBurstWindow(wkey) ? burstAt : handoffAt;
+}
+
+/**
+ * When resets_at is missing/unparseable, windows at/over their handoff
+ * threshold still expire after windowMaxAgeMs from updated so 100% readings
+ * cannot stick forever.
+ */
+export function effectiveResetAt(w, wkey, limits = 0.95, now = Date.now()) {
   const parsed = parseResetAt(w?.resets_at, now);
   if (parsed !== null) return parsed;
+  const handoffAt = resolveHandoffAt(wkey, limits);
   if (typeof w?.used !== "number" || w.used < handoffAt) return null;
   const updated = Date.parse(w?.updated || "");
   if (!Number.isFinite(updated)) return null;
@@ -63,30 +85,32 @@ export function effectiveResetAt(w, wkey, handoffAt = 0.95, now = Date.now()) {
 }
 
 /** Window blocks only when used ≥ threshold AND reset/staleness ceiling has not passed. */
-export function windowIsBlocking(wkey, usage, handoffAt, now = Date.now()) {
+export function windowIsBlocking(wkey, usage, limits, now = Date.now()) {
   const w = usage?.windows?.[wkey];
   if (!w || typeof w.used !== "number") return false;
-  const resetAt = effectiveResetAt(w, wkey, handoffAt, now);
+  const resetAt = effectiveResetAt(w, wkey, limits, now);
   if (resetAt !== null && now >= resetAt) return false;
-  return w.used >= handoffAt;
+  return w.used >= resolveHandoffAt(wkey, limits);
 }
 
 /**
- * Per-model usage gate: window data for THIS model's keys when present;
- * otherwise legacy provider/cli scalars.
+ * Per-model usage gate: window data for THIS model's keys when present
+ * (each resolves its own burst-vs-regular threshold); otherwise legacy
+ * provider/cli scalars gated on the flat `handoff_at`.
  * @returns {{ blocked: boolean, reason?: string }}
  */
-export function modelUsageGate({ usage, limitWindows, provider, cli, handoffAt, now = Date.now() }) {
+export function modelUsageGate({ usage, limitWindows, provider, cli, limits, now = Date.now() }) {
   const withData = limitWindows.filter((k) => usage?.windows?.[k] != null);
   if (withData.length > 0) {
     for (const wkey of withData) {
-      if (windowIsBlocking(wkey, usage, handoffAt, now)) {
+      if (windowIsBlocking(wkey, usage, limits, now)) {
         const used = usage.windows[wkey].used;
         return { blocked: true, reason: `window ${wkey} at ${Math.round(used * 100)}%` };
       }
     }
     return { blocked: false };
   }
+  const handoffAt = typeof limits === "number" ? limits : limits?.handoff_at ?? 0.95;
   const used = usage?.providers?.[provider]?.used;
   if (typeof used === "number" && used >= handoffAt) {
     return { blocked: true, reason: `provider ${provider} at ${Math.round(used * 100)}%` };

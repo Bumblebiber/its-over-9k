@@ -13,14 +13,18 @@ Hermes) with role-based model selection.
   spawns the worker in tmux, `mark-limited` reacts to rate-limit errors,
   `handoff` moves a dying session's work to a successor.
 - **limit-watch hook**: warns the active agent at 90% usage, triggers the
-  handoff protocol at 95%. Wired on all supported hosts by `/o9k-init`.
+  handoff protocol at 95% (week/monthly windows) or 80% (burst windows —
+  `claude:5h`/`claude:session` — see `handoff_at_burst`). Wired on all
+  supported hosts by `/o9k-init`.
 - **Scores refresh** (`roster refresh`): OpenRouter pulls Artificial Analysis
   indices + prices (incl. hosted open-weight for Hermes/OpenCode) into
   `~/.o9k/roster-scores.json`; `--apply` semiauto-promotes chain heads when
   score rises and cost does not. See skill `roster-refresh`.
 - **Subscription usage collector** (optional): maintains multi-window
   `~/.o9k/usage.json` for Claude/Codex/Cursor; `pick` skips models when any
-  applicable window ≥ `handoff_at`. Refresh via `roster usage --refresh` or the
+  applicable window is at/over its threshold (`handoff_at_burst` for
+  5h/session windows, `handoff_at` otherwise). Refresh via
+  `roster usage --refresh` or the
   adaptive watcher (`o9k-usage-watcher.sh`, cron, systemd user unit on Linux,
   or launchd agent on macOS — see `plugins/o9k-roster/systemd/` and
   `plugins/o9k-roster/launchd/`). Foreign installs: symlink the wrapper from

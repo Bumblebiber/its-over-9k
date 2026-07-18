@@ -48,7 +48,7 @@ export function loadJson(filePath) {
 }
 
 function limits(roster) {
-  return { warn_at: 0.9, handoff_at: 0.95, ...(roster.limits || {}) };
+  return { warn_at: 0.9, handoff_at: 0.95, handoff_at_burst: 0.8, ...(roster.limits || {}) };
 }
 
 function markedUntil(usage, key, now) {
@@ -121,7 +121,7 @@ function dispatchFreshnessMs(roster) {
 export function pick({ roster, usage, role, now = Date.now() }) {
   const spec = roster.roles?.[role];
   if (!spec) throw new Error(`unknown role: ${role}`);
-  const { handoff_at } = limits(roster);
+  const roleLimits = limits(roster);
   const skipped = [];
 
   for (const raw of spec.chain) {
@@ -161,7 +161,7 @@ export function pick({ roster, usage, role, now = Date.now() }) {
       limitWindows,
       provider: model.provider,
       cli,
-      handoffAt: handoff_at,
+      limits: roleLimits,
       now,
     });
     if (gate.blocked) {
@@ -208,17 +208,18 @@ export function markLimited({ usage, target, ttlMs, now = Date.now(), reason }) 
  * Empty string when all providers are below warn_at.
  */
 export function checkThresholds({ roster, usage, now = Date.now() }) {
-  const { warn_at, handoff_at } = limits(roster);
+  const thresholds = limits(roster);
+  const { warn_at, handoff_at } = thresholds;
   const lines = [];
   let handoff = false;
 
   if (hasWindowsData(usage)) {
     for (const [wkey, info] of Object.entries(usage.windows)) {
       if (typeof info?.used !== "number") continue;
-      const resetAt = effectiveResetAt(info, wkey, handoff_at, now);
+      const resetAt = effectiveResetAt(info, wkey, thresholds, now);
       if (resetAt !== null && now >= resetAt) continue;
       const pct = Math.round(info.used * 100);
-      if (windowIsBlocking(wkey, usage, handoff_at, now)) {
+      if (windowIsBlocking(wkey, usage, thresholds, now)) {
         lines.push(`⛔ o9k-roster: ${wkey} at ${pct}% — session limit reached.`);
         handoff = true;
       } else if (info.used >= warn_at) {
@@ -331,7 +332,7 @@ export function validateRoster(roster) {
     if (!isPlainObject(roster.limits)) {
       errors.push("limits must be an object");
     } else {
-      for (const key of ["warn_at", "handoff_at"]) {
+      for (const key of ["warn_at", "handoff_at", "handoff_at_burst"]) {
         const v = roster.limits[key];
         if (v !== undefined && (typeof v !== "number" || !(v > 0 && v <= 1))) {
           errors.push(`limits.${key} must be a number in (0, 1]`);
@@ -465,7 +466,7 @@ export function tmuxArgs({ session, dir, argv }) {
   return ["new-session", "-d", "-s", session, "-c", dir, argv.map(shellQuote).join(" ")];
 }
 
-function modelUsageBlocked({ roster, usage, modelName, cli, handoffAt, now }) {
+function modelUsageBlocked({ roster, usage, modelName, cli, limits: limitsArg, now }) {
   const model = roster.models?.[modelName];
   if (!model) return false;
   return modelUsageGate({
@@ -473,7 +474,7 @@ function modelUsageBlocked({ roster, usage, modelName, cli, handoffAt, now }) {
     limitWindows: resolveLimitWindows(roster, modelName, model),
     provider: model.provider,
     cli,
-    handoffAt,
+    limits: limitsArg,
     now,
   }).blocked;
 }
@@ -490,7 +491,7 @@ export function resolvePickAfterRefresh({
   role,
   now = Date.now(),
 }) {
-  const { handoff_at } = limits(roster);
+  const roleLimits = limits(roster);
   const r2 = pick({ roster, usage: postUsage, role, now });
   if (r2.model) return r2;
   if (
@@ -500,7 +501,7 @@ export function resolvePickAfterRefresh({
       usage: preUsage,
       modelName: priorPick.model,
       cli: priorPick.cli,
-      handoffAt: handoff_at,
+      limits: roleLimits,
       now,
     }) &&
     modelUsageBlocked({
@@ -508,7 +509,7 @@ export function resolvePickAfterRefresh({
       usage: postUsage,
       modelName: priorPick.model,
       cli: priorPick.cli,
-      handoffAt: handoff_at,
+      limits: roleLimits,
       now,
     })
   ) {

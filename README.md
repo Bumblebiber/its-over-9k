@@ -233,8 +233,11 @@ hosts above.
   session away. Never blocks or delays compaction.
 - **Limit watch (o9k-roster)** — reads `~/.o9k/usage.json` (no provider API
   calls) and warns / instructs handoff when a provider, CLI, or **usage window**
-  (e.g. `claude:5h`, `codex:weekly`) crosses `limits.handoff_at`. Wired on all
-  hosts; model choice stays in `roster.mjs`, never in LLM reasoning.
+  crosses its threshold: burst windows like `claude:5h`/`claude:session`
+  (reset in hours) hand off at `limits.handoff_at_burst` (default 0.8);
+  week/monthly windows like `codex:weekly` hand off at `limits.handoff_at`
+  (default 0.95). Wired on all hosts; model choice stays in `roster.mjs`,
+  never in LLM reasoning.
 - **Subscription usage collector (o9k-roster)** — optional adaptive watcher +
   `roster usage --refresh` populate per-window fractions for Claude/Codex/Cursor
   (`claude -p "/usage"` fast path; PTY for interactive tables). `pick`/`dispatch`

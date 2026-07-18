@@ -164,5 +164,5 @@
       ]
     }
   },
-  "limits": { "warn_at": 0.9, "handoff_at": 0.95 }
+  "limits": { "warn_at": 0.9, "handoff_at": 0.95, "handoff_at_burst": 0.8 }
 }
