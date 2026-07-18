@@ -20,6 +20,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
  *   marketplaceRoot?: string,
  *   only?: string[],
  *   force?: boolean,
+ *   pathEnv?: string,
  * }} options
  * @returns {{ skills: object, hooks: object }}
  */
@@ -35,7 +36,9 @@ export function refreshHosts(options = {}) {
 
   // Detect hosts once and hand the same snapshot to both syncSkills and
   // wireHosts — previously each ran its own detectHosts() pass.
-  const hosts = detectHosts({ home });
+  const detectOpts = { home };
+  if (options.pathEnv !== undefined) detectOpts.pathEnv = options.pathEnv;
+  const hosts = detectHosts(detectOpts);
 
   const skills = syncSkills({
     home,

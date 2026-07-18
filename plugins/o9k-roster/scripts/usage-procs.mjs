@@ -1,5 +1,6 @@
 // usage-procs.mjs — precise agent process counting (excludes collectors + MCP noise).
 
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -67,6 +68,32 @@ function listProcPids() {
   }
 }
 
+/** Parse `ps -axo pid=,command=` output into a pid→cmdline map. Exported for tests. */
+export function parsePsTable(text) {
+  const table = new Map();
+  for (const line of String(text || "").split("\n")) {
+    const m = /^\s*(\d+)\s+(.+)$/.exec(line);
+    if (m) table.set(Number(m[1]), m[2].trim());
+  }
+  return table;
+}
+
+/** macOS/BSD fallback: one ps call instead of /proc walks. */
+function psProcessTable() {
+  try {
+    const out = execFileSync("ps", ["-axo", "pid=,command="], {
+      encoding: "utf8",
+      maxBuffer: 8 * 1024 * 1024,
+      timeout: 10_000,
+    });
+    return parsePsTable(out);
+  } catch {
+    return new Map();
+  }
+}
+
+const HAS_PROC = fs.existsSync("/proc");
+
 /**
  * Count live agent processes per subscription CLI.
  * @param {{ excludePids?: number[], envMarker?: string, listPids?: () => number[], readCmdline?: (pid: number) => string|null, hasEnvMarker?: (pid: number, marker: string) => boolean }} [opts]
@@ -74,9 +101,24 @@ function listProcPids() {
 export function countAgentProcesses(opts = {}) {
   const envMarker = opts.envMarker || "O9K_USAGE_COLLECT";
   const exclude = new Set(opts.excludePids || []);
-  const listPids = opts.listPids || listProcPids;
-  const readCmdline = opts.readCmdline || readProcCmdline;
-  const hasEnvMarker = opts.hasEnvMarker || procHasEnvMarker;
+  let { listPids, readCmdline, hasEnvMarker } = opts;
+  if (!listPids && !readCmdline) {
+    if (HAS_PROC) {
+      listPids = listProcPids;
+      readCmdline = readProcCmdline;
+    } else {
+      // No /proc (macOS/BSD): one ps snapshot. Env markers aren't readable
+      // there, but collector spawns carry O9K_USAGE_COLLECT=1 in the cmdline
+      // (usage-pty.mjs spawns via `env`), so isCollectorCmdline still catches them.
+      const table = psProcessTable();
+      listPids = () => [...table.keys()];
+      readCmdline = (pid) => table.get(pid) ?? null;
+      hasEnvMarker = hasEnvMarker || (() => false);
+    }
+  }
+  listPids = listPids || listProcPids;
+  readCmdline = readCmdline || readProcCmdline;
+  hasEnvMarker = hasEnvMarker || procHasEnvMarker;
 
   const counts = { claude: 0, codex: 0, cursor: 0 };
   for (const pid of listPids()) {

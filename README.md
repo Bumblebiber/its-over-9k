@@ -69,6 +69,17 @@ mentions only what's missing, offering to fix each item for you. A fully set-up
 install gets three sentences: *everything runs by itself, nothing to do,
 `/o9k-stats` shows the effect.*
 
+## Platforms
+
+| OS | Core pillars (doctrine, caveman, scout, dispatch, memory, recon) | Multi-agent (roster, runs, collector) |
+|----|------------------------------------------------------------------|----------------------------------------|
+| **Linux** | ✅ full | ✅ full (systemd units for watcher/resume) |
+| **macOS** | ✅ full | ⚠️ needs `brew install tmux`; watcher/resume via launchd plists (`plugins/o9k-roster/launchd/`) |
+| **Windows** | ✅ hooks + update check work natively | ❌ tmux/expect/bash stack — use **WSL** |
+
+`/o9k-init` prints this as a Platform line first and skips setup questions the
+host OS can't honor.
+
 ## Install
 
 o9k is a [Claude Code plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces):
@@ -115,6 +126,23 @@ bundle installer that wires up a whole tested stack at once:
 then run the `companion-bundles` skill (or `install/o9k-companions.sh
 recommended --run`). Bundles: `minimal`, `recommended`, `max` — see
 [docs/BUNDLES.md](docs/BUNDLES.md).
+
+## Doctor & uninstall
+
+o9k writes symlinks, rules, and hook wrappers across host config dirs — two
+scripts keep that auditable:
+
+```bash
+node plugins/o9k-core/scripts/o9k-doctor.mjs        # read-only: list artifacts, flag dangling/stale
+node plugins/o9k-core/scripts/o9k-uninstall.mjs --dry-run   # then --run to remove them
+```
+
+The doctor flags dangling skill symlinks and wrappers whose baked marketplace
+path no longer exists (e.g. after moving the clone — fix via
+`update-check.mjs --refresh-hosts`). Uninstall removes only provably-o9k
+artifacts, strips o9k entries from host hook configs without touching foreign
+ones, keeps `~/.o9k` user data, and prints the manual follow-ups
+(`/plugin uninstall`, systemd/launchd units).
 
 ## Playing with others
 

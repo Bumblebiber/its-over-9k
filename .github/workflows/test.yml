@@ -1,0 +1,32 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  node-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [20, 22]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Run node test suites
+        # find+xargs: Node 20 does not expand ** globs; macOS bash has no shopt globstar
+        run: |
+          set -e
+          files=$(find plugins -type f -name '*.test.mjs' | sort)
+          test -n "$files"
+          # intentional word-split; repo test paths have no spaces
+          # shellcheck disable=SC2086
+          node --test $files
+      - name: Run wait-mailbox shell test
+        shell: bash
+        run: bash plugins/o9k-roster/scripts/wait-mailbox.test.sh

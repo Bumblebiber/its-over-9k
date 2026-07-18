@@ -14,6 +14,21 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+/** O9K_DEBUG=1 makes swallowed hook errors visible (stderr + ~/.o9k/logs).
+ *  Kept per-plugin — pillars deliberately don't import each other. */
+export function debugLog(scope, err) {
+  if (process.env.O9K_DEBUG !== "1") return;
+  try {
+    const line = `${new Date().toISOString()} [${scope}] ${err?.stack || err}\n`;
+    process.stderr.write(line);
+    const dir = path.join(os.homedir(), ".o9k", "logs");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.appendFileSync(path.join(dir, "hook-errors.log"), line);
+  } catch {
+    /* debug logging must never throw */
+  }
+}
+
 export function readJsonSafe(p) {
   try {
     return JSON.parse(fs.readFileSync(p, "utf8"));
@@ -48,8 +63,16 @@ export const PILLARS = Object.keys(REG.frameworks).filter(
 
 function onPath(bin, pathEnv) {
   if (pathEnv !== undefined) {
+    // Windows binaries carry an extension (claude.cmd, codex.exe, …) — probe
+    // the common PATHEXT variants, not just the bare name.
+    const names =
+      process.platform === "win32"
+        ? [bin, `${bin}.exe`, `${bin}.cmd`, `${bin}.bat`]
+        : [bin];
     for (const dir of pathEnv.split(path.delimiter).filter(Boolean)) {
-      if (fs.existsSync(path.join(dir, bin))) return true;
+      for (const name of names) {
+        if (fs.existsSync(path.join(dir, name))) return true;
+      }
     }
     return false;
   }

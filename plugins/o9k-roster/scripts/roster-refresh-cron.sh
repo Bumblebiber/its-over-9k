@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 # roster-refresh-cron.sh — weekly matrix refresh (disk-first report).
-# Contract for Overseer/Hermes cron: run this script; do not inline collectors.
-# Prefer ~/.hermes/scripts/roster-refresh-wrapper.sh from hermes cron (loads API key).
+# Cron contract: run this script; do not inline collectors. Needs
+# OPENROUTER_API_KEY in the cron environment (wrapper script or env file).
+#
+# Optional env:
+#   O9K_REPORT_DIR   base dir for reports (default ~/.o9k/reports)
+#   O9K_NOTIFY_CMD   command invoked as: $O9K_NOTIFY_CMD <report-path>
+#                    after each run (e.g. a script that mails/pings you)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ROSTER_JS="$ROOT/scripts/roster.mjs"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 
-if [[ -d "${HOME}/.hermes/cron-outputs" ]]; then
-  OUT_DIR="${HOME}/.hermes/cron-outputs/roster-refresh"
-else
-  OUT_DIR="${HOME}/.o9k/reports/roster-refresh"
-fi
+OUT_DIR="${O9K_REPORT_DIR:-$HOME/.o9k/reports}/roster-refresh"
 mkdir -p "$OUT_DIR"
 REPORT="$OUT_DIR/report-$STAMP.md"
 
@@ -35,14 +36,9 @@ STATUS=0
 
 echo "report: $REPORT"
 
-# Short ping via @bbbeeCronBot (full report stays on disk).
-if [[ -x "$HOME/.hermes/bin/send-cron-telegram" ]]; then
-  SUMMARY=$(head -n 40 "$REPORT" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
-  "$HOME/.hermes/bin/send-cron-telegram" "📋 roster-refresh
-${SUMMARY}
-
-Full: ${REPORT}" \
-    || echo "WARN: CronBot telegram send failed" >&2
+# Optional notification hook (full report stays on disk).
+if [[ -n "${O9K_NOTIFY_CMD:-}" ]]; then
+  "$O9K_NOTIFY_CMD" "$REPORT" || echo "WARN: O9K_NOTIFY_CMD failed" >&2
 fi
 
 exit "$STATUS"

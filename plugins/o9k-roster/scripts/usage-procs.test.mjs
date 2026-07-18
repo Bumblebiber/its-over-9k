@@ -4,6 +4,7 @@ import {
   isAgentProcessCmdline,
   isCollectorCmdline,
   countAgentProcesses,
+  parsePsTable,
 } from "./usage-procs.mjs";
 
 test("isCollectorCmdline detects usage probes", () => {
@@ -35,6 +36,24 @@ test("countAgentProcesses uses fixture cmdlines", () => {
   assert.equal(counts.claude, 1);
   assert.equal(counts.codex, 1);
   assert.equal(counts.cursor, 1);
+});
+
+// macOS/BSD fallback: no /proc — pid→cmdline comes from one `ps -axo` snapshot.
+test("parsePsTable parses ps -axo pid=,command= output", () => {
+  const table = parsePsTable(
+    "    1 /sbin/launchd\n" +
+    "  501 /usr/bin/claude --model sonnet\n" +
+    " 6502 env O9K_USAGE_COLLECT=1 TERM=xterm-256color claude\n" +
+    "garbage line without pid\n" +
+    ""
+  );
+  assert.equal(table.size, 3);
+  assert.equal(table.get(501), "/usr/bin/claude --model sonnet");
+  assert.equal(
+    isCollectorCmdline(table.get(6502)),
+    true,
+    "collector spawns are still excluded via the cmdline env marker"
+  );
 });
 
 test("countAgentProcesses excludes processes with O9K_USAGE_COLLECT in environ", () => {

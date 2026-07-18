@@ -42,7 +42,11 @@ test("verifyHost reports hooks=yes after wireOpencode", () => {
 
 test("verifyHost reports yes after syncSkills + wireCodex", () => {
   const home = makeTmpHome();
-  syncSkills({ home, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
+  // Fake bin dir so codex is "present" for syncSkills without a real install.
+  const binDir = path.join(home, "bin");
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.writeFileSync(path.join(binDir, "codex"), "", { mode: 0o755 });
+  syncSkills({ home, pluginRoot: coreRoot, marketplaceRoot: marketRoot, pathEnv: binDir });
   wireCodex({ home, marketplaceRoot: marketRoot });
   const hosts = detectHosts({ home, pathEnv: "" });
   const v = verifyHost(hosts.codex, home);

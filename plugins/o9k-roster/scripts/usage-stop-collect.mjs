@@ -1,11 +1,19 @@
 #!/usr/bin/env node
 // usage-stop-collect.mjs — Claude Stop hook: debounced claude usage refresh.
-// Contract: silent + exit 0 always.
+//
+// Hook mode re-spawns itself detached with --collect (pre-compact.mjs
+// pattern) so the Stop hook returns immediately instead of holding the
+// turn for up to ~45 s. The child does the collect and stamps the debounce
+// only on success — a failed attempt (lock contention, empty parse) must
+// not suppress retries for the whole window. The PTY lock serializes
+// concurrent children. Contract: silent + exit 0 always.
 
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { debugLog } from "./debug.mjs";
 
 const DEBOUNCE_MS = 15 * 60_000;
 
@@ -13,20 +21,38 @@ function debouncePath() {
   return path.join(os.homedir(), ".o9k/.usage-collect-claude.debounce");
 }
 
+async function runCollect() {
+  const { collectUsageForCli } = await import("./usage-collect.mjs");
+  const r = await collectUsageForCli({ cli: "claude" });
+  if (r?.ok) {
+    fs.mkdirSync(path.dirname(debouncePath()), { recursive: true });
+    fs.writeFileSync(debouncePath(), String(Date.now()));
+  }
+}
+
 try {
-  const debounce = debouncePath();
-  const now = Date.now();
+  // Never collect from inside a collector-spawned claude run (its Stop hook
+  // fires too — the PTY lock would catch it, but don't even try).
+  if (process.env.O9K_USAGE_COLLECT === "1") process.exit(0);
+
+  if (process.argv.includes("--collect")) {
+    await runCollect();
+    process.exit(0);
+  }
+
   try {
-    const last = Number(fs.readFileSync(debounce, "utf8"));
-    if (Number.isFinite(last) && now - last < DEBOUNCE_MS) process.exit(0);
+    const last = Number(fs.readFileSync(debouncePath(), "utf8"));
+    if (Number.isFinite(last) && Date.now() - last < DEBOUNCE_MS) process.exit(0);
   } catch {
     /* no debounce file */
   }
-  fs.mkdirSync(path.dirname(debounce), { recursive: true });
-  fs.writeFileSync(debounce, String(now));
 
-  const { collectUsageForCli } = await import("./usage-collect.mjs");
-  await collectUsageForCli({ cli: "claude" });
-} catch {
+  const self = fileURLToPath(import.meta.url);
+  spawn(process.execPath, [self, "--collect"], {
+    detached: true,
+    stdio: "ignore",
+  }).unref();
+} catch (e) {
   // hook must never block the host
+  debugLog("o9k-roster usage-stop-collect", e);
 }

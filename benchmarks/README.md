@@ -21,11 +21,20 @@ See the `bundle-bench` skill (o9k-recon plugin) for the full protocol —
 sandbox setup, combo installation, ablation order. The mechanical part:
 
 ```bash
-benchmarks/run-bench.sh <combo-name> <sandbox-config-dir> [model]
+benchmarks/run-bench.sh <combo-name> <sandbox-config-dir> [model] [--repeat N]
 ```
 
 One run = 5 non-interactive Claude sessions. **This costs real tokens** —
-budget roughly a normal working session per combo.
+budget roughly a normal working session per combo (× N with `--repeat`).
+
+## Sample size — read before quoting numbers
+
+A single run per combo (the default, and what the committed results in
+`results/` are) is a **smoke signal, not a measurement** — LLM runs are
+noisy in pass/fail, turns, and cost. Use `--repeat 3` (or more) before
+drawing comparative conclusions; the result JSON then carries per-task
+`pass_rate` and `cost_mean`/`min`/`max` under `task_summary`. Only compare
+runs with the same `tasks_hash`, model, and repeat count.
 
 ## Contributing results
 

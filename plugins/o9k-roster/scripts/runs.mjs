@@ -274,19 +274,28 @@ export function isPidAlive(pid) {
 
 /** Acquire lock; steal if holder PID is dead (host-crash mid-resume). */
 export function acquireResumeLock(lockPath = resumeLockPath()) {
-  if (fs.existsSync(lockPath)) {
-    const raw = fs.readFileSync(lockPath, "utf8").trim();
-    const pid = Number.parseInt(raw, 10);
-    if (Number.isInteger(pid) && pid > 0 && isPidAlive(pid)) {
-      throw new Error(`resume lock held: ${lockPath} (pid ${pid})`);
-    }
-    try {
-      fs.unlinkSync(lockPath);
-    } catch {
-      /* raced */
-    }
+  // O_EXCL create so two concurrent resumes can't both "win" the lock
+  // (same pattern as usage-pty-lock.mjs).
+  const tryCreate = () => {
+    fs.writeFileSync(lockPath, `${process.pid}\n`, { flag: "wx" });
+  };
+  try {
+    tryCreate();
+    return;
+  } catch (e) {
+    if (e.code !== "EEXIST") throw e;
   }
-  fs.writeFileSync(lockPath, `${process.pid}\n`);
+  const raw = fs.readFileSync(lockPath, "utf8").trim();
+  const pid = Number.parseInt(raw, 10);
+  if (Number.isInteger(pid) && pid > 0 && isPidAlive(pid)) {
+    throw new Error(`resume lock held: ${lockPath} (pid ${pid})`);
+  }
+  try {
+    fs.unlinkSync(lockPath);
+  } catch {
+    /* raced */
+  }
+  tryCreate();
 }
 
 export function captureTmuxPane(session) {

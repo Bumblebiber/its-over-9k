@@ -31,7 +31,19 @@ const classified = classifyInventory({ home: os.homedir() });
 const mark = (v) => (v === null ? "?" : v ? "yes" : "no");
 const label = (id) => REG.frameworks[id]?.label || id;
 
+const PLATFORM_NOTES = {
+  linux: "linux — full support",
+  darwin:
+    "macOS — core pillars: full. Roster/runs need tmux (brew install tmux); " +
+    "watcher/resume ship as launchd plists (see plugins/o9k-roster/launchd/).",
+  win32:
+    "Windows — core/memory/update hooks work; the roster/runs/collector stack " +
+    "(tmux, expect, bash) does not. Use WSL for multi-agent features.",
+};
+
 console.log("== o9k init snapshot ==");
+console.log("");
+console.log(`Platform: ${PLATFORM_NOTES[process.platform] || process.platform}`);
 console.log("");
 console.log("Pillars:");
 for (const p of PILLARS) console.log(`  ${p.padEnd(14)} ${mark(pillars[p])}`);

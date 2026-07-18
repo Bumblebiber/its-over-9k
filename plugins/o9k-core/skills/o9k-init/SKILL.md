@@ -32,7 +32,13 @@ model you are:
 node "${CLAUDE_PLUGIN_ROOT}/scripts/o9k-init.mjs"
 ```
 
-Read-only, instant. Gives you: pillars, git, memory backend, companions,
+Read-only, instant. The first line is a **Platform** note — surface it to the
+user *before* the interview when it lists limitations (macOS: roster needs
+tmux + launchd units; Windows: multi-agent stack needs WSL). Never silently
+wire half a stack on an OS that can't run the other half — skip the roster
+questions on native Windows and say why.
+
+The snapshot also gives you: pillars, git, memory backend, companions,
 **bundle deltas** (what each bundle would still add), rival frameworks, open
 arbitrations, a **Hosts** section, and an **Unknown installed** section
 (plugins / MCPs / skills present on the machine that are **not** in

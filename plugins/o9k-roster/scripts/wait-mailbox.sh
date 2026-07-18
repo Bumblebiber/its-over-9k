@@ -32,7 +32,12 @@ fi
 interval=5
 if (( CEILING < 5 )); then interval=1; fi
 deadline=$((SECONDS + CEILING))
-snapshot() { find "$MB" -type f -printf '%p %T@ %s\n' 2>/dev/null | sort; }
+# -printf is GNU-only; BSD find (macOS) needs stat -f. Probe once, not per poll.
+if find "$MB" -maxdepth 0 -printf '' >/dev/null 2>&1; then
+  snapshot() { find "$MB" -type f -printf '%p %T@ %s\n' 2>/dev/null | sort; }
+else
+  snapshot() { find "$MB" -type f -exec stat -f '%N %m %z' {} + 2>/dev/null | sort; }
+fi
 prev="$(snapshot || true)"
 while (( SECONDS < deadline )); do
   sleep "$interval"

@@ -1,5 +1,6 @@
 // o9k OpenCode plugin — wired to ~/.config/opencode/plugins/o9k.ts by wire-opencode.mjs.
-// MARKETPLACE is replaced with an absolute path at wire time.
+// MARKETPLACE and the target list are replaced at wire time; the single
+// source of truth for targets is common.mjs's HOOK_WRAPPERS.
 import type { Hooks } from "@opencode-ai/plugin";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -7,14 +8,7 @@ import path from "node:path";
 const MARKETPLACE = "__O9K_MARKETPLACE_ROOT__";
 const RUN_HOOK = path.join(MARKETPLACE, "o9k-core/hooks/adapters/run-o9k-hook.sh");
 
-// Kept in sync by hand with common.mjs's HOOK_WRAPPERS (OpenCode runs this
-// as a native plugin, not a shell wrapper, so it can't import that module).
-const SESSION_START_TARGETS = [
-  "core/session-start",
-  "memory/session-start",
-  "core/update-check",
-  "roster/limit-watch",
-] as const;
+const SESSION_START_TARGETS: readonly string[] = __O9K_SESSION_TARGETS__;
 
 function runHook(target: string): string | undefined {
   const result = spawnSync("bash", [RUN_HOOK, target], {

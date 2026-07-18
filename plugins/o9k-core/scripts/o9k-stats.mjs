@@ -12,14 +12,63 @@ import path from "node:path";
 import readline from "node:readline";
 
 const projectDir = path.resolve(process.argv[2] || process.cwd());
+const projectsRoot = path.join(os.homedir(), ".claude", "projects");
 // Claude Code encodes the project path by replacing path separators (and dots) with '-'
 const encoded = projectDir.replace(/[\\/.:]/g, "-");
-const logDir = path.join(os.homedir(), ".claude", "projects", encoded);
+let logDir = path.join(projectsRoot, encoded);
+
+/**
+ * The encoding above is an undocumented Claude Code detail — if it drifts,
+ * fall back to scanning every project dir and matching the `cwd` field in
+ * the newest transcript's head instead of guessing.
+ */
+function findLogDirByCwd() {
+  const needle = `"cwd":${JSON.stringify(projectDir)}`;
+  let dirs;
+  try {
+    dirs = fs
+      .readdirSync(projectsRoot, { withFileTypes: true })
+      .filter((d) => d.isDirectory());
+  } catch {
+    return null;
+  }
+  for (const d of dirs) {
+    const dir = path.join(projectsRoot, d.name);
+    let files;
+    try {
+      files = fs
+        .readdirSync(dir)
+        .filter((f) => f.endsWith(".jsonl"))
+        .map((f) => ({ f, m: fs.statSync(path.join(dir, f)).mtimeMs }))
+        .sort((a, b) => b.m - a.m)
+        .slice(0, 3);
+    } catch {
+      continue;
+    }
+    for (const { f } of files) {
+      try {
+        const fd = fs.openSync(path.join(dir, f), "r");
+        const buf = Buffer.alloc(64 * 1024);
+        const n = fs.readSync(fd, buf, 0, buf.length, 0);
+        fs.closeSync(fd);
+        if (buf.toString("utf8", 0, n).includes(needle)) return dir;
+      } catch {
+        /* unreadable transcript — try the next one */
+      }
+    }
+  }
+  return null;
+}
 
 if (!fs.existsSync(logDir)) {
-  console.error(`No Claude Code transcripts found for ${projectDir}`);
-  console.error(`(looked in ${logDir})`);
-  process.exit(1);
+  const found = findLogDirByCwd();
+  if (found) {
+    logDir = found;
+  } else {
+    console.error(`No Claude Code transcripts found for ${projectDir}`);
+    console.error(`(looked in ${logDir} and scanned ${projectsRoot} for cwd matches)`);
+    process.exit(1);
+  }
 }
 
 const files = fs.readdirSync(logDir).filter((f) => f.endsWith(".jsonl"));

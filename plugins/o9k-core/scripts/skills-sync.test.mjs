@@ -9,28 +9,38 @@ import { syncSkills } from "./skills-sync.mjs";
 const coreRoot = fileURLToPath(new URL("..", import.meta.url)); // plugins/o9k-core
 const marketRoot = path.join(coreRoot, "..");
 
-test("syncSkills writes canonical and symlinks into codex skills dir", () => {
+// Hermetic host detection: a fake bin dir + pathEnv makes hosts "present"
+// regardless of what is installed on the machine running the tests.
+function makeTmpHome(bins = ["codex"]) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-skills-"));
+  const binDir = path.join(tmp, "bin");
+  fs.mkdirSync(binDir, { recursive: true });
+  for (const b of bins) fs.writeFileSync(path.join(binDir, b), "", { mode: 0o755 });
+  return { tmp, pathEnv: binDir };
+}
+
+test("syncSkills writes canonical and symlinks into codex skills dir", () => {
+  const { tmp, pathEnv } = makeTmpHome();
   fs.mkdirSync(path.join(tmp, ".codex"), { recursive: true });
-  const r = syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
+  const r = syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot, pathEnv });
   assert.ok(fs.existsSync(path.join(tmp, ".agents/skills/o9k/scout/SKILL.md")));
   const link = path.join(tmp, ".codex/skills/o9k-scout");
   assert.ok(fs.lstatSync(link).isSymbolicLink());
   // idempotent
-  const r2 = syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
+  const r2 = syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot, pathEnv });
   assert.equal(r2.errors.length, 0);
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
 test("syncSkills leaves foreign scout dir and creates o9k-scout symlink beside it", () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-skills-"));
+  const { tmp, pathEnv } = makeTmpHome();
   const skillsDir = path.join(tmp, ".codex/skills");
   fs.mkdirSync(path.join(tmp, ".codex"), { recursive: true });
   const foreignScout = path.join(skillsDir, "scout");
   fs.mkdirSync(foreignScout, { recursive: true });
   fs.writeFileSync(path.join(foreignScout, "SKILL.md"), "# foreign\n");
 
-  const r = syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
+  const r = syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot, pathEnv });
 
   assert.ok(fs.statSync(foreignScout).isDirectory());
   assert.equal(fs.readFileSync(path.join(foreignScout, "SKILL.md"), "utf8"), "# foreign\n");
@@ -41,14 +51,14 @@ test("syncSkills leaves foreign scout dir and creates o9k-scout symlink beside i
 });
 
 test("syncSkills preserves foreign o9k-scout content and reports error", () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-skills-"));
+  const { tmp, pathEnv } = makeTmpHome();
   const skillsDir = path.join(tmp, ".codex/skills");
   fs.mkdirSync(skillsDir, { recursive: true });
   const blocked = path.join(skillsDir, "o9k-scout");
   fs.mkdirSync(blocked, { recursive: true });
   fs.writeFileSync(path.join(blocked, "SKILL.md"), "# user skill\n");
 
-  const r = syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
+  const r = syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot, pathEnv });
 
   assert.ok(fs.statSync(blocked).isDirectory());
   assert.equal(fs.readFileSync(path.join(blocked, "SKILL.md"), "utf8"), "# user skill\n");
@@ -58,9 +68,9 @@ test("syncSkills preserves foreign o9k-scout content and reports error", () => {
 });
 
 test("syncSkills writes Cursor rules when skillDir is null", () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-skills-"));
+  const { tmp, pathEnv } = makeTmpHome(["cursor-agent"]);
   fs.mkdirSync(path.join(tmp, ".cursor"), { recursive: true });
-  syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
+  syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot, pathEnv });
   assert.ok(fs.existsSync(path.join(tmp, ".cursor/rules/o9k-using-o9k.mdc")));
   fs.rmSync(tmp, { recursive: true, force: true });
 });
@@ -70,9 +80,9 @@ test("syncSkills writes Cursor rules when skillDir is null", () => {
 // pillar list + each pillar's skills/ dir, so new skills (and pillars) show
 // up automatically.
 test("syncSkills discovers o9k-recon skills dynamically (not hardcoded)", () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-skills-"));
+  const { tmp, pathEnv } = makeTmpHome();
   fs.mkdirSync(path.join(tmp, ".codex"), { recursive: true });
-  syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
+  syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot, pathEnv });
   assert.ok(fs.existsSync(path.join(tmp, ".agents/skills/o9k/bundle-bench/SKILL.md")));
   assert.ok(fs.existsSync(path.join(tmp, ".agents/skills/o9k/companion-bundles/SKILL.md")));
   assert.ok(fs.existsSync(path.join(tmp, ".agents/skills/o9k/framework-scout/SKILL.md")));

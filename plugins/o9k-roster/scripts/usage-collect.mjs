@@ -51,6 +51,8 @@ function collectClaudeFast() {
     env: { ...process.env, ...COLLECT_ENV },
     timeout: 45_000,
     maxBuffer: 2 * 1024 * 1024,
+    // claude may be an npm .cmd shim on Windows — needs a shell there.
+    shell: process.platform === "win32",
   });
   return parseClaudeUsage(text);
 }

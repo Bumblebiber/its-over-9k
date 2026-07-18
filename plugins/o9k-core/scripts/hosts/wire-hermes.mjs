@@ -189,6 +189,28 @@ export function mergeHermesHooksYaml(existingYaml, { home }) {
 }
 
 /**
+ * Strip-only counterpart of mergeHermesHooksYaml — removes o9k list items
+ * from the hooks: block without re-adding anything (used by o9k-uninstall).
+ * Returns the input unchanged when there is nothing to strip or the hooks:
+ * key uses inline flow style.
+ */
+export function stripHermesO9kHooksYaml(existingYaml) {
+  if (!existingYaml || hasInlineFlowHooks(existingYaml)) return existingYaml;
+
+  const normalized = existingYaml.endsWith("\n") ? existingYaml : `${existingYaml}\n`;
+  const lines = normalized.split("\n");
+  if (lines[lines.length - 1] === "") lines.pop();
+
+  const bounds = findHooksBounds(lines);
+  if (!bounds) return existingYaml;
+
+  const before = lines.slice(0, bounds.start);
+  const section = stripO9kListItems(lines.slice(bounds.start, bounds.end));
+  const after = lines.slice(bounds.end);
+  return `${[...before, ...section, ...after].join("\n")}\n`;
+}
+
+/**
  * Wire o9k hooks into Hermes ~/.hermes/config.yaml and agent-hooks wrappers.
  */
 export function wireHermes({ home, marketplaceRoot, dryRun = false }) {

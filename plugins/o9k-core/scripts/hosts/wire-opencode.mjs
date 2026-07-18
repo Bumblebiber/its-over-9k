@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { resolveRoots, writeFileWithBackup } from "./common.mjs";
+import { resolveRoots, writeFileWithBackup, SESSION_START_TARGETS } from "./common.mjs";
 
 const MARKETPLACE_PLACEHOLDER = "__O9K_MARKETPLACE_ROOT__";
+const TARGETS_PLACEHOLDER = "__O9K_SESSION_TARGETS__";
 const PRECOMPACT_HOOK = "experimental.session.compacting";
 const PRECOMPACT_DETAIL = `preCompact: ${PRECOMPACT_HOOK}`;
 
@@ -20,10 +21,15 @@ function readTemplate() {
 
 export function buildOpencodePluginContent(marketplaceRoot) {
   const resolved = path.resolve(marketplaceRoot);
-  if (!readTemplate().includes(MARKETPLACE_PLACEHOLDER)) {
-    throw new Error(`opencode-o9k.ts missing ${MARKETPLACE_PLACEHOLDER} marker`);
+  const template = readTemplate();
+  for (const marker of [MARKETPLACE_PLACEHOLDER, TARGETS_PLACEHOLDER]) {
+    if (!template.includes(marker)) {
+      throw new Error(`opencode-o9k.ts missing ${marker} marker`);
+    }
   }
-  return readTemplate().replaceAll(MARKETPLACE_PLACEHOLDER, escapeTsString(resolved));
+  return template
+    .replaceAll(MARKETPLACE_PLACEHOLDER, escapeTsString(resolved))
+    .replace(TARGETS_PLACEHOLDER, JSON.stringify(SESSION_START_TARGETS));
 }
 
 /**

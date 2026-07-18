@@ -13,6 +13,21 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+/** O9K_DEBUG=1 makes swallowed hook errors visible (stderr + ~/.o9k/logs).
+ *  Kept per-plugin — pillars deliberately don't import each other. */
+export function debugLog(scope, err) {
+  if (process.env.O9K_DEBUG !== "1") return;
+  try {
+    const line = `${new Date().toISOString()} [${scope}] ${err?.stack || err}\n`;
+    process.stderr.write(line);
+    const dir = path.join(os.homedir(), ".o9k", "logs");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.appendFileSync(path.join(dir, "hook-errors.log"), line);
+  } catch {
+    /* debug logging must never throw */
+  }
+}
+
 function onPath(bin) {
   try {
     execFileSync(process.platform === "win32" ? "where" : "which", [bin], {
@@ -47,8 +62,12 @@ function runQuiet(cmd, args) {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
       timeout: 10_000,
+      // npm-global CLIs (hmem/tim) are .cmd shims on Windows — spawnable
+      // only through a shell since Node's CVE-2024-27980 hardening.
+      shell: process.platform === "win32",
     }).trim();
-  } catch {
+  } catch (e) {
+    debugLog(`o9k-memory ${cmd}`, e);
     return "";
   }
 }
