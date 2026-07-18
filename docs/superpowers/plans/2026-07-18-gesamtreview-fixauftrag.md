@@ -90,7 +90,7 @@ stamp the debounce from the child on success.
 
 ## P3 — smaller hardening
 
-### 9. `roster.json` has no schema validation
+### 9. `roster.json` has no schema validation — **fixed**
 Structurally wrong config (chain entry typos, missing `clis`) surfaces as
 late `pick` errors or silent skips.
 **Fix:** a `validateRoster(roster)` called by `requireRoster()` printing all

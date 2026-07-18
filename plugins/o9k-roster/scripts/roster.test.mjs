@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import {
   pick, parseTtl, markLimited, checkThresholds, buildCommand, tmuxArgs,
   parseChainEntry, firstPositional, resolveLimitWindows, resolvePickAfterRefresh,
+  validateRoster,
 } from "./roster.mjs";
 import { fileURLToPath } from "node:url";
 
@@ -394,4 +395,50 @@ test("resolvePickAfterRefresh pins when collect probe alone blocks prior pick", 
     now: NOW,
   });
   assert.equal(resolved.model, "model-a");
+});
+
+test("validateRoster accepts a minimal limits-only roster", () => {
+  const { errors, warnings } = validateRoster({ limits: { warn_at: 0.9, handoff_at: 0.95 } });
+  assert.deepEqual(errors, []);
+  assert.deepEqual(warnings, []);
+});
+
+test("validateRoster accepts the shipped example roster", async () => {
+  const fs = await import("node:fs");
+  const example = JSON.parse(
+    fs.readFileSync(new URL("../roster.example.json", import.meta.url), "utf8"),
+  );
+  const { errors } = validateRoster(example);
+  assert.deepEqual(errors, []);
+});
+
+test("validateRoster flags malformed sections, all at once", () => {
+  const { errors } = validateRoster({
+    models: [],
+    roles: { planner: { chain: [] }, reviewer: { chain: [42] } },
+    clis: { claude: { cmd: "claude {prompt}" } },
+    limits: { warn_at: 2 },
+  });
+  assert.ok(errors.some((e) => e.includes("models must be an object")));
+  assert.ok(errors.some((e) => e.includes("roles.planner.chain")));
+  assert.ok(errors.some((e) => e.includes("roles.reviewer")));
+  assert.ok(errors.some((e) => e.includes("clis.claude.cmd")));
+  assert.ok(errors.some((e) => e.includes("limits.warn_at")));
+  assert.ok(errors.length >= 5, "reports all problems at once");
+});
+
+test("validateRoster warns (not errors) on unknown model/cli chain refs", () => {
+  const { errors, warnings } = validateRoster({
+    models: { "model-a": { provider: "anthropic", cli: ["claude"] } },
+    clis: { claude: { cmd: ["claude", "{prompt}"] } },
+    roles: { planner: { chain: ["model-a", "typo-model", "codex:model-a"] } },
+  });
+  assert.deepEqual(errors, []);
+  assert.ok(warnings.some((w) => w.includes("typo-model")));
+  assert.ok(warnings.some((w) => w.includes('cli "codex"')));
+});
+
+test("validateRoster rejects non-object roster", () => {
+  assert.ok(validateRoster(null).errors.length > 0);
+  assert.ok(validateRoster([1]).errors.length > 0);
 });
