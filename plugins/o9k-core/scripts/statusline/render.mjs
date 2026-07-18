@@ -28,15 +28,7 @@ export function renderLine({ config, segments, width, marqueePath: mqPath }) {
   while (join(order).length > budget && shrinkOrder.length && guard++ < 200) {
     const victim = shrinkOrder[0];
     const minW = 4;
-    if (mqKeys.has(victim)) {
-      if (shrinkOrder.length > 1) {
-        shrinkOrder.shift();
-        order = order.filter((k) => k !== victim);
-        delete parts[victim];
-        continue;
-      }
-      break;
-    }
+    if (mqKeys.has(victim)) break;
     if ((parts[victim] || "").length > minW) {
       parts[victim] = ellipsize(parts[victim], Math.max(minW, parts[victim].length - 4));
     } else {

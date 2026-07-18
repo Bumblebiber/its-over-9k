@@ -59,3 +59,24 @@ test("marquee advances offset for long key", () => {
   assert.equal(a.length, 5);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test("marquee key survives shrink when other segments exist", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-mq-"));
+  const statePath = path.join(dir, "mq.json");
+  const line = renderLine({
+    config: {
+      enabled: true,
+      elements: ["model", "git"],
+      priority: ["model", "git"],
+      marquee: { enabled: true, keys: ["git"] },
+    },
+    segments: { model: "Opus", git: "abcdefghijklmnop" },
+    width: 15,
+    marqueePath: statePath,
+  });
+  assert.ok(line.includes("Opus"));
+  assert.notEqual(line.trim(), "Opus");
+  assert.ok(/[a-p]/.test(line));
+  assert.ok(line.length <= 15);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
