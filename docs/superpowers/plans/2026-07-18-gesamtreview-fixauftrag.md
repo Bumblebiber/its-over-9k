@@ -81,7 +81,7 @@ because of this.
 stderr (Claude Code shows hook stderr in verbose mode) or append to
 `~/.o9k/logs/hook-errors.log`. One shared `debugLog()` helper is enough.
 
-### 8. Stop hook runs a synchronous 45 s collect
+### 8. Stop hook runs a synchronous 45 s collect — **fixed**
 `usage-stop-collect.mjs` runs `claude -p "/usage"` in-line (Stop-hook timeout
 120 s). Worst case the user waits ~45 s at end-of-turn every 15 min.
 **Fix:** spawn the collect detached (`spawn(..., {detached, stdio:"ignore"})
