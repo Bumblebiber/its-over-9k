@@ -3,9 +3,11 @@
 //
 // Removes everything o9k wrote OUTSIDE the marketplace clone: canonical
 // skills, host skill symlinks, Cursor rules, hook wrappers, hooks.json /
-// config.yaml entries, the OpenCode plugin file. Never touches user data
-// (~/.o9k roster/usage/runs stay) and never removes foreign content — only
-// artifacts that are provably ours (o9k- prefix, o9k markers, symlinks).
+// config.yaml entries, the OpenCode plugin file, and (best-effort) the
+// opt-in statusLine wiring on Claude/Cursor/Hermes. Never touches user data
+// (~/.o9k roster/usage/runs/statusline.json stay) and never removes foreign
+// content — only artifacts that are provably ours (o9k- prefix, o9k
+// markers, symlinks, isO9kStatuslineCommand).
 //
 // Claude Code plugins themselves are uninstalled via /plugin, and systemd /
 // launchd units via systemctl / launchctl — this script prints those as
@@ -20,6 +22,8 @@ import { pathToFileURL } from "node:url";
 import { detectHosts, readJsonSafe } from "./detect.mjs";
 import { mergeHooksJson, mergeCursorHooksJson } from "./hook-merge.mjs";
 import { stripHermesO9kHooksYaml } from "./hosts/wire-hermes.mjs";
+import { isO9kStatuslineCommand } from "./statusline/command-path.mjs";
+import { unpatchCliPySource } from "./statusline/wire-hermes.mjs";
 
 function listMatching(dir, re) {
   try {
@@ -57,6 +61,38 @@ function pruneEmptyFlat(config) {
     if ((entries ?? []).length === 0) delete config.hooks[event];
   }
   return config;
+}
+
+/** Strip statusLine from a Claude settings.json / Cursor cli-config.json, only when it's ours. */
+function stripStatusLine(filePath, { dryRun, changedFiles, errors }) {
+  const existing = readJsonSafe(filePath);
+  if (!isO9kStatuslineCommand(existing?.statusLine?.command)) return;
+  const next = { ...existing };
+  delete next.statusLine;
+  try {
+    if (!dryRun) fs.writeFileSync(filePath, `${JSON.stringify(next, null, 2)}\n`);
+    changedFiles.push(filePath);
+  } catch (e) {
+    errors.push(`${filePath}: ${e.message}`);
+  }
+}
+
+/** Best-effort reverse of the o9k Hermes cli.py statusline patch; leaves foreign/TIM patches. */
+function stripHermesStatuslineCliPy(cliPath, { dryRun, changedFiles, errors }) {
+  let source;
+  try {
+    source = fs.readFileSync(cliPath, "utf8");
+  } catch {
+    return;
+  }
+  const { source: stripped, changed } = unpatchCliPySource(source);
+  if (!changed) return;
+  try {
+    if (!dryRun) fs.writeFileSync(cliPath, stripped);
+    changedFiles.push(cliPath);
+  } catch (e) {
+    errors.push(`${cliPath}: ${e.message}`);
+  }
 }
 
 function stripHooksJson(filePath, { flat, dryRun, changedFiles, errors }) {
@@ -146,6 +182,13 @@ export function uninstall(options = {}) {
   // Canonical skills last — symlinks above pointed here.
   removePath(path.join(home, ".agents/skills/o9k"), ctx);
 
+  // Statusline (opt-in wiring, see o9k-init): strip only what's provably
+  // ours; a foreign statusLine command or a foreign/TIM cli.py patch stays.
+  stripStatusLine(path.join(home, ".claude/settings.json"), { dryRun, changedFiles, errors });
+  stripStatusLine(path.join(home, ".cursor/cli-config.json"), { dryRun, changedFiles, errors });
+  stripHermesStatuslineCliPy(path.join(home, ".hermes/hermes-agent/cli.py"), { dryRun, changedFiles, errors });
+  removePath(path.join(home, ".hermes/agent-hooks/hermes-o9k-statusline.sh"), ctx);
+
   const manual = [
     "Claude Code plugins: /plugin uninstall o9k-<pillar>@o9k (repeat per pillar), then /plugin marketplace remove o9k",
     "systemd (Linux): systemctl --user disable --now o9k-usage-watcher o9k-resume; rm ~/.config/systemd/user/o9k-*.service",
@@ -153,6 +196,18 @@ export function uninstall(options = {}) {
     "~/.local/bin/o9k-usage-watcher and ~/.local/bin/o9k-runs symlinks, if you created them",
     "User data kept on purpose: ~/.o9k (roster.json, usage.json, runs/, logs/) — delete manually if wanted",
   ];
+
+  // Never auto-restore .o9k-bak (the pre-o9k statusLine/cli.py snapshot) —
+  // just point at it so the user can put it back by hand if they want it.
+  for (const bak of [
+    path.join(home, ".claude/settings.json.o9k-bak"),
+    path.join(home, ".cursor/cli-config.json.o9k-bak"),
+    path.join(home, ".hermes/hermes-agent/cli.py.o9k-bak"),
+  ]) {
+    if (fs.existsSync(bak)) {
+      manual.push(`statusline backup kept, restore manually if desired: ${bak}`);
+    }
+  }
 
   return { removed, changedFiles, errors, manual };
 }

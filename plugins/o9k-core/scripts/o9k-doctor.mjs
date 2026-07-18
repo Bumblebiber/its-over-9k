@@ -10,8 +10,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { detectHosts } from "./detect.mjs";
+import { detectHosts, readJsonSafe } from "./detect.mjs";
 import { skillDrift } from "./skills-sync.mjs";
+import { loadConfig } from "./statusline/config.mjs";
+import { isO9kStatuslineCommand } from "./statusline/command-path.mjs";
 
 function listMatching(dir, re) {
   try {
@@ -47,6 +49,49 @@ function bakedRoot(filePath) {
     return m ? m[1] : null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Claude/Cursor statusLine.command check: foreign (present, not ours) is
+ * always a problem when statusline is enabled; missing is only a problem
+ * on hosts the user's config says should be wired.
+ */
+function checkStatuslineCommandHost({ hostId, settingsPath, wireHosts, artifacts, problems }) {
+  const existing = readJsonSafe(settingsPath);
+  const cmd = existing?.statusLine?.command;
+  if (isO9kStatuslineCommand(cmd)) {
+    artifacts.push({ kind: "statusline", host: hostId, path: settingsPath, state: "ok" });
+    return;
+  }
+  if (cmd) {
+    artifacts.push({ kind: "statusline", host: hostId, path: settingsPath, state: "foreign" });
+    problems.push(`foreign statusLine command on ${hostId} (o9k statusline enabled): ${settingsPath}`);
+    return;
+  }
+  if (wireHosts?.[hostId]) {
+    artifacts.push({ kind: "statusline", host: hostId, path: settingsPath, state: "missing" });
+    problems.push(
+      `statusline enabled and ${hostId} should be wired but no o9k statusLine command found: ${settingsPath}`
+    );
+  }
+}
+
+/** Hermes has no statusLine API — presence is judged by cli.py's o9k patch. */
+function checkStatuslineHermes({ home, wireHosts, artifacts, problems }) {
+  if (!wireHosts?.hermes) return;
+  const cliPath = path.join(home, ".hermes/hermes-agent/cli.py");
+  let patched = false;
+  try {
+    patched = fs.readFileSync(cliPath, "utf8").includes("_get_o9k_status");
+  } catch {
+    // missing cli.py also counts as not-wired
+  }
+  artifacts.push({ kind: "statusline", host: "hermes", path: cliPath, state: patched ? "ok" : "missing" });
+  if (!patched) {
+    problems.push(
+      `statusline enabled and hermes should be wired but cli.py lacks _get_o9k_status: ${cliPath}`
+    );
   }
 }
 
@@ -104,6 +149,30 @@ export function doctor(options = {}) {
     if (stale) problems.push(`opencode plugin bakes missing marketplace path (${root}): ${opencodePlugin}`);
   }
 
+  // Statusline is opt-in (see o9k-init); only check when the user actually
+  // turned it on. Wiring itself only ever happens via that interview — this
+  // just verifies enabled hosts stayed wired and nothing foreign crept in.
+  const statuslinePath = process.env.O9K_STATUSLINE || path.join(home, ".o9k/statusline.json");
+  const statusline = loadConfig({ path: statuslinePath });
+  if (statusline?.enabled) {
+    const wireHosts = statusline.hosts || {};
+    checkStatuslineCommandHost({
+      hostId: "claude",
+      settingsPath: path.join(home, ".claude/settings.json"),
+      wireHosts,
+      artifacts,
+      problems,
+    });
+    checkStatuslineCommandHost({
+      hostId: "cursor",
+      settingsPath: path.join(home, ".cursor/cli-config.json"),
+      wireHosts,
+      artifacts,
+      problems,
+    });
+    checkStatuslineHermes({ home, wireHosts, artifacts, problems });
+  }
+
   const drift = skillDrift({ home });
   if (!drift.ok) {
     problems.push(
@@ -135,7 +204,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     for (const p of r.problems) console.log(`  ! ${p}`);
     console.log("");
     console.log("Fixes: stale/missing wiring → update-check.mjs --refresh-hosts;");
-    console.log("       leftovers after removal → o9k-uninstall.mjs --dry-run");
+    console.log("       leftovers after removal → o9k-uninstall.mjs --dry-run;");
+    console.log("       statusline foreign/missing → re-run the /o9k-init statusline step");
     process.exit(1);
   }
   console.log("Healthy: no dangling links, no stale baked paths, skills in sync.");

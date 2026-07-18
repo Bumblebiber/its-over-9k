@@ -68,6 +68,12 @@ const DURATION_ANCHOR =
 // .extend([...]) call argument list.
 const FRAGS_ANCHOR_RE = /^([ \t]*)\("class:status-bar-strong", snapshot\["model_short"\]\),[ \t]*$/m;
 
+// Mirror of the text FRAGS_ANCHOR_RE's replacer prepends — matched literally
+// (indent-agnostic) so unpatchCliPySource can remove exactly what patching
+// added, leaving the anchor line and any TIM splice untouched.
+const FRAGS_PREPEND_RE =
+  /^[ \t]*\*\(\[\("class:status-bar-strong", f" \{o9k_prefix\}"\), \("class:status-bar-dim", " \u2502 "\)\] if o9k_prefix else \[\]\),[ \t]*\n/m;
+
 function isO9kCliPatched(source) {
   return source.includes("_get_o9k_status");
 }
@@ -105,6 +111,21 @@ export function patchCliPySource(source) {
   });
 
   return { source: out, changed: true };
+}
+
+/**
+ * Best-effort reverse of patchCliPySource — removes exactly the three
+ * literal blocks patching adds (method, prefix-compute, frags-splice).
+ * A foreign/TIM patch stacked alongside ours is untouched since it lives
+ * outside those literals. No-op (changed: false) when o9k never patched.
+ */
+export function unpatchCliPySource(source) {
+  if (!isO9kCliPatched(source)) return { source, changed: false };
+  let out = source;
+  out = out.replace(O9K_METHOD, "");
+  out = out.replace(O9K_PREFIX_BLOCK, "");
+  out = out.replace(FRAGS_PREPEND_RE, "");
+  return { source: out, changed: out !== source };
 }
 
 function patchHermesCliPy({ cliPath, mode, dryRun }) {
