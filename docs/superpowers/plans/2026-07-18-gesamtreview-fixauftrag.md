@@ -96,7 +96,7 @@ late `pick` errors or silent skips.
 **Fix:** a `validateRoster(roster)` called by `requireRoster()` printing all
 problems at once; cover with tests.
 
-### 10. `o9k-stats.mjs` guesses Claude Code's transcript path encoding
+### 10. `o9k-stats.mjs` guesses Claude Code’s transcript path encoding — **fixed**
 `projectDir.replace(/[\\/.:]/g, "-")` re-implements an undocumented Claude
 Code detail; silently prints "no transcripts" when the encoding drifts.
 **Fix:** on miss, scan `~/.claude/projects/*` and match against the `cwd`
