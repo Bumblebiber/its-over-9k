@@ -86,9 +86,37 @@ Ask, don't lecture. One question at a time, options not essays. In order:
      and report at the end. Uses the non-interactive flags below.
    - **User-run:** you print the commands (interactive variants, e.g. plain
      `hmem init`) and the user drives.
-3. **Conflicts** — only if Step 1 found rivals; see Step 3.
-4. **Unknowns** — only if Step 1 printed `Unknown installed`; see Step 2b.
-5. **git** — only if missing; see below.
+3. **Statusline (opt-in, default Skip)** — never install without an explicit
+   Yes.
+   - Ask: *"Set up the o9k statusline?"* Options: **Skip (default)** / Yes.
+   - If **Skip**: do not write `~/.o9k/statusline.json`, do not call
+     `wire-all.mjs`.
+   - If **Yes**:
+     1. Multi-select elements: `tim`, `device`, `limits`, `context`, `model`,
+        `git` (at least one).
+     2. Write config with `saveConfig(defaultConfig({ elements }))` via a
+        short node invocation against
+        `${CLAUDE_PLUGIN_ROOT}/scripts/statusline/config.mjs`.
+     3. For each **present** host from Step 1:
+        - Claude / Cursor / Hermes: if an existing non-o9k statusline command
+          is detected → ask **keep** / **replace** (replace backs up first).
+        - Codex / OpenCode: report `statusline: unsupported` — do not pretend
+          to wire.
+     4. During Step 5, run:
+        ```bash
+        node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/wire-all.mjs" \
+          --marketplace "${CLAUDE_PLUGIN_ROOT}/.." \
+          --hosts claude:replace,cursor:replace,hermes:replace,codex:replace
+        ```
+        Use `keep` / `replace` / `skip` per host from the interview; omit
+        absent hosts. Codex/OpenCode entries return `unsupported` in JSON —
+        surface that in the final report.
+   - **Hard rule:** `--refresh-hosts`, SessionStart hooks, and plugin enable
+     **must never** wire statusline — only this interview path may call
+     `wire-all.mjs`.
+4. **Conflicts** — only if Step 1 found rivals; see Step 3.
+5. **Unknowns** — only if Step 1 printed `Unknown installed`; see Step 2b.
+6. **git** — only if missing; see below.
 
 ### Step 2b — unknowns: ask, then evaluate (never silent)
 
@@ -124,7 +152,8 @@ Registry rivals already have a WHY. Unknowns do not. For **each** unknown
      on the user's machine as "upstream truth".
 
 Unknowns are **not** auto-rivals. Classification happens only after Go.
-5. **Multi-agent roster** — only if the `o9k-roster` pillar is installed and
+
+7. **Multi-agent roster** — only if the `o9k-roster` pillar is installed and
    `~/.o9k/roster.json` is missing: *"Use the multi-agent setup (roster)? It
    routes work to models by role with fallback chains and warns before
    session limits."* On yes, during setup run:
@@ -290,6 +319,22 @@ Always **dry-run the bundle first** and show the plan:
 companions dropped in Step 3, and for anything Step 1 already showed as
 installed).
 
+### 6) Statusline (only if Step 2 = Yes)
+
+Dry-run first when agent-run, then wire:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/wire-all.mjs" --dry-run \
+  --marketplace "${CLAUDE_PLUGIN_ROOT}/.." \
+  --hosts claude:replace,cursor:replace,hermes:replace
+node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/wire-all.mjs" \
+  --marketplace "${CLAUDE_PLUGIN_ROOT}/.." \
+  --hosts claude:replace,cursor:replace,hermes:replace
+```
+
+Use the keep/replace/skip modes collected in Step 2. Skip this block entirely
+when the user chose **Skip** — no config file, no wire.
+
 ### Other
 
 - **Only hand the user a manual step when there truly is no CLI path** — e.g. a
@@ -317,5 +362,8 @@ time, `/o9k-stats` measures the effect.
   fully-set-up user through the whole interview.
 - Re-runs are normal: `/o9k-init` on a configured machine is how you *extend*
   (e.g. minimal → recommended) — same flow, smaller deltas.
+- **Statusline is opt-in only** — default Skip; never write
+  `~/.o9k/statusline.json` or call `wire-all.mjs` from `--refresh-hosts`,
+  SessionStart, or plugin enable.
 - Don't fight the user's choice. B (keep the rival) is legitimate; state the
   consequence once and move on.

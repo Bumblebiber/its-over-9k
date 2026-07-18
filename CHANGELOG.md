@@ -9,6 +9,9 @@ changes, marketplace versions when a release is cut.
 ## [Unreleased]
 
 ### Added
+- **Opt-in o9k statusline (`scripts/statusline/`)** — selectable elements, host
+  translation for Claude/Cursor/Hermes; Codex/OpenCode reported unsupported.
+  Wired only from `/o9k-init` (default skip) — never from refresh-hosts.
 - **o9k-doctor + o9k-uninstall (o9k-core@0.10.0)** — read-only artifact
   inventory (dangling symlinks, stale baked marketplace paths) and a safe
   reverse of syncSkills/wireHosts that keeps foreign content and `~/.o9k`
