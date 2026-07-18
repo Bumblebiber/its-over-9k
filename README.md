@@ -69,6 +69,17 @@ mentions only what's missing, offering to fix each item for you. A fully set-up
 install gets three sentences: *everything runs by itself, nothing to do,
 `/o9k-stats` shows the effect.*
 
+## Platforms
+
+| OS | Core pillars (doctrine, caveman, scout, dispatch, memory, recon) | Multi-agent (roster, runs, collector) |
+|----|------------------------------------------------------------------|----------------------------------------|
+| **Linux** | ✅ full | ✅ full (systemd units for watcher/resume) |
+| **macOS** | ✅ full | ⚠️ needs `brew install tmux`; watcher/resume via launchd plists (`plugins/o9k-roster/launchd/`) |
+| **Windows** | ✅ hooks + update check work natively | ❌ tmux/expect/bash stack — use **WSL** |
+
+`/o9k-init` prints this as a Platform line first and skips setup questions the
+host OS can't honor.
+
 ## Install
 
 o9k is a [Claude Code plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces):

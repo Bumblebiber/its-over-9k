@@ -30,7 +30,7 @@ already works on the joined command string; the env-marker check degrades to
 cmdline-only there). Unit-testable via the existing `listPids`/`readCmdline`
 injection points.
 
-### 2. Support matrix + platform requirements in README
+### 2. Support matrix + platform requirements in README — **fixed**
 Nothing in the README states OS requirements. Reality after the quick-win
 fixes: **Linux** first-class; **macOS** core pillars fine, roster needs `tmux`
 (brew) and has no watcher/resume services (see item 3); **Windows** core/memory
