@@ -9,6 +9,8 @@ changes, marketplace versions when a release is cut.
 ## [Unreleased]
 
 ### Added
+- `/o9k-init` migrates TIM host statuslines (detect / remove / keep-with-warn /
+  abort); doctor flags stray TIM wiring and Hermes TIM+o9k stacks.
 - **Opt-in o9k statusline (`scripts/statusline/`)** — selectable elements, host
   translation for Claude/Cursor/Hermes; Codex/OpenCode reported unsupported.
   Wired only from `/o9k-init` (default skip) — never from refresh-hosts.
