@@ -89,31 +89,69 @@ Ask, don't lecture. One question at a time, options not essays. In order:
 3. **Statusline (opt-in, default Skip)** — never install without an explicit
    Yes.
    - Ask: *"Set up the o9k statusline?"* Options: **Skip (default)** / Yes.
+   - **Detect TIM bar** (read-only) before any wiring decision:
+     ```bash
+     node --input-type=module -e "
+     import { detectTimStatusline } from '${CLAUDE_PLUGIN_ROOT}/scripts/statusline/detect-tim.mjs';
+     console.log(JSON.stringify(detectTimStatusline({ home: process.env.HOME })));
+     "
+     ```
+     Treat `any: true` as a TIM-owned statusline on at least one host
+     (Claude/Cursor `statusLine.command` with TIM markers, or Hermes
+     `_get_tim_status` / `tim-hermes-statusline.sh`).
    - If **Skip**: do not write `~/.o9k/statusline.json`, do not call
-     `wire-all.mjs`.
+     `migrate.mjs` or `wire-all.mjs`. If TIM was detected, optional one-liner:
+     *"TIM statusline still active — left untouched."*
    - If **Yes**:
      1. Multi-select elements: `tim`, `device`, `limits`, `context`, `model`,
-        `git` (at least one).
-     2. Write config with `saveConfig(defaultConfig({ elements }))` via a
-        short node invocation against
-        `${CLAUDE_PLUGIN_ROOT}/scripts/statusline/config.mjs`.
-     3. For each **present** host from Step 1:
-        - Claude / Cursor / Hermes: if an existing non-o9k statusline command
-          is detected → ask **keep** / **replace** (replace backs up first).
+        `git` (at least one). **Preselect `tim`** when the TIM bar was detected
+        or the `tim` CLI is on PATH.
+     2. If **TIM bar detected** — ask **one** choice (default **A**):
+        - **A. Remove TIM host wiring, install o9k** (`--action remove-tim`;
+          recommended). Strips TIM-owned markers, then wires o9k with
+          `replace` on present hosts.
+        - **B. Keep TIM wiring and install o9k** (`--action keep-tim`). Warn:
+          Claude/Cursor can only have one `statusLine.command` — TIM command
+          kept means **skip o9k wire on that host** (`keep` mode). Hermes has
+          no equivalent skip — o9k stacks alongside TIM's patch; the TUI may
+          show **stacked prefixes** (doctor will flag stacks afterward).
+        - **C. Abort o9k statusline** (`--action abort`) — leave TIM as-is;
+          no config write, no strip, no wire.
+     3. If **no TIM bar** — proceed with element checklist only; Step 5 uses
+        `--action remove-tim` (strip is a no-op, then wire as today).
+     4. For each **present** host from Step 1 (when action is not abort):
+        - Claude / Cursor / Hermes: if a non-TIM, non-o9k statusline is
+          detected → ask **keep** / **replace** per host (replace backs up
+          first). Under action B, TIM hosts are already `keep` — do not
+          re-ask.
         - Codex / OpenCode: report `statusline: unsupported` — do not pretend
           to wire.
-     4. During Step 5, run:
+     5. During Step 5, **always** run `migrate.mjs` for the Yes path (never
+        call `wire-all.mjs` directly from the interview). It wraps strip +
+        `saveConfig` + `wire-all` and prints JSON (including `warnings`).
         ```bash
-        node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/wire-all.mjs" \
+        node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/migrate.mjs" \
+          --action remove-tim|keep-tim|abort \
+          --elements tim,model,... \
           --marketplace "${CLAUDE_PLUGIN_ROOT}/.." \
-          --hosts claude:replace,cursor:replace,hermes:replace,codex:replace
+          --hosts-present claude,cursor,hermes \
+          [--dry-run]
         ```
-        Use `keep` / `replace` / `skip` per host from the interview; omit
-        absent hosts. Codex/OpenCode entries return `unsupported` in JSON —
-        surface that in the final report.
+        Omit absent hosts from `--hosts-present`. Surface `warnings` (e.g.
+        Hermes stack under B) and per-host `wireResults` in the final report.
+        Codex/OpenCode are not wired by migrate — note `unsupported` if asked.
+   - **`migrate.mjs` CLI flags:**
+     | Flag | Required | Meaning |
+     |------|----------|---------|
+     | `--action` | yes | `remove-tim` \| `keep-tim` \| `abort` |
+     | `--elements` | when not abort | Comma list for `statusline.json` |
+     | `--marketplace` | no | Marketplace root (defaults beside plugin) |
+     | `--home` | no | Home dir (default `$HOME`) |
+     | `--hosts-present` | no | Comma list of hosts to consider (`claude`, `cursor`, `hermes`) |
+     | `--dry-run` | no | Plan only — no config write, no strip, no wire |
    - **Hard rule:** `--refresh-hosts`, SessionStart hooks, and plugin enable
-     **must never** wire statusline — only this interview path may call
-     `wire-all.mjs`.
+     **must never** wire or strip statusline — only this interview path may
+     call `migrate.mjs` / `wire-all.mjs`.
 4. **Conflicts** — only if Step 1 found rivals; see Step 3.
 5. **Unknowns** — only if Step 1 printed `Unknown installed`; see Step 2b.
 6. **git** — only if missing; see below.
@@ -321,19 +359,35 @@ installed).
 
 ### 6) Statusline (only if Step 2 = Yes)
 
-Dry-run first when agent-run, then wire:
+Dry-run first when agent-run, then execute. **Always** use `migrate.mjs` — not
+`wire-all.mjs` directly:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/wire-all.mjs" --dry-run \
+node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/migrate.mjs" --dry-run \
+  --action remove-tim|keep-tim|abort \
+  --elements tim,model,... \
   --marketplace "${CLAUDE_PLUGIN_ROOT}/.." \
-  --hosts claude:replace,cursor:replace,hermes:replace
-node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/wire-all.mjs" \
+  --hosts-present claude,cursor,hermes
+node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/migrate.mjs" \
+  --action remove-tim|keep-tim|abort \
+  --elements tim,model,... \
   --marketplace "${CLAUDE_PLUGIN_ROOT}/.." \
-  --hosts claude:replace,cursor:replace,hermes:replace
+  --hosts-present claude,cursor,hermes
 ```
 
-Use the keep/replace/skip modes collected in Step 2. Skip this block entirely
-when the user chose **Skip** — no config file, no wire.
+- **Action** from Step 2: A → `remove-tim`, B → `keep-tim`, C → `abort`.
+  No TIM bar → `remove-tim` (strip no-ops).
+- **`--elements`** — comma list from the Step 2 checklist.
+- **`--hosts-present`** — only **present** hosts from Step 1 (e.g.
+  `claude,hermes` when Cursor absent).
+- Read stdout JSON: on `aborted: true`, skip; else report `warnings`,
+  `stripResults`, and per-host `wireResults`.
+- Non-TIM foreign statuslines: fold per-host keep/replace into host modes
+  only when action is `remove-tim` and no TIM collision — otherwise migrate
+  decides modes from action + TIM detect.
+
+Skip this block entirely when the user chose **Skip** — no config file, no
+migrate, no wire.
 
 ### Other
 
@@ -363,7 +417,9 @@ time, `/o9k-stats` measures the effect.
 - Re-runs are normal: `/o9k-init` on a configured machine is how you *extend*
   (e.g. minimal → recommended) — same flow, smaller deltas.
 - **Statusline is opt-in only** — default Skip; never write
-  `~/.o9k/statusline.json` or call `wire-all.mjs` from `--refresh-hosts`,
-  SessionStart, or plugin enable.
+  `~/.o9k/statusline.json`, strip TIM wiring, or call `migrate.mjs` /
+  `wire-all.mjs` from `--refresh-hosts`, SessionStart, or plugin enable.
+  TIM strip happens only in `/o9k-init` when the user picks action A
+  (`remove-tim`).
 - Don't fight the user's choice. B (keep the rival) is legitimate; state the
   consequence once and move on.
