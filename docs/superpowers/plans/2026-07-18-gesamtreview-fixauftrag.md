@@ -65,7 +65,7 @@ version, or (b) independent — then CHANGELOG headings must name
 plugin@version. Document the choice in CONTRIBUTING or CHANGELOG header;
 bump the drifted manifests once.
 
-### 6. No uninstall / doctor path
+### 6. No uninstall / doctor path — **fixed**
 `o9k-init` spreads symlinks (`~/.agents/skills/o9k`, host skillDirs), Cursor
 rules, host hook wrappers with baked absolute marketplace paths. Moving or
 deleting the repo leaves dangling links nobody diagnoses.

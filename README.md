@@ -127,6 +127,23 @@ then run the `companion-bundles` skill (or `install/o9k-companions.sh
 recommended --run`). Bundles: `minimal`, `recommended`, `max` — see
 [docs/BUNDLES.md](docs/BUNDLES.md).
 
+## Doctor & uninstall
+
+o9k writes symlinks, rules, and hook wrappers across host config dirs — two
+scripts keep that auditable:
+
+```bash
+node plugins/o9k-core/scripts/o9k-doctor.mjs        # read-only: list artifacts, flag dangling/stale
+node plugins/o9k-core/scripts/o9k-uninstall.mjs --dry-run   # then --run to remove them
+```
+
+The doctor flags dangling skill symlinks and wrappers whose baked marketplace
+path no longer exists (e.g. after moving the clone — fix via
+`update-check.mjs --refresh-hosts`). Uninstall removes only provably-o9k
+artifacts, strips o9k entries from host hook configs without touching foreign
+ones, keeps `~/.o9k` user data, and prints the manual follow-ups
+(`/plugin uninstall`, systemd/launchd units).
+
 ## Playing with others
 
 o9k deliberately does **not** re-implement workflow methodology, issue tracking,
