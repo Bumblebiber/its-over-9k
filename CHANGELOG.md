@@ -9,6 +9,18 @@ changes, marketplace versions when a release is cut.
 ## [Unreleased]
 
 ### Added
+- **o9k-doctor + o9k-uninstall (o9k-core@0.10.0)** — read-only artifact
+  inventory (dangling symlinks, stale baked marketplace paths) and a safe
+  reverse of syncSkills/wireHosts that keeps foreign content and `~/.o9k`
+  user data.
+- **O9K_DEBUG=1** — swallowed hook errors now visible on stderr and in
+  `~/.o9k/logs/hook-errors.log`; hooks keep their silent-exit-0 contract.
+- **roster.json validation (o9k-roster@0.3.0)** — `validateRoster` flags
+  malformed sections all at once in every roster CLI command; unknown chain
+  refs are warnings (pick still skips them at runtime).
+- **Benchmark repeats** — `run-bench.sh --repeat N` with per-task
+  `pass_rate` / cost mean/min/max in `task_summary`; README states that
+  single runs are smoke signals, not measurements.
 - **Versioning convention** (this header) — marketplace releases vs
   independent plugin versions; drifted manifests bumped once
   (o9k-core@0.10.0, o9k-roster@0.3.0).
@@ -23,6 +35,15 @@ changes, marketplace versions when a release is cut.
   `docs/superpowers/plans/2026-07-18-gesamtreview-fixauftrag.md`.
 
 ### Fixed
+- **Stop-hook collect detached (o9k-roster@0.3.0)** — the Claude Stop hook
+  returns in ~70 ms; the collect runs in a detached child that stamps the
+  debounce only on success.
+- **o9k-stats transcript fallback (o9k-core@0.10.0)** — on a path-encoding
+  miss, scan `~/.claude/projects` for a `cwd` match instead of failing.
+- **OpenCode target list (o9k-core@0.10.0)** — injected at wire time from
+  `HOOK_WRAPPERS` instead of a hand-synced copy in the adapter.
+- **Windows `onPath` extensions (o9k-core@0.10.0)** — injected-PATH probe
+  also checks `bin.exe/.cmd/.bat` on win32.
 - **Hermetic o9k-core tests** — skills-sync/host-wire/refresh-hosts/o9k-init
   tests no longer require a real `codex`/`cursor` binary on PATH (fake-bin
   `pathEnv` injection; `refreshHosts` gained a `pathEnv` option).

@@ -1,6 +1,20 @@
 # Fixauftrag — remaining findings from the 2026-07-18 full-project review
 
-Status: open. The quick wins from the same review are already fixed on
+Status: **all 13 items fixed** on `claude/projekt-gesamtreview-bhh990`
+(2026-07-18, one commit per item — see the individual **fixed** markers
+below). Kept as the review record.
+
+## Deliberately deferred (not in scope of this Fixauftrag)
+
+- **Native Windows support for the multi-agent stack** (roster dispatch,
+  runs/resume, PTY collector). The Unix dependencies (tmux, expect, bash
+  wrappers) would need Windows equivalents (e.g. Windows Terminal tabs or
+  ConPTY via node-pty, PowerShell wrappers) — a design of its own, not a
+  fix. Until then: WSL, as documented in the README platform matrix. The
+  cheap Windows correctness fixes (`.cmd` shim spawns, `onPath`
+  extensions) are done.
+
+The quick wins from the same review were fixed first on
 `claude/projekt-gesamtreview-bhh990`:
 
 - hermetic o9k-core tests (fake-bin `pathEnv` instead of relying on installed
