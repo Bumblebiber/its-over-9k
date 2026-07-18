@@ -19,10 +19,8 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - name: Run node test suites
-        shell: bash
-        run: |
-          shopt -s globstar
-          node --test plugins/**/*.test.mjs
+        # Quote the glob so Node expands it (macOS bash 3.2 has no shopt globstar)
+        run: node --test 'plugins/**/*.test.mjs'
       - name: Run wait-mailbox shell test
         shell: bash
         run: bash plugins/o9k-roster/scripts/wait-mailbox.test.sh
