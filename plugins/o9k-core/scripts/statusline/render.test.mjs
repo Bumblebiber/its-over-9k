@@ -60,6 +60,34 @@ test("marquee advances offset for long key", () => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test("skips marquee keys in shrink without aborting priority trim", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-mq-"));
+  const statePath = path.join(dir, "mq.json");
+  const segments = {
+    limits: "lim:5h:42%",
+    tim: "very-long-tim-project-name",
+    context: "ctx:63%",
+    model: "claude-opus-4-5-20260620",
+    device: "dev",
+    git: "feat/very-long-branch-name",
+  };
+  const line = renderLine({
+    config: {
+      enabled: true,
+      elements: Object.keys(segments),
+      priority: ["limits", "tim", "context", "model", "device", "git"],
+      marquee: { enabled: true, keys: ["git", "tim"] },
+    },
+    segments,
+    width: 50,
+    marqueePath: statePath,
+  });
+  assert.ok(line.length <= 50, `line too long (${line.length}): ${line}`);
+  assert.ok(line.includes("lim:"), `limits segment lost: ${line}`);
+  assert.ok(!line.startsWith("…"), `whole-line ellipsize mangled start: ${line}`);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test("marquee key survives shrink when other segments exist", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-mq-"));
   const statePath = path.join(dir, "mq.json");

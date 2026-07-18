@@ -1,6 +1,7 @@
 import { applyMarquee, marqueePath } from "./marquee.mjs";
 
 const SEP = " · ";
+const MIN_MQ_SLOT = 4;
 
 function ellipsize(s, max) {
   if (s.length <= max) return s;
@@ -23,12 +24,26 @@ export function renderLine({ config, segments, width, marqueePath: mqPath }) {
   const budget = Math.max(1, width || 80);
   const shrinkOrder = [...priority].reverse().filter((k) => order.includes(k));
   const mqKeys = config.marquee?.enabled ? new Set(config.marquee.keys || []) : new Set();
+  const joinLen = (ord, forShrink = false) => {
+    let len = 0;
+    for (const k of ord) {
+      const t = parts[k];
+      if (!t) continue;
+      if (len) len += SEP.length;
+      if (forShrink && mqKeys.has(k)) len += Math.min(t.length, MIN_MQ_SLOT);
+      else len += t.length;
+    }
+    return len;
+  };
 
   let guard = 0;
-  while (join(order).length > budget && shrinkOrder.length && guard++ < 200) {
+  while (joinLen(order, true) > budget && shrinkOrder.length && guard++ < 200) {
     const victim = shrinkOrder[0];
     const minW = 4;
-    if (mqKeys.has(victim)) break;
+    if (mqKeys.has(victim)) {
+      shrinkOrder.shift();
+      continue;
+    }
     if ((parts[victim] || "").length > minW) {
       parts[victim] = ellipsize(parts[victim], Math.max(minW, parts[victim].length - 4));
     } else {
