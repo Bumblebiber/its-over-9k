@@ -7,6 +7,7 @@ import { wireCursorStatusline } from "./wire-cursor.mjs";
 import { wireHermesStatusline } from "./wire-hermes.mjs";
 import { wireCodexStatusline } from "./wire-codex.mjs";
 import { wireOpencodeStatusline } from "./wire-opencode.mjs";
+import { loadConfig, saveConfig } from "./config.mjs";
 
 const WIRERS = {
   claude: wireClaudeStatusline,
@@ -29,6 +30,35 @@ export function parseHostsArg(spec) {
     hosts[id] = mode;
   }
   return hosts;
+}
+
+function statuslineConfigPath(home) {
+  return process.env.O9K_STATUSLINE || path.join(home, ".o9k/statusline.json");
+}
+
+/** A host counts as o9k-wired only when our command/patch is actually in place. */
+function isWired(r) {
+  return !!(r.ok && !r.unsupported && !r.skipped);
+}
+
+/**
+ * Record which hosts this run actually wired into `~/.o9k/statusline.json`
+ * `hosts`. That map is what o9k-doctor treats as authoritative ("present
+ * hosts Init was told to wire", see the statusline spec) — it must reflect
+ * reality, not defaultConfig's optimistic all-true seed, or doctor flags
+ * absent/kept/unsupported hosts as un-wired. The interview's `--hosts` set
+ * is the full scope of this run, so we replace `hosts` outright rather than
+ * merge (a host omitted from the run is, by definition, not wired). No-op
+ * when the user never opted in (no config file) or on a dry run.
+ */
+function reconcileConfigHosts({ home, results, dryRun }) {
+  if (dryRun) return;
+  const p = statuslineConfigPath(home);
+  const cfg = loadConfig({ path: p });
+  if (!cfg) return;
+  const hosts = {};
+  for (const r of results) hosts[r.id] = isWired(r);
+  saveConfig({ ...cfg, hosts }, { path: p });
 }
 
 /** Wire statusline for each host entry; mode `skip` → skipped without calling a wirer. */
@@ -54,6 +84,8 @@ export function wireAllStatusline({ home, marketplaceRoot, hosts, dryRun = false
       results.push({ id, ok: false, detail: e.message });
     }
   }
+
+  reconcileConfigHosts({ home, results, dryRun });
 
   return { results };
 }

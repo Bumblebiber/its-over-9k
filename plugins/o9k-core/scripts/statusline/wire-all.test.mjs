@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { wireCodexStatusline } from "./wire-codex.mjs";
 import { wireOpencodeStatusline } from "./wire-opencode.mjs";
 import { parseHostsArg, wireAllStatusline } from "./wire-all.mjs";
+import { defaultConfig, saveConfig, loadConfig } from "./config.mjs";
 
 const marketplaceRoot = path.join(fileURLToPath(new URL("../../..", import.meta.url)));
 
@@ -72,6 +73,55 @@ test("wireAllStatusline mode skip returns skipped", () => {
     assert.equal(entry.detail, "skipped");
   }
 
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
+test("wireAllStatusline reconciles config hosts to what was actually wired", () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-wire-all-hosts-"));
+  fs.mkdirSync(path.join(home, ".cursor"), { recursive: true });
+  const cfgPath = path.join(home, ".o9k/statusline.json");
+  // Seed with defaultConfig's optimistic all-true hosts map.
+  saveConfig(defaultConfig({ elements: ["model"] }), { path: cfgPath });
+
+  wireAllStatusline({
+    home,
+    marketplaceRoot,
+    hosts: { cursor: "replace", codex: "replace" },
+  });
+
+  // hermes/claude (absent from the run) are dropped; codex (unsupported) is false.
+  const cfg = loadConfig({ path: cfgPath });
+  assert.deepEqual(cfg.hosts, { cursor: true, codex: false });
+
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
+test("wireAllStatusline dry-run leaves config hosts untouched", () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-wire-all-dry-"));
+  fs.mkdirSync(path.join(home, ".cursor"), { recursive: true });
+  const cfgPath = path.join(home, ".o9k/statusline.json");
+  saveConfig(defaultConfig({ elements: ["model"] }), { path: cfgPath });
+
+  wireAllStatusline({
+    home,
+    marketplaceRoot,
+    hosts: { cursor: "replace" },
+    dryRun: true,
+  });
+
+  const cfg = loadConfig({ path: cfgPath });
+  assert.deepEqual(cfg.hosts, { claude: true, cursor: true, hermes: true });
+
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
+test("wireAllStatusline does not create a config when user never opted in", () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-wire-all-noopt-"));
+  fs.mkdirSync(path.join(home, ".cursor"), { recursive: true });
+
+  wireAllStatusline({ home, marketplaceRoot, hosts: { cursor: "replace" } });
+
+  assert.equal(fs.existsSync(path.join(home, ".o9k/statusline.json")), false);
   fs.rmSync(home, { recursive: true, force: true });
 });
 
