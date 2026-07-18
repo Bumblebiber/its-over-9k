@@ -28,7 +28,7 @@ o9k now owns the cross-CLI statusline (opt-in via `/o9k-init`). TIM still ships 
 | Render / data | `tim statusline` (text + `--format hermes`) | Segments call TIM; compose line |
 | Host wire (Claude / Cursor / Hermes) | Explicit only for TIM-only (`setup-hermes-statusline`, manual Claude settings) | `/o9k-init` opt-in + `wire-all` |
 | Detect foreign TIM bar | — | Init detect + migrate interview |
-| Auto-wire on agent setup | Skip when o9k present (TIM follow-up) | Never outside Init |
+| Auto-wire on agent setup | Skip when o9k present (**TIM follow-up — not yet a guarantee**; see below) | Never outside Init |
 
 ## Detection (o9k-init)
 
@@ -79,6 +79,7 @@ Statusline question (default Skip)
 - Wire o9k as usual **without** stripping TIM.
 - Loud warning that Claude/Cursor can only have one `statusLine.command` — “keep TIM” on those hosts means **skip o9k wire for that host** (mode `keep`), while Hermes may stack prefixes if both patches exist (document risk).
 - Practical rule for Claude/Cursor under B: treat like statusline collision keep — do not overwrite TIM command; report host as skipped for o9k wire.
+- Hermes under B: o9k patch may be applied alongside TIM (`_get_tim_status` + `_get_o9k_status`). Init must warn that the TUI can show **stacked prefixes**. Doctor must flag this state afterward (see Hard rules) so it is not invisible.
 
 ### Action C — Abort
 
@@ -88,9 +89,14 @@ Statusline question (default Skip)
 
 - No TIM strip from `refresh-hosts`, SessionStart, marketplace enable, or `o9k-uninstall` of unrelated pillars.
 - `o9k-uninstall` of o9k statusline does **not** reinstall TIM bar; print hint to run TIM setup if desired.
-- Doctor: if o9k statusline enabled and Claude/Cursor still point at TIM markers → problem (“TIM statusline still wired; re-run /o9k-init migrate or remove manually”).
+- Doctor (symmetric across hosts where o9k statusline is enabled / `config.hosts` says wired):
+  - **Claude/Cursor:** `statusLine.command` still matches TIM markers → problem (“TIM statusline still wired; re-run /o9k-init migrate or remove manually”).
+  - **Hermes:** `_get_tim_status` present (and/or `tim-hermes-statusline.sh` present) while o9k Hermes statusline is also present (`_get_o9k_status` / o9k script) → problem (“TIM+o9k Hermes statusline stacked; re-run /o9k-init Action A or remove TIM patch”).
+  - Hermes TIM-only markers with o9k statusline enabled but o9k Hermes not wired → same class of problem as Claude stray TIM (TIM still owning the bar).
 
 ## TIM follow-up (out of scope for this o9k change, tracked)
+
+**Dependency risk:** Row “Auto-wire on agent setup” in the ownership table is **not** enforced until the TIM change lands. Until then, o9k’s safety net is Init migrate + **doctor** (including Hermes). Do not ship the o9k Init/doctor work assuming TIM already defers — treat TIM deferral as a tracked follow-up with its own PR.
 
 1. `setup-agent` / auto Hermes statusline: if `~/.o9k/` exists or o9k marketplace present → skip auto-wire; print pointer to `/o9k-init`.
 2. Keep `tim statusline` and `tim setup-hermes-statusline` documented for TIM-only.
@@ -107,13 +113,23 @@ Statusline question (default Skip)
 
 Hermetic fixtures:
 
+**Claude / Cursor**
+
 - Detect TIM Claude command → true; foreign command → false; o9k command → false (not TIM).
 - Init path A: TIM settings stripped + o9k wired; `.o9k-bak` present.
 - Init path B on Claude: TIM command preserved; o9k wire skipped for that host.
 - Init Skip: TIM untouched.
 - Doctor flags TIM command while o9k statusline enabled.
 
+**Hermes (required — stacking is the risky path)**
+
+- Detect: `_get_tim_status` and/or `tim-hermes-statusline.sh` → TIM bar true.
+- Init path A: TIM method/script removed; o9k Hermes wired; TIM markers gone.
+- Init path B: both `_get_tim_status` and `_get_o9k_status` present after wire (stacked); Init warning path covered by skill text or a dry-run report field.
+- Doctor: stacked TIM+o9k Hermes → problem; clean o9k-only Hermes → no TIM stacking problem.
+- Doctor: TIM Hermes markers while o9k statusline enabled and Hermes host expected → problem even if o9k patch missing.
+
 ## Open points (non-blocking)
 
-1. Exact TIM marker regex list — finalize in implementation against real install paths (`tim-statusline.sh`, npm global paths, etc.).
-2. Whether Hermes Action B should refuse stacking and force A/C — default allow stack with warning unless spike shows TUI breakage.
+1. Exact TIM marker regex list — finalize in implementation against real install paths (`tim-statusline.sh`, npm global paths, etc.). Do not block design/plan on this.
+2. Whether Hermes Action B should refuse stacking and force A/C — default remain **allow stack + Init warning + doctor flag** unless a spike shows TUI breakage; then tighten to refuse B on Hermes.
