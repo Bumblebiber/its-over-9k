@@ -254,6 +254,76 @@ test("doctor: hermes statusline clean when cli.py is patched", () => {
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
+test("doctor: TIM Claude command while o9k statusline enabled is a problem", () => {
+  const { tmp, pathEnv } = makeStatuslineHome();
+  saveStatuslineConfig(tmp, { hosts: { claude: false } });
+  fs.writeFileSync(
+    path.join(tmp, ".claude/settings.json"),
+    JSON.stringify(
+      { statusLine: { type: "command", command: "bash /x/tim-statusline.sh" } },
+      null,
+      2
+    )
+  );
+  const r = doctor({ home: tmp, pathEnv });
+  const artifact = r.artifacts.find((a) => a.kind === "statusline" && a.host === "claude");
+  assert.equal(artifact.state, "tim");
+  assert.ok(r.problems.some((p) => /TIM statusline still wired/.test(p)));
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("doctor: Hermes TIM+o9k stack is a problem", () => {
+  const { tmp, pathEnv } = makeStatuslineHome();
+  fs.mkdirSync(path.join(tmp, ".hermes/hermes-agent"), { recursive: true });
+  const stackedFixture = FIXTURE_CLI_PY.replace(
+    "    @staticmethod\n    def _status_bar_display_width(text: str) -> int:",
+    `    def _get_tim_status(self):
+        return {}
+
+    @staticmethod
+    def _status_bar_display_width(text: str) -> int:`
+  );
+  fs.writeFileSync(path.join(tmp, ".hermes/hermes-agent/cli.py"), stackedFixture);
+  wireHermesStatusline({ home: tmp, marketplaceRoot: marketRoot, mode: "replace" });
+  saveStatuslineConfig(tmp, { hosts: { hermes: true } });
+  const r = doctor({ home: tmp, pathEnv });
+  const artifact = r.artifacts.find((a) => a.kind === "statusline" && a.host === "hermes");
+  assert.equal(artifact.state, "stacked");
+  assert.ok(r.problems.some((p) => /stacked/i.test(p)));
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("doctor: o9k-only Hermes is clean for TIM stack check", () => {
+  const { tmp, pathEnv } = makeStatuslineHome();
+  fs.mkdirSync(path.join(tmp, ".hermes/hermes-agent"), { recursive: true });
+  fs.writeFileSync(path.join(tmp, ".hermes/hermes-agent/cli.py"), FIXTURE_CLI_PY);
+  wireHermesStatusline({ home: tmp, marketplaceRoot: marketRoot, mode: "replace" });
+  saveStatuslineConfig(tmp, { hosts: { hermes: true } });
+  const r = doctor({ home: tmp, pathEnv });
+  assert.ok(!r.problems.some((p) => /stacked/i.test(p) || /TIM statusline still wired/.test(p)));
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("doctor: TIM Hermes markers with o9k enabled and hermes host expected", () => {
+  const { tmp, pathEnv } = makeStatuslineHome();
+  fs.mkdirSync(path.join(tmp, ".hermes/hermes-agent"), { recursive: true });
+  const timOnlyFixture = FIXTURE_CLI_PY.replace(
+    "    @staticmethod\n    def _status_bar_display_width(text: str) -> int:",
+    `    def _get_tim_status(self):
+        return {}
+
+    @staticmethod
+    def _status_bar_display_width(text: str) -> int:`
+  );
+  fs.writeFileSync(path.join(tmp, ".hermes/hermes-agent/cli.py"), timOnlyFixture);
+  saveStatuslineConfig(tmp, { hosts: { hermes: true } });
+  const r = doctor({ home: tmp, pathEnv });
+  const artifact = r.artifacts.find((a) => a.kind === "statusline" && a.host === "hermes");
+  assert.equal(artifact.state, "tim");
+  assert.ok(r.problems.some((p) => /TIM statusline still wired on hermes/.test(p)));
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
 test("uninstall strips only o9k-owned statusLine, leaves foreign intact", () => {
   const { tmp, pathEnv } = makeStatuslineHome();
   wireCursorStatusline({ home: tmp, marketplaceRoot: marketRoot, mode: "replace" });

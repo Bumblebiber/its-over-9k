@@ -14,6 +14,7 @@ import { detectHosts, readJsonSafe } from "./detect.mjs";
 import { skillDrift } from "./skills-sync.mjs";
 import { loadConfig } from "./statusline/config.mjs";
 import { isO9kStatuslineCommand } from "./statusline/command-path.mjs";
+import { isTimStatuslineCommand } from "./statusline/detect-tim.mjs";
 
 function listMatching(dir, re) {
   try {
@@ -64,6 +65,13 @@ function checkStatuslineCommandHost({ hostId, settingsPath, wireHosts, artifacts
     artifacts.push({ kind: "statusline", host: hostId, path: settingsPath, state: "ok" });
     return;
   }
+  if (isTimStatuslineCommand(cmd)) {
+    artifacts.push({ kind: "statusline", host: hostId, path: settingsPath, state: "tim" });
+    problems.push(
+      `TIM statusline still wired on ${hostId}; re-run /o9k-init migrate or remove manually: ${settingsPath}`
+    );
+    return;
+  }
   if (cmd) {
     artifacts.push({ kind: "statusline", host: hostId, path: settingsPath, state: "foreign" });
     problems.push(`foreign statusLine command on ${hostId} (o9k statusline enabled): ${settingsPath}`);
@@ -77,18 +85,37 @@ function checkStatuslineCommandHost({ hostId, settingsPath, wireHosts, artifacts
   }
 }
 
-/** Hermes has no statusLine API — presence is judged by cli.py's o9k patch. */
+/** Hermes has no statusLine API — presence is judged by cli.py patches and hook scripts. */
 function checkStatuslineHermes({ home, wireHosts, artifacts, problems }) {
-  if (!wireHosts?.hermes) return;
   const cliPath = path.join(home, ".hermes/hermes-agent/cli.py");
-  let patched = false;
+  const timScript = path.join(home, ".hermes/agent-hooks/tim-hermes-statusline.sh");
+  let source = "";
   try {
-    patched = fs.readFileSync(cliPath, "utf8").includes("_get_o9k_status");
+    source = fs.readFileSync(cliPath, "utf8");
   } catch {
     // missing cli.py also counts as not-wired
   }
-  artifacts.push({ kind: "statusline", host: "hermes", path: cliPath, state: patched ? "ok" : "missing" });
-  if (!patched) {
+  const hasTim = source.includes("_get_tim_status") || fs.existsSync(timScript);
+  const hasO9k = source.includes("_get_o9k_status");
+
+  if (hasTim && hasO9k) {
+    artifacts.push({ kind: "statusline", host: "hermes", path: cliPath, state: "stacked" });
+    problems.push(
+      `TIM+o9k Hermes statusline stacked; re-run /o9k-init Action A or remove TIM patch: ${cliPath}`
+    );
+    return;
+  }
+
+  if (!wireHosts?.hermes) return;
+
+  const state = hasO9k ? "ok" : hasTim ? "tim" : "missing";
+  artifacts.push({ kind: "statusline", host: "hermes", path: cliPath, state });
+  if (hasTim && !hasO9k) {
+    problems.push(
+      `TIM statusline still wired on hermes; re-run /o9k-init migrate or remove manually: ${cliPath}`
+    );
+  }
+  if (!hasO9k) {
     problems.push(
       `statusline enabled and hermes should be wired but cli.py lacks _get_o9k_status: ${cliPath}`
     );
