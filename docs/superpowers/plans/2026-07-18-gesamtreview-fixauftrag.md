@@ -102,7 +102,7 @@ Code detail; silently prints "no transcripts" when the encoding drifts.
 **Fix:** on miss, scan `~/.claude/projects/*` and match against the `cwd`
 field inside the newest `.jsonl` lines instead of failing.
 
-### 11. `onPath(bin, pathEnv)` ignores Windows extensions
+### 11. `onPath(bin, pathEnv)` ignores Windows extensions — **fixed**
 `detect.mjs` checks `existsSync(join(dir, bin))` — on Windows the file is
 `bin.cmd`/`bin.exe`.
 **Fix:** probe `bin`, `bin.exe`, `bin.cmd`, `bin.bat` when

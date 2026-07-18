@@ -63,8 +63,16 @@ export const PILLARS = Object.keys(REG.frameworks).filter(
 
 function onPath(bin, pathEnv) {
   if (pathEnv !== undefined) {
+    // Windows binaries carry an extension (claude.cmd, codex.exe, …) — probe
+    // the common PATHEXT variants, not just the bare name.
+    const names =
+      process.platform === "win32"
+        ? [bin, `${bin}.exe`, `${bin}.cmd`, `${bin}.bat`]
+        : [bin];
     for (const dir of pathEnv.split(path.delimiter).filter(Boolean)) {
-      if (fs.existsSync(path.join(dir, bin))) return true;
+      for (const name of names) {
+        if (fs.existsSync(path.join(dir, name))) return true;
+      }
     }
     return false;
   }
