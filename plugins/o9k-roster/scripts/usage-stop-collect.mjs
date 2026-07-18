@@ -6,6 +6,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { debugLog } from "./debug.mjs";
 
 const DEBOUNCE_MS = 15 * 60_000;
 
@@ -35,6 +36,7 @@ try {
     fs.mkdirSync(path.dirname(debounce), { recursive: true });
     fs.writeFileSync(debounce, String(now));
   }
-} catch {
+} catch (e) {
   // hook must never block the host
+  debugLog("o9k-roster usage-stop-collect", e);
 }

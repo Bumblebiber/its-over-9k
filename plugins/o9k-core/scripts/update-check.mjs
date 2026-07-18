@@ -32,7 +32,7 @@ import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { detectPillars, detectCompanions } from "./detect.mjs";
+import { debugLog, detectPillars, detectCompanions } from "./detect.mjs";
 import { refreshHosts } from "./refresh-hosts.mjs";
 import { skillDrift } from "./skills-sync.mjs";
 
@@ -63,7 +63,8 @@ function run(cmd, args, timeout = 20_000) {
       // since Node's CVE-2024-27980 hardening.
       shell: process.platform === "win32",
     }).trim();
-  } catch {
+  } catch (e) {
+    debugLog(`o9k-core update-check ${cmd}`, e);
     return "";
   }
 }
@@ -370,8 +371,9 @@ if (flag === "--report" || flag === "--apply") {
         env: process.env,
       });
       child.unref();
-    } catch {
+    } catch (e) {
       /* background refresh is best-effort */
+      debugLog("o9k-core update-check spawn", e);
     }
   }
 

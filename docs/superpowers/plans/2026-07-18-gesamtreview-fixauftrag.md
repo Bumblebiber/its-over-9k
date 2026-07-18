@@ -73,7 +73,7 @@ deleting the repo leaves dangling links nobody diagnoses.
 dangling/stale) + `o9k-uninstall.mjs` (reverse of syncSkills/wireHosts).
 Most of the inventory logic already exists in `skillDrift()`/`verifyHost()`.
 
-### 7. Silent degradation is undiagnosable
+### 7. Silent degradation is undiagnosable — **fixed**
 Hooks correctly swallow all errors (exit 0), but there is no way to *see*
 the swallowed failures — the Windows `.cmd` bug went unnoticed exactly
 because of this.
