@@ -49,7 +49,7 @@ MULTI-AGENT.md, mirroring the systemd comments.
 
 ## P2 — operational quality
 
-### 4. Personal infra baked into cron scripts
+### 4. Personal infra baked into cron scripts — **fixed**
 `roster-refresh-cron.sh` calls `~/.hermes/bin/send-cron-telegram`
 (@bbbeeCronBot); both cron scripts prefer `~/.hermes/cron-outputs`. That is the
 author's private rig, not the product.

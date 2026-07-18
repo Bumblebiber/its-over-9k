@@ -7,11 +7,9 @@ COLLECT_JS="$ROOT/scripts/usage-collect.mjs"
 WATCHER_STATE="${O9K_USAGE_WATCHER_STATE:-$HOME/.o9k/usage-watcher.json}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 
-if [[ -d "${HOME}/.hermes/cron-outputs" ]]; then
-  OUT_DIR="${HOME}/.hermes/cron-outputs/usage-collector"
-else
-  OUT_DIR="${HOME}/.o9k/reports/usage-collector"
-fi
+# Report location: override the base dir via O9K_REPORT_DIR (e.g. a cron
+# runner's collected-outputs dir). Default stays inside ~/.o9k.
+OUT_DIR="${O9K_REPORT_DIR:-$HOME/.o9k/reports}/usage-collector"
 mkdir -p "$OUT_DIR"
 REPORT="$OUT_DIR/report-$STAMP.md"
 
