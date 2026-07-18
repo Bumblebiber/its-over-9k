@@ -14,6 +14,10 @@ function debouncePath() {
 }
 
 try {
+  // Never collect from inside a collector-spawned claude run (its Stop hook
+  // fires too — the PTY lock would catch it, but don't even try).
+  if (process.env.O9K_USAGE_COLLECT === "1") process.exit(0);
+
   const debounce = debouncePath();
   const now = Date.now();
   try {
@@ -22,11 +26,15 @@ try {
   } catch {
     /* no debounce file */
   }
-  fs.mkdirSync(path.dirname(debounce), { recursive: true });
-  fs.writeFileSync(debounce, String(now));
 
   const { collectUsageForCli } = await import("./usage-collect.mjs");
-  await collectUsageForCli({ cli: "claude" });
+  const r = await collectUsageForCli({ cli: "claude" });
+  // Stamp only after a successful collect — a failed attempt (lock contention,
+  // empty parse) must not suppress retries for the whole debounce window.
+  if (r?.ok) {
+    fs.mkdirSync(path.dirname(debounce), { recursive: true });
+    fs.writeFileSync(debounce, String(now));
+  }
 } catch {
   // hook must never block the host
 }

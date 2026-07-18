@@ -2,6 +2,32 @@
 
 ## [Unreleased]
 
+### Added
+- **CI** — GitHub Actions workflow running all node test suites + the
+  wait-mailbox shell test on ubuntu/macos × node 20/22.
+- **Fixauftrag** — remaining review findings tracked in
+  `docs/superpowers/plans/2026-07-18-gesamtreview-fixauftrag.md`.
+
+### Fixed
+- **Hermetic o9k-core tests** — skills-sync/host-wire/refresh-hosts/o9k-init
+  tests no longer require a real `codex`/`cursor` binary on PATH (fake-bin
+  `pathEnv` injection; `refreshHosts` gained a `pathEnv` option).
+- **macOS `wait-mailbox.sh`** — polling fallback used GNU-only
+  `find -printf`, so on macOS (no inotifywait) it never detected mailbox
+  changes and always blocked until the ceiling; now probes once and falls
+  back to `stat -f`.
+- **`runs.mjs` resume lock** — TOCTOU between existence check and lock write;
+  now O_EXCL (`wx`) create with the same dead-holder steal semantics.
+- **Stop-hook usage collect** — debounce is stamped only after a *successful*
+  collect (a failed attempt no longer suppresses retries for 15 min), and
+  collector-spawned claude runs (`O9K_USAGE_COLLECT=1`) skip the hook.
+- **Windows npm-shim spawns** — `hmem`/`tim`/`npm`/`claude` are `.cmd` shims
+  on Windows and need `shell: true` since Node's CVE-2024-27980 hardening;
+  memory-backend detection, update-check, and the claude fast-path collector
+  were silently dead there (backend.mjs, update-check.mjs, usage-collect.mjs).
+- **Repo hygiene** — `.tim-project` untracked + gitignored; installer's
+  `head()` no longer shadows the coreutils binary (renamed `banner()`).
+
 ## [0.11.0] — 2026-07-17
 
 ### Added

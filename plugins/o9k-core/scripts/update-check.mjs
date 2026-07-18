@@ -59,6 +59,9 @@ function run(cmd, args, timeout = 20_000) {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
       timeout,
+      // npm is a .cmd shim on Windows — spawnable only through a shell
+      // since Node's CVE-2024-27980 hardening.
+      shell: process.platform === "win32",
     }).trim();
   } catch {
     return "";

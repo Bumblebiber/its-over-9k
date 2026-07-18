@@ -11,15 +11,26 @@ const pluginRoot = fileURLToPath(new URL("..", import.meta.url));
 const marketRoot = path.join(pluginRoot, "..");
 const script = fileURLToPath(new URL("./refresh-hosts.mjs", import.meta.url));
 
-test("refreshHosts dry-run does not write host hooks under HOME", () => {
+// Hermetic host detection: fake bin dir + pathEnv makes codex "present"
+// regardless of what is installed on the machine running the tests.
+function makeTmpHome() {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-refresh-"));
   fs.mkdirSync(path.join(tmp, ".codex"), { recursive: true });
+  const binDir = path.join(tmp, "bin");
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.writeFileSync(path.join(binDir, "codex"), "", { mode: 0o755 });
+  return { tmp, pathEnv: binDir };
+}
+
+test("refreshHosts dry-run does not write host hooks under HOME", () => {
+  const { tmp, pathEnv } = makeTmpHome();
   const out = refreshHosts({
     home: tmp,
     dryRun: true,
     pluginRoot,
     marketplaceRoot: marketRoot,
     only: ["codex"],
+    pathEnv,
   });
   assert.equal(fs.existsSync(path.join(tmp, ".codex", "hooks.json")), false);
   assert.ok(out.hooks.results.some((r) => r.id === "codex" && r.ok));
@@ -27,15 +38,14 @@ test("refreshHosts dry-run does not write host hooks under HOME", () => {
 });
 
 test("refreshHosts run wires codex and refreshes skills under HOME", () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-refresh-"));
-  fs.mkdirSync(path.join(tmp, ".codex"), { recursive: true });
-  // Isolate PATH so present=home only
+  const { tmp, pathEnv } = makeTmpHome();
   const out = refreshHosts({
     home: tmp,
     dryRun: false,
     pluginRoot,
     marketplaceRoot: marketRoot,
     only: ["codex"],
+    pathEnv,
   });
   assert.ok(fs.existsSync(path.join(tmp, ".agents", "skills", "o9k", "scout", "SKILL.md")));
   assert.ok(fs.existsSync(path.join(tmp, ".codex", "hooks.json")));

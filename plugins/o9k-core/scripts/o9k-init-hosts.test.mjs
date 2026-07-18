@@ -12,11 +12,22 @@ const script = fileURLToPath(new URL("./o9k-init.mjs", import.meta.url));
 const coreRoot = fileURLToPath(new URL("..", import.meta.url));
 const marketRoot = path.join(coreRoot, "..");
 
-test("o9k-init.mjs prints Hosts section with verify columns", () => {
+// Hermetic host detection: o9k-init.mjs probes the child's PATH via which/where,
+// so give it a fake executable codex instead of relying on a real install.
+function makeTmpHome() {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-init-"));
   fs.mkdirSync(path.join(tmp, ".codex"));
+  const binDir = path.join(tmp, "bin");
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.writeFileSync(path.join(binDir, "codex"), "#!/bin/sh\n", { mode: 0o755 });
+  const childPath = binDir + path.delimiter + (process.env.PATH || "");
+  return { tmp, binDir, childPath };
+}
+
+test("o9k-init.mjs prints Hosts section with verify columns", () => {
+  const { tmp, childPath } = makeTmpHome();
   const r = spawnSync(process.execPath, [script], {
-    env: { ...process.env, HOME: tmp, CLAUDE_PLUGIN_ROOT: coreRoot },
+    env: { ...process.env, HOME: tmp, PATH: childPath, CLAUDE_PLUGIN_ROOT: coreRoot },
     encoding: "utf8",
   });
   assert.equal(r.status, 0);
@@ -26,16 +37,15 @@ test("o9k-init.mjs prints Hosts section with verify columns", () => {
 });
 
 test("o9k-init.mjs reports wired codex host snapshot", () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "o9k-init-"));
-  fs.mkdirSync(path.join(tmp, ".codex"));
-  syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
+  const { tmp, binDir, childPath } = makeTmpHome();
+  syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot, pathEnv: binDir });
   wireCodex({ home: tmp, marketplaceRoot: marketRoot });
   fs.writeFileSync(
     path.join(tmp, ".codex/config.toml"),
     '[mcp.servers.hmem]\ncommand = "hmem"\n',
   );
   const r = spawnSync(process.execPath, [script], {
-    env: { ...process.env, HOME: tmp, CLAUDE_PLUGIN_ROOT: coreRoot },
+    env: { ...process.env, HOME: tmp, PATH: childPath, CLAUDE_PLUGIN_ROOT: coreRoot },
     encoding: "utf8",
   });
   assert.equal(r.status, 0);

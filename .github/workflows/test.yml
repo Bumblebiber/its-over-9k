@@ -1,0 +1,28 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  node-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [20, 22]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Run node test suites
+        shell: bash
+        run: |
+          shopt -s globstar
+          node --test plugins/**/*.test.mjs
+      - name: Run wait-mailbox shell test
+        shell: bash
+        run: bash plugins/o9k-roster/scripts/wait-mailbox.test.sh
