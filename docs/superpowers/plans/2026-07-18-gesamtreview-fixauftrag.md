@@ -21,7 +21,7 @@ Everything below is ordered by priority. Each item: problem → where → what t
 
 ## P1 — visible correctness / platform gaps
 
-### 1. macOS: agent process counting silently reports 0
+### 1. macOS: agent process counting silently reports 0 — **fixed**
 `plugins/o9k-roster/scripts/usage-procs.mjs` reads `/proc/<pid>/cmdline` and
 `/proc/<pid>/environ` — Linux-only. On macOS `listProcPids()` returns `[]`, so
 the adaptive watcher always sees "idle" and schedules the slowest cadence.
