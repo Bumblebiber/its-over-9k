@@ -1,8 +1,22 @@
 # Changelog
 
+Versioning: the `[x.y.z]` headings below are **marketplace releases** (the
+repo as a whole). Each plugin keeps its own independent version in its
+`plugin.json`; entries that change a plugin's behavior name it as
+`plugin@version` on first mention. Plugin versions bump when the plugin
+changes, marketplace versions when a release is cut.
+
 ## [Unreleased]
 
 ### Added
+- **Versioning convention** (this header) — marketplace releases vs
+  independent plugin versions; drifted manifests bumped once
+  (o9k-core@0.10.0, o9k-roster@0.3.0).
+- **macOS launchd agents (o9k-roster@0.3.0)** — `launchd/` mirrors of the
+  systemd watcher/resume units; `ps` fallback for agent process counting
+  without `/proc`; platform matrix in README + Platform line in o9k-init.
+- **Generic cron hooks (o9k-roster@0.3.0)** — `O9K_REPORT_DIR` +
+  `O9K_NOTIFY_CMD` replace hardcoded personal hermes/telegram paths.
 - **CI** — GitHub Actions workflow running all node test suites + the
   wait-mailbox shell test on ubuntu/macos × node 20/22.
 - **Fixauftrag** — remaining review findings tracked in

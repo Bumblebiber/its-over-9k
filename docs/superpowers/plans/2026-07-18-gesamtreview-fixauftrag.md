@@ -57,7 +57,7 @@ author's private rig, not the product.
 (`O9K_NOTIFY_CMD` env: gets the report path as `$1`), and make the hermes
 output dir an env override (`O9K_REPORT_DIR`) instead of an auto-preference.
 
-### 5. Versioning scheme is ambiguous
+### 5. Versioning scheme is ambiguous — **fixed**
 Repo-level CHANGELOG says 0.11.0; `o9k-roster/plugin.json` says 0.2.0,
 `o9k-core` 0.9.1; commit messages mix them ("o9k-roster 0.11.0").
 **Fix:** decide: (a) lockstep — all plugin.json versions = marketplace
