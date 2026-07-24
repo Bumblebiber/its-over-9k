@@ -12,8 +12,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { detectHosts, readJsonSafe } from "./detect.mjs";
 import { skillDrift } from "./skills-sync.mjs";
-import { loadConfig } from "./statusline/config.mjs";
-import { isO9kStatuslineCommand } from "./statusline/command-path.mjs";
+import { isO9kStatuslineCommand } from "./statusline/legacy-cleanup.mjs";
 
 function listMatching(dir, re) {
   try {
@@ -53,46 +52,44 @@ function bakedRoot(filePath) {
 }
 
 /**
- * Claude/Cursor statusLine.command check: foreign (present, not ours) is
- * always a problem when statusline is enabled; missing is only a problem
- * on hosts the user's config says should be wired.
+ * Claude/Cursor statusLine.command inventory.
+ *
+ * o9k no longer wires the statusline (see docs/STATUSLINE.md), so a missing
+ * command is never a problem — the user simply hasn't added the snippet, or
+ * doesn't want one. What we still report is an o9k-owned command left over
+ * from o9k ≤ 0.10.x, because that one points at a path inside the
+ * marketplace clone and breaks silently if the clone moves.
  */
-function checkStatuslineCommandHost({ hostId, settingsPath, wireHosts, artifacts, problems }) {
+function checkStatuslineCommandHost({ hostId, settingsPath, artifacts, problems }) {
   const existing = readJsonSafe(settingsPath);
   const cmd = existing?.statusLine?.command;
-  if (isO9kStatuslineCommand(cmd)) {
-    artifacts.push({ kind: "statusline", host: hostId, path: settingsPath, state: "ok" });
-    return;
-  }
-  if (cmd) {
-    artifacts.push({ kind: "statusline", host: hostId, path: settingsPath, state: "foreign" });
-    problems.push(`foreign statusLine command on ${hostId} (o9k statusline enabled): ${settingsPath}`);
-    return;
-  }
-  if (wireHosts?.[hostId]) {
-    artifacts.push({ kind: "statusline", host: hostId, path: settingsPath, state: "missing" });
+  if (!isO9kStatuslineCommand(cmd)) return;
+
+  artifacts.push({ kind: "statusline", host: hostId, path: settingsPath, state: "legacy" });
+  const script = cmd.split(/\s+/).find((t) => t.includes("o9k-statusline"));
+  if (script && !fs.existsSync(script)) {
     problems.push(
-      `statusline enabled and ${hostId} should be wired but no o9k statusLine command found: ${settingsPath}`
+      `statusLine on ${hostId} points at a missing o9k script (${script}) — ` +
+        `re-point it at your clone or remove it: ${settingsPath}`
     );
   }
 }
 
-/** Hermes has no statusLine API — presence is judged by cli.py's o9k patch. */
-function checkStatuslineHermes({ home, wireHosts, artifacts, problems }) {
-  if (!wireHosts?.hermes) return;
+/** Hermes has no statusLine API — older o9k versions patched cli.py instead. */
+function checkStatuslineHermes({ home, artifacts, problems }) {
   const cliPath = path.join(home, ".hermes/hermes-agent/cli.py");
   let patched = false;
   try {
     patched = fs.readFileSync(cliPath, "utf8").includes("_get_o9k_status");
   } catch {
-    // missing cli.py also counts as not-wired
+    return; // no cli.py, nothing to report
   }
-  artifacts.push({ kind: "statusline", host: "hermes", path: cliPath, state: patched ? "ok" : "missing" });
-  if (!patched) {
-    problems.push(
-      `statusline enabled and hermes should be wired but cli.py lacks _get_o9k_status: ${cliPath}`
-    );
-  }
+  if (!patched) return;
+  artifacts.push({ kind: "statusline", host: "hermes", path: cliPath, state: "legacy" });
+  problems.push(
+    `hermes cli.py still carries the o9k statusline patch from an older version — ` +
+      `o9k-uninstall.mjs removes it: ${cliPath}`
+  );
 }
 
 /**
@@ -149,29 +146,23 @@ export function doctor(options = {}) {
     if (stale) problems.push(`opencode plugin bakes missing marketplace path (${root}): ${opencodePlugin}`);
   }
 
-  // Statusline is opt-in (see o9k-init); only check when the user actually
-  // turned it on. Wiring itself only ever happens via that interview — this
-  // just verifies enabled hosts stayed wired and nothing foreign crept in.
-  const statuslinePath = process.env.O9K_STATUSLINE || path.join(home, ".o9k/statusline.json");
-  const statusline = loadConfig({ path: statuslinePath });
-  if (statusline?.enabled) {
-    const wireHosts = statusline.hosts || {};
-    checkStatuslineCommandHost({
-      hostId: "claude",
-      settingsPath: path.join(home, ".claude/settings.json"),
-      wireHosts,
-      artifacts,
-      problems,
-    });
-    checkStatuslineCommandHost({
-      hostId: "cursor",
-      settingsPath: path.join(home, ".cursor/cli-config.json"),
-      wireHosts,
-      artifacts,
-      problems,
-    });
-    checkStatuslineHermes({ home, wireHosts, artifacts, problems });
-  }
+  // Statusline: o9k only ever reports leftovers from versions that still
+  // wired it. Deliberately NOT gated on ~/.o9k/statusline.json — a user who
+  // disabled or deleted that config still wants to hear about a stale
+  // statusLine command sitting in their host config.
+  checkStatuslineCommandHost({
+    hostId: "claude",
+    settingsPath: path.join(home, ".claude/settings.json"),
+    artifacts,
+    problems,
+  });
+  checkStatuslineCommandHost({
+    hostId: "cursor",
+    settingsPath: path.join(home, ".cursor/cli-config.json"),
+    artifacts,
+    problems,
+  });
+  checkStatuslineHermes({ home, artifacts, problems });
 
   const drift = skillDrift({ home });
   if (!drift.ok) {
@@ -205,7 +196,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log("");
     console.log("Fixes: stale/missing wiring → update-check.mjs --refresh-hosts;");
     console.log("       leftovers after removal → o9k-uninstall.mjs --dry-run;");
-    console.log("       statusline foreign/missing → re-run the /o9k-init statusline step");
+    console.log("       statusline legacy → node o9k-uninstall.mjs removes it (see docs/STATUSLINE.md)");
     process.exit(1);
   }
   console.log("Healthy: no dangling links, no stale baked paths, skills in sync.");

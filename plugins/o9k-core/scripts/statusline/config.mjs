@@ -16,7 +16,6 @@ export function defaultConfig(overrides = {}) {
     elements: ["tim", "device", "limits", "context", "model", "git"],
     priority: ["limits", "tim", "context", "model", "device", "git"],
     marquee: { enabled: true, keys: ["git", "tim"] },
-    hosts: { claude: true, cursor: true, hermes: true },
     ...overrides,
   };
 }

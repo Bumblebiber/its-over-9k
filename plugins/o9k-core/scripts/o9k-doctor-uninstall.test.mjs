@@ -11,17 +11,15 @@ import { wireOpencode } from "./hosts/wire-opencode.mjs";
 import { wireHermes } from "./hosts/wire-hermes.mjs";
 import { doctor } from "./o9k-doctor.mjs";
 import { uninstall } from "./o9k-uninstall.mjs";
-import { defaultConfig, saveConfig } from "./statusline/config.mjs";
-import { wireClaudeStatusline } from "./statusline/wire-claude.mjs";
-import { wireCursorStatusline } from "./statusline/wire-cursor.mjs";
-import { wireHermesStatusline } from "./statusline/wire-hermes.mjs";
+import { unpatchCliPySource } from "./statusline/legacy-cleanup.mjs";
 
 const coreRoot = fileURLToPath(new URL("..", import.meta.url));
 const marketRoot = path.join(coreRoot, "..");
 
-// Self-contained fixture — not a real hermes-agent snapshot; just contains
-// the three anchors statusline/wire-hermes.mjs looks for (see that file's
-// comments for why each was chosen).
+// Self-contained fixture — not a real hermes-agent snapshot; just the shape
+// the o9k ≤ 0.10.x statusline patch used to be applied to. o9k no longer
+// patches cli.py (see docs/STATUSLINE.md); these fixtures exist so the
+// *removal* path stays covered for people who wired it back then.
 const FIXTURE_CLI_PY = `import os
 from typing import Dict
 
@@ -74,9 +72,68 @@ function makeStatuslineHome() {
   return { tmp, pathEnv: binDir };
 }
 
-function saveStatuslineConfig(tmp, overrides) {
-  saveConfig(defaultConfig(overrides), { path: path.join(tmp, ".o9k/statusline.json") });
+// ── legacy artifacts, reconstructed verbatim ──────────────────────────────
+// These literals are what o9k ≤ 0.10.x wrote. They are duplicated here on
+// purpose rather than imported: the cleanup code must keep removing this
+// exact historical text, so the test pins the text, not the implementation.
+
+const LEGACY_O9K_METHOD = `    def _get_o9k_status(self) -> Dict[str, str]:
+        """Call hermes-o9k-statusline.sh for the o9k status line."""
+        try:
+            import subprocess, json
+            script = os.path.expanduser("~/.hermes/agent-hooks/hermes-o9k-statusline.sh")
+            if not os.path.isfile(script):
+                return {}
+            result = subprocess.run(
+                ["bash", script], capture_output=True, text=True, timeout=3
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return json.loads(result.stdout)
+        except Exception:
+            pass
+        return {}
+
+`;
+
+const LEGACY_PREFIX_BLOCK = `
+            o9k_status = self._get_o9k_status()
+            o9k_prefix = o9k_status.get("line", "") if o9k_status else ""
+
+`;
+
+const LEGACY_DURATION_ANCHOR =
+  '            duration_label = snapshot["duration"]\n            yolo_active = self._is_session_yolo_active()';
+
+const LEGACY_FRAGS_LINE =
+  '                *([("class:status-bar-strong", f" {o9k_prefix}"), ("class:status-bar-dim", " │ ")] if o9k_prefix else []),';
+
+const LEGACY_MODEL_LINE = '                ("class:status-bar-strong", snapshot["model_short"]),';
+
+const LEGACY_METHOD_ANCHOR =
+  "    @staticmethod\n    def _status_bar_display_width(";
+
+/** cli.py as the old wiring left it. */
+function legacyPatchedCliPy(source = FIXTURE_CLI_PY) {
+  return source
+    .replace(LEGACY_METHOD_ANCHOR, LEGACY_O9K_METHOD + LEGACY_METHOD_ANCHOR)
+    .replace(LEGACY_DURATION_ANCHOR, LEGACY_DURATION_ANCHOR + LEGACY_PREFIX_BLOCK)
+    .replace(LEGACY_MODEL_LINE, LEGACY_FRAGS_LINE + "\n" + LEGACY_MODEL_LINE);
 }
+
+/** A statusLine command as the old wiring wrote it. */
+function writeLegacyStatusLine(file, scriptPath) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(
+    file,
+    JSON.stringify(
+      { statusLine: { type: "command", command: `${process.execPath} ${scriptPath} --host x` } },
+      null,
+      2
+    )
+  );
+}
+
+const LIVE_STATUSLINE_SCRIPT = path.join(coreRoot, "scripts/statusline/o9k-statusline.mjs");
 
 // Full fake install: codex + cursor + opencode + hermes wired under a tmp home.
 function makeWiredHome() {
@@ -186,77 +243,81 @@ test("uninstall removes o9k artifacts and strips hook configs, keeps foreign con
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
-test("doctor: statusline disabled skips all statusline checks", () => {
+test("doctor: no statusline artifacts on a host that was never wired", () => {
   const { tmp, pathEnv } = makeStatuslineHome();
-  saveStatuslineConfig(tmp, { enabled: false, hosts: { cursor: true } });
   const r = doctor({ home: tmp, pathEnv });
   assert.equal(r.artifacts.some((a) => a.kind === "statusline"), false);
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
-test("doctor: statusline host clean when o9k command is wired", () => {
+test("doctor: a foreign statusLine command is none of o9k's business", () => {
   const { tmp, pathEnv } = makeStatuslineHome();
-  saveStatuslineConfig(tmp, { hosts: { cursor: true } });
-  wireCursorStatusline({ home: tmp, marketplaceRoot: marketRoot, mode: "replace" });
-  const r = doctor({ home: tmp, pathEnv });
-  const artifact = r.artifacts.find((a) => a.kind === "statusline" && a.host === "cursor");
-  assert.equal(artifact.state, "ok");
-  assert.deepEqual(r.problems.filter((p) => !p.startsWith("skills out of sync")), []);
-  fs.rmSync(tmp, { recursive: true, force: true });
-});
-
-test("doctor: foreign statusLine command is a problem", () => {
-  const { tmp, pathEnv } = makeStatuslineHome();
-  saveStatuslineConfig(tmp, { hosts: { cursor: true } });
   fs.writeFileSync(
     path.join(tmp, ".cursor/cli-config.json"),
     JSON.stringify({ statusLine: { type: "command", command: "echo foreign" } }, null, 2)
   );
   const r = doctor({ home: tmp, pathEnv });
-  const artifact = r.artifacts.find((a) => a.kind === "statusline" && a.host === "cursor");
-  assert.equal(artifact.state, "foreign");
-  assert.ok(r.problems.some((p) => p.includes("foreign") && p.includes("cursor")));
-  fs.rmSync(tmp, { recursive: true, force: true });
-});
-
-test("doctor: enabled + host should be wired but has no statusLine command at all", () => {
-  const { tmp, pathEnv } = makeStatuslineHome();
-  saveStatuslineConfig(tmp, { hosts: { cursor: true } });
-  const r = doctor({ home: tmp, pathEnv });
-  const artifact = r.artifacts.find((a) => a.kind === "statusline" && a.host === "cursor");
-  assert.equal(artifact.state, "missing");
-  assert.ok(r.problems.some((p) => p.includes("cursor") && p.includes("should be wired")));
-  fs.rmSync(tmp, { recursive: true, force: true });
-});
-
-test("doctor: hermes statusline missing when enabled but cli.py is unpatched", () => {
-  const { tmp, pathEnv } = makeStatuslineHome();
-  fs.mkdirSync(path.join(tmp, ".hermes/hermes-agent"), { recursive: true });
-  fs.writeFileSync(path.join(tmp, ".hermes/hermes-agent/cli.py"), FIXTURE_CLI_PY);
-  saveStatuslineConfig(tmp, { hosts: { hermes: true } });
-  const r = doctor({ home: tmp, pathEnv });
-  const artifact = r.artifacts.find((a) => a.kind === "statusline" && a.host === "hermes");
-  assert.equal(artifact.state, "missing");
-  assert.ok(r.problems.some((p) => p.includes("hermes")));
-  fs.rmSync(tmp, { recursive: true, force: true });
-});
-
-test("doctor: hermes statusline clean when cli.py is patched", () => {
-  const { tmp, pathEnv } = makeStatuslineHome();
-  fs.mkdirSync(path.join(tmp, ".hermes/hermes-agent"), { recursive: true });
-  fs.writeFileSync(path.join(tmp, ".hermes/hermes-agent/cli.py"), FIXTURE_CLI_PY);
-  wireHermesStatusline({ home: tmp, marketplaceRoot: marketRoot, mode: "replace" });
-  saveStatuslineConfig(tmp, { hosts: { hermes: true } });
-  const r = doctor({ home: tmp, pathEnv });
-  const artifact = r.artifacts.find((a) => a.kind === "statusline" && a.host === "hermes");
-  assert.equal(artifact.state, "ok");
+  assert.equal(r.artifacts.some((a) => a.kind === "statusline"), false);
   assert.deepEqual(r.problems.filter((p) => !p.startsWith("skills out of sync")), []);
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
+test("doctor: legacy o9k statusLine is reported but not a problem while the script exists", () => {
+  const { tmp, pathEnv } = makeStatuslineHome();
+  writeLegacyStatusLine(path.join(tmp, ".cursor/cli-config.json"), LIVE_STATUSLINE_SCRIPT);
+  const r = doctor({ home: tmp, pathEnv });
+  const artifact = r.artifacts.find((a) => a.kind === "statusline" && a.host === "cursor");
+  assert.equal(artifact.state, "legacy");
+  assert.deepEqual(r.problems.filter((p) => !p.startsWith("skills out of sync")), []);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("doctor: legacy statusLine pointing at a moved clone is a problem", () => {
+  const { tmp, pathEnv } = makeStatuslineHome();
+  writeLegacyStatusLine(
+    path.join(tmp, ".claude/settings.json"),
+    "/gone/plugins/o9k-core/scripts/statusline/o9k-statusline.mjs"
+  );
+  const r = doctor({ home: tmp, pathEnv });
+  const artifact = r.artifacts.find((a) => a.kind === "statusline" && a.host === "claude");
+  assert.equal(artifact.state, "legacy");
+  assert.ok(r.problems.some((p) => p.includes("claude") && p.includes("missing o9k script")));
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("doctor: unpatched hermes cli.py produces no statusline noise", () => {
+  const { tmp, pathEnv } = makeStatuslineHome();
+  fs.mkdirSync(path.join(tmp, ".hermes/hermes-agent"), { recursive: true });
+  fs.writeFileSync(path.join(tmp, ".hermes/hermes-agent/cli.py"), FIXTURE_CLI_PY);
+  const r = doctor({ home: tmp, pathEnv });
+  assert.equal(r.artifacts.some((a) => a.kind === "statusline"), false);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("doctor: a leftover hermes cli.py patch is flagged for removal", () => {
+  const { tmp, pathEnv } = makeStatuslineHome();
+  fs.mkdirSync(path.join(tmp, ".hermes/hermes-agent"), { recursive: true });
+  fs.writeFileSync(path.join(tmp, ".hermes/hermes-agent/cli.py"), legacyPatchedCliPy());
+  const r = doctor({ home: tmp, pathEnv });
+  const artifact = r.artifacts.find((a) => a.kind === "statusline" && a.host === "hermes");
+  assert.equal(artifact.state, "legacy");
+  assert.ok(r.problems.some((p) => p.includes("hermes") && p.includes("older version")));
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test("unpatchCliPySource round-trips the legacy patch back to the original", () => {
+  const patched = legacyPatchedCliPy();
+  assert.notEqual(patched, FIXTURE_CLI_PY); // fixture really is patched
+  const { source, changed } = unpatchCliPySource(patched);
+  assert.equal(changed, true);
+  assert.equal(source, FIXTURE_CLI_PY);
+  // Idempotent: nothing left to remove the second time.
+  assert.equal(unpatchCliPySource(source).changed, false);
+});
+
 test("uninstall strips only o9k-owned statusLine, leaves foreign intact", () => {
   const { tmp, pathEnv } = makeStatuslineHome();
-  wireCursorStatusline({ home: tmp, marketplaceRoot: marketRoot, mode: "replace" });
+  writeLegacyStatusLine(path.join(tmp, ".cursor/cli-config.json"), LIVE_STATUSLINE_SCRIPT);
   fs.writeFileSync(
     path.join(tmp, ".claude/settings.json"),
     JSON.stringify({ statusLine: { type: "command", command: "echo foreign" } }, null, 2)
@@ -276,7 +337,7 @@ test("uninstall strips only o9k-owned statusLine, leaves foreign intact", () => 
 
 test("uninstall dry-run leaves statusLine untouched", () => {
   const { tmp, pathEnv } = makeStatuslineHome();
-  wireClaudeStatusline({ home: tmp, marketplaceRoot: marketRoot, mode: "replace" });
+  writeLegacyStatusLine(path.join(tmp, ".claude/settings.json"), LIVE_STATUSLINE_SCRIPT);
   const before = fs.readFileSync(path.join(tmp, ".claude/settings.json"), "utf8");
 
   const r = uninstall({ home: tmp, dryRun: true, pathEnv });
@@ -297,10 +358,10 @@ test("uninstall removes hermes statusline script and unpatches cli.py, keeps for
     @staticmethod
     def _status_bar_display_width(text: str) -> int:`
   );
-  fs.writeFileSync(path.join(tmp, ".hermes/hermes-agent/cli.py"), foreignFixture);
-  wireHermesStatusline({ home: tmp, marketplaceRoot: marketRoot, mode: "replace" });
+  fs.writeFileSync(path.join(tmp, ".hermes/hermes-agent/cli.py"), legacyPatchedCliPy(foreignFixture));
   const scriptPath = path.join(tmp, ".hermes/agent-hooks/hermes-o9k-statusline.sh");
-  assert.ok(fs.existsSync(scriptPath));
+  fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
+  fs.writeFileSync(scriptPath, "#!/usr/bin/env bash\n");
 
   const r = uninstall({ home: tmp, dryRun: false, pathEnv });
   assert.deepEqual(r.errors, []);
@@ -315,15 +376,13 @@ test("uninstall removes hermes statusline script and unpatches cli.py, keeps for
 
 test("uninstall mentions the .o9k-bak hint when a statusline backup exists", () => {
   const { tmp, pathEnv } = makeStatuslineHome();
-  wireCursorStatusline({ home: tmp, marketplaceRoot: marketRoot, mode: "replace" });
-  // Re-wiring over a foreign command rolls a backup (see writeFileWithBackup).
+  writeLegacyStatusLine(path.join(tmp, ".cursor/cli-config.json"), LIVE_STATUSLINE_SCRIPT);
+  // The old wiring rolled a backup when it overwrote a foreign command.
+  const bak = path.join(tmp, ".cursor/cli-config.json.o9k-bak");
   fs.writeFileSync(
-    path.join(tmp, ".cursor/cli-config.json"),
+    bak,
     JSON.stringify({ statusLine: { type: "command", command: "echo old" } }, null, 2)
   );
-  wireCursorStatusline({ home: tmp, marketplaceRoot: marketRoot, mode: "replace" });
-  const bak = path.join(tmp, ".cursor/cli-config.json.o9k-bak");
-  assert.ok(fs.existsSync(bak));
 
   const r = uninstall({ home: tmp, dryRun: false, pathEnv });
   assert.ok(r.manual.some((m) => m.includes(bak)));

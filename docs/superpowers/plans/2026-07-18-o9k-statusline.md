@@ -1,5 +1,11 @@
 # o9k Statusline Implementation Plan
 
+> **SUPERSEDED (2026-07-24).** o9k no longer wires the statusline into host
+> configs; the wiring described below was removed together with
+> `statusline/wire-*.mjs`. The renderer survives and is documented in
+> `docs/STATUSLINE.md`, which also explains why the wiring went. Kept as the
+> design record — do not implement from this document.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Opt-in o9k statusline with selectable elements (tim/device/limits/context/model/git), host translation for Claude/Cursor/Hermes (Codex/OpenCode unsupported when no API), never auto-wired outside `/o9k-init`.

@@ -1,5 +1,11 @@
 # TIM ↔ o9k Statusline Coexistence Implementation Plan
 
+> **SUPERSEDED (2026-07-24).** o9k no longer wires the statusline into host
+> configs; the wiring described below was removed together with
+> `statusline/wire-*.mjs`. The renderer survives and is documented in
+> `docs/STATUSLINE.md`, which also explains why the wiring went. Kept as the
+> design record — do not implement from this document.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Detect TIM-owned host statuslines in `/o9k-init`, migrate (remove / keep-with-warn / abort), and doctor-flag stray TIM or Hermes TIM+o9k stacks — without silently stripping TIM outside Init.

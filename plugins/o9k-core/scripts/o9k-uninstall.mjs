@@ -3,8 +3,10 @@
 //
 // Removes everything o9k wrote OUTSIDE the marketplace clone: canonical
 // skills, host skill symlinks, Cursor rules, hook wrappers, hooks.json /
-// config.yaml entries, the OpenCode plugin file, and (best-effort) the
-// opt-in statusLine wiring on Claude/Cursor/Hermes. Never touches user data
+// config.yaml entries, the OpenCode plugin file, and (best-effort) any
+// statusLine wiring left behind by o9k ≤ 0.10.x on Claude/Cursor/Hermes.
+// o9k no longer writes that wiring (see docs/STATUSLINE.md); the removal
+// path stays so existing installs can still be cleaned up. Never touches user data
 // (~/.o9k roster/usage/runs/statusline.json stay) and never removes foreign
 // content — only artifacts that are provably ours (o9k- prefix, o9k
 // markers, symlinks, isO9kStatuslineCommand).
@@ -22,8 +24,7 @@ import { pathToFileURL } from "node:url";
 import { detectHosts, readJsonSafe } from "./detect.mjs";
 import { mergeHooksJson, mergeCursorHooksJson } from "./hook-merge.mjs";
 import { stripHermesO9kHooksYaml } from "./hosts/wire-hermes.mjs";
-import { isO9kStatuslineCommand } from "./statusline/command-path.mjs";
-import { unpatchCliPySource } from "./statusline/wire-hermes.mjs";
+import { isO9kStatuslineCommand, unpatchCliPySource } from "./statusline/legacy-cleanup.mjs";
 
 function listMatching(dir, re) {
   try {
@@ -182,8 +183,9 @@ export function uninstall(options = {}) {
   // Canonical skills last — symlinks above pointed here.
   removePath(path.join(home, ".agents/skills/o9k"), ctx);
 
-  // Statusline (opt-in wiring, see o9k-init): strip only what's provably
-  // ours; a foreign statusLine command or a foreign/TIM cli.py patch stays.
+  // Statusline wiring left over from o9k ≤ 0.10.x (o9k no longer writes it —
+  // see docs/STATUSLINE.md). Strip only what's provably ours; a foreign
+  // statusLine command or a foreign/TIM cli.py patch stays.
   stripStatusLine(path.join(home, ".claude/settings.json"), { dryRun, changedFiles, errors });
   stripStatusLine(path.join(home, ".cursor/cli-config.json"), { dryRun, changedFiles, errors });
   stripHermesStatuslineCliPy(path.join(home, ".hermes/hermes-agent/cli.py"), { dryRun, changedFiles, errors });

@@ -1,5 +1,11 @@
 # TIM ↔ o9k Statusline Coexistence — Detect & Defer
 
+> **SUPERSEDED (2026-07-24).** o9k no longer wires the statusline into host
+> configs; the wiring described below was removed together with
+> `statusline/wire-*.mjs`. The renderer survives and is documented in
+> `docs/STATUSLINE.md`, which also explains why the wiring went. Kept as the
+> design record — do not implement from this document.
+
 **Date:** 2026-07-18
 **Status:** Approved (decisions locked)
 **Depends on:** `docs/superpowers/specs/2026-07-18-o9k-statusline-design.md`

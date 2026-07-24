@@ -8,10 +8,62 @@ changes, marketplace versions when a release is cut.
 
 ## [Unreleased]
 
+### Changed
+- **Statusline: renderer kept, auto-wiring removed (o9k-core@0.11.0)** — o9k
+  no longer writes `statusLine` into `~/.claude/settings.json` /
+  `~/.cursor/cli-config.json` and no longer source-patches Hermes'
+  `cli.py`. That was 828 LOC against three config formats o9k doesn't own,
+  with a regex-anchor patch that any Hermes release could break silently.
+  The renderer stays (it reads o9k's own `~/.o9k/usage.json` and degrades
+  gracefully on unknown host payloads) and is wired by hand — see the dated
+  snippet in `docs/STATUSLINE.md`. Removed: `statusline/wire-*.mjs`,
+  `wire-all.mjs`, `command-path.mjs`, `hermes-o9k-statusline.sh`.
+- **Statusline renders without a config file (o9k-core@0.11.0)** — with the
+  interview gone, nothing wrote `~/.o9k/statusline.json`, so the statusline
+  would have silently rendered nothing. `loadConfig()` misses now fall back
+  to `defaultConfig()`; an explicit `enabled: false` still silences it.
+  Pasting the command into the host config *is* the opt-in.
+- **o9k-doctor: statusline is inventory, not policy (o9k-core@0.11.0)** —
+  reports o9k-owned statusLine commands as `legacy` and only raises a problem
+  when one points at a script path that no longer exists. A missing or
+  foreign statusLine is no longer o9k's business. No longer gated on
+  `~/.o9k/statusline.json`, so a disabled config can't hide a stale entry.
+
 ### Added
-- **Opt-in o9k statusline (`scripts/statusline/`)** — selectable elements, host
-  translation for Claude/Cursor/Hermes; Codex/OpenCode reported unsupported.
-  Wired only from `/o9k-init` (default skip) — never from refresh-hosts.
+- **Evidence ledger (`docs/EVIDENCE.md`)** — what o9k has actually measured,
+  claim by claim. Includes the verified cost decomposition: the price model
+  reproduces the committed `total_cost_usd` to 0.000% on two of three runs,
+  showing cache tokens are ~85% of spend and output only ~14%.
+- **`benchmarks/bench-compare.mjs`** — refuses to compare runs whose
+  `tasks_hash`/`target_ref`/`model` differ (exit 2), decomposes cost by token
+  class, flags a saturated task set, self-checks its price model, and
+  withholds a verdict below `--repeat 3`. Covered by 15 tests, including a
+  reconciliation tripwire against the committed results.
+- **Sandbox provenance in results (`run-bench.sh --sandbox-note`)** — every
+  result JSON now carries a `sandbox` block (enabled plugins, MCP server
+  names, free-text note) plus `total_cache_read_tokens`,
+  `total_cache_creation_tokens` and `total_turns`. The committed `o9k-full`
+  result — the only combo that beat `bare` — has no such record, which makes
+  its win unattributable.
+- **Pillar-level ablation protocol (`bundle-bench` skill)** — measure
+  `o9k-core` → `+caveman` → `+scout` → `+dispatch` → `+memory` individually
+  *before* any companion work. Measuring the pillars as one blob is what hid
+  the +19% cost regression in the 2026-07-16 run.
+- **`docs/STATUSLINE.md`** — dated (2026-07-24) manual wiring snippet for
+  Claude and Cursor, why the auto-wiring was removed, and how to clean up an
+  old o9k-wired statusline.
+- **Remediation plan** — `docs/superpowers/plans/2026-07-24-kritikpunkte-behebung.md`,
+  tracking the 2026-07-24 review findings as done / needs-a-run / needs-a-decision.
+- **CI covers `benchmarks/`** — excluding `benchmarks/tasks/`, whose
+  `*.test.mjs` files are workload fixtures (t4-debug ships a deliberately
+  failing test the agent under test must fix), not repo tests.
+
+### Removed
+- **Claims that no measurement supports** — the "~50–65% fewer output tokens"
+  figure was inherited from upstream caveman and never measured in o9k; o9k's
+  own `o9k-pillars` run shows +20% output and +19% cost versus `bare` at equal
+  pass count. README and the caveman skill now state the evidence instead.
+  The four statusline design docs are kept with a SUPERSEDED banner.
 - **o9k-doctor + o9k-uninstall (o9k-core@0.10.0)** — read-only artifact
   inventory (dangling symlinks, stale baked marketplace paths) and a safe
   reverse of syncSkills/wireHosts that keeps foreign content and `~/.o9k`

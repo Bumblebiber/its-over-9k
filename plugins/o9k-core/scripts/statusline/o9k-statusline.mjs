@@ -2,7 +2,7 @@
 // o9k-statusline.mjs — host statusline command: stdin JSON → one line.
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
-import { loadConfig } from "./config.mjs";
+import { loadConfig, defaultConfig } from "./config.mjs";
 import { normalizePayload } from "./normalize.mjs";
 import { renderSegment } from "./segments/index.mjs";
 import { renderLine } from "./render.mjs";
@@ -25,9 +25,14 @@ function parseArgs(argv) {
   return { host, format };
 }
 
-export function runStatusline({ stdin, host, format }) {
-  const cfg = loadConfig();
-  if (!cfg?.enabled) {
+export function runStatusline({ stdin, host, format, config }) {
+  // No config file → defaults. Since o9k stopped wiring the statusline
+  // itself (docs/STATUSLINE.md), the opt-in IS the user pasting this command
+  // into their host config; requiring a second opt-in file on top of that
+  // just yields a silently empty status bar. An explicit `enabled: false`
+  // still wins.
+  const cfg = config ?? loadConfig() ?? defaultConfig();
+  if (!cfg.enabled) {
     return format === "hermes" ? "{}\n" : "";
   }
   let raw = null;
