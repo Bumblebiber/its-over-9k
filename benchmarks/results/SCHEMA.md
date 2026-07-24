@@ -12,10 +12,18 @@ One JSON file per run, written by `run-bench.sh`, named
   "date": "2026-07-16T12:00:00Z",
   "claude_code": "1.x.y (Claude Code)",
   "repeats": 1,                        // runs per task (--repeat N); n=1 = smoke signal
+  "sandbox": {                         // what was actually installed (see rule 3)
+    "enabled_plugins": {"o9k-core@o9k": true},   // from $SANDBOX/settings.json, may be null
+    "mcp_servers": ["hmem"],                     // server names, may be null
+    "note": "o9k-core 0.10.0; hmem-mcp 1.2"      // --sandbox-note, may be null
+  },
   "passed": 5,                         // passing rows across ALL repeats
   "total": 5,                          // rows = tasks × repeats
   "total_cost_usd": 0.42,
   "total_output_tokens": 12345,
+  "total_cache_read_tokens": 900000,   // cache tokens are ~85% of cost —
+  "total_cache_creation_tokens": 60000, // reporting output alone hides the bill
+  "total_turns": 39,                   // the variable that most drives cost
   "task_summary": [                    // per-task aggregate across repeats
     {
       "task": "t1-orient",
@@ -23,7 +31,9 @@ One JSON file per run, written by `run-bench.sh`, named
       "pass_rate": 1,
       "cost_mean": 0.06,
       "cost_min": 0.06,
-      "cost_max": 0.06
+      "cost_max": 0.06,
+      "turns_mean": 7,
+      "output_tokens_mean": 2100
     }
   ],
   "tasks": [

@@ -20,9 +20,14 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Run node test suites
         # find+xargs: Node 20 does not expand ** globs; macOS bash has no shopt globstar
+        #
+        # benchmarks/tasks/ is excluded on purpose: those .test.mjs files are
+        # workload fixtures for the benchmark (t4-debug ships a deliberately
+        # failing test the agent under test has to fix), not repo tests.
         run: |
           set -e
-          files=$(find plugins -type f -name '*.test.mjs' | sort)
+          files=$(find plugins benchmarks -type f -name '*.test.mjs' \
+            -not -path 'benchmarks/tasks/*' | sort)
           test -n "$files"
           # intentional word-split; repo test paths have no spaces
           # shellcheck disable=SC2086

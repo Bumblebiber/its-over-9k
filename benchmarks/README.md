@@ -27,6 +27,25 @@ benchmarks/run-bench.sh <combo-name> <sandbox-config-dir> [model] [--repeat N]
 One run = 5 non-interactive Claude sessions. **This costs real tokens** —
 budget roughly a normal working session per combo (× N with `--repeat`).
 
+## Comparing runs
+
+Never diff two result JSONs by eye — `total_cost_usd` hides where the money
+goes, and a delta between incomparable runs is meaningless:
+
+```bash
+node benchmarks/bench-compare.mjs <baseline.json> <candidate.json> [--json]
+```
+
+It refuses runs whose `tasks_hash`/`target_ref`/`model` differ (exit 2),
+splits cost into output vs cache-read vs cache-write, flags a saturated task
+set, and withholds a verdict below `--repeat 3`. The price model it uses is
+self-checking: if it stops explaining the reported cost within 2%, it warns
+instead of printing a confident wrong breakdown.
+
+What it currently says about o9k's own pillars is documented in
+**[docs/EVIDENCE.md](../docs/EVIDENCE.md)** — including the finding that
+output tokens are only ~14% of spend while cache tokens are ~85%.
+
 ## Sample size — read before quoting numbers
 
 A single run per combo (the default, and what the committed results in

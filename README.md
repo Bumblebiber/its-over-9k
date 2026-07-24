@@ -24,7 +24,7 @@ the pieces multiply instead of colliding.
 | Pillar | Plugin | What it does | Standing on the shoulders of |
 |--------|--------|--------------|------------------------------|
 | **Doctrine & arbitration** | `o9k-core` | The rules of engagement: who owns which hook, which style, which plan. Loaded once, always on. | Anthropic context-engineering guidance |
-| **Output compression** | `o9k-caveman` | Telegraphic output style: ~50–65% fewer output tokens, with automatic fallback to full prose for anything safety-critical. | [caveman](https://github.com/JuliusBrussee/caveman) (MIT) |
+| **Output compression** | `o9k-caveman` | Telegraphic output style, with automatic fallback to full prose for anything safety-critical. Effect on cost not yet demonstrated — see [Evidence](docs/EVIDENCE.md). | [caveman](https://github.com/JuliusBrussee/caveman) (MIT) |
 | **Context discipline** | `o9k-scout` | Load structure, not files: search before read, targeted line ranges, one canonical repo map per session. | aider repo-map, [codesight](https://github.com/Houseofmvps/codesight), [ast-grep](https://github.com/ast-grep/ast-grep) |
 | **Subagent isolation** | `o9k-dispatch` | Cost-gated fan-out: offload searches and decomposable work to isolated subagents that return results, not transcripts. Own skill (`dispatch`) with fan-out cost gate + RESULT-only contract. | [Anthropic multi-agent research](https://www.anthropic.com/engineering/multi-agent-research-system) |
 | **Memory** | `o9k-memory` | A memory MCP so sessions never start from zero — compact briefing at session start, deep recall on demand, save-before-compact. | **[hmem](https://github.com/Bumblebiber/hmem)** (available default), [TIM](https://github.com/Bumblebiber/tim) (planned) |
@@ -34,7 +34,10 @@ the pieces multiply instead of colliding.
 Each pillar is an independent plugin. Install all seven or cherry-pick — `o9k-core`
 is the only one the others assume.
 
-## Why combining multiplies
+## Why combining should multiply — the hypothesis
+
+This is the project's thesis, not a result. It is being tested, and the
+current data does **not** yet support it (see [Evidence](docs/EVIDENCE.md)):
 
 - **Less output → less context.** Everything the agent says gets fed back into
   every later turn. caveman-style output doesn't just save this turn's tokens —
@@ -45,16 +48,50 @@ is the only one the others assume.
 - **Memory → less re-reading.** A 300-token briefing from the memory backend
   replaces the 20k tokens of "let me look around the codebase" that every fresh
   session burns.
-- **Together:** the agent's *effective* context — the fraction doing useful
-  work — goes way past what any single technique achieves. It's over 9000.
 
-## Zero effort by design
+**Where the hypothesis is already wrong:** the chain above assumes output
+tokens drive the bill. They don't — output is ~14% of spend, cache tokens are
+~85%, and o9k's own doctrine injection *adds* cache writes at the most
+expensive rate. The lever that actually moved cost in the one measurement so
+far was **fewer turns**, not fewer words per turn.
 
-The human should not have to do — or know — anything. After install, a
-SessionStart hook in `o9k-core` injects the doctrine automatically every
-session: the agent compresses its output, loads only what it needs, offloads
-noisy searches, and saves state before compaction — no commands, no reading,
-no habits to learn.
+## Does it work? — the honest answer
+
+Not demonstrated yet. o9k benchmarks itself, and the run that isolates o9k's
+own pillars currently looks like this:
+
+| Combo | Passed | Cost | Output tokens |
+|---|---|---|---|
+| `bare` (no framework) | 5/5 | $1.030 | 9.784 |
+| `o9k-pillars` (o9k alone) | 5/5 | **$1.222 (+19%)** | **11.705 (+20%)** |
+| `o9k-full` (pillars + companions) | 5/5 | $1.115 (+8%) | 8.156 (−17%) |
+
+n=1 per task, Sonnet, 2026-07-16 — a smoke signal, not a measurement, and it
+could be noise. But it is the only direct evidence that exists, and it points
+away from the pitch. Every task also passed in every combo, so this suite
+measures cost only; it cannot show a quality difference at all.
+
+Full breakdown, the verified cost model, and what would settle it:
+**[docs/EVIDENCE.md](docs/EVIDENCE.md)**. Reproduce with
+`node benchmarks/bench-compare.mjs <baseline.json> <candidate.json>`.
+
+What *is* solid today is not the token math: it's the arbitration layer (one
+owner per concern, so stacked frameworks stop fighting) and the roster's
+limit-handoff (deterministic CLI×model fallback when a subscription window
+runs dry).
+
+## Zero effort in daily use
+
+Nothing to invoke *while working*. After install, a SessionStart hook in
+`o9k-core` injects the doctrine automatically every session: the agent
+compresses its output, loads only what it needs, offloads noisy searches, and
+saves state before compaction — no commands, no habits to learn.
+
+Setup is a different story, and the README used to oversell it. Realistically
+you will touch: `/o9k-init` (an interview), a companion-bundle choice, a
+`hmem init`, and — if you enable the multi-agent roster — hand-curating
+`~/.o9k/roster.json` plus systemd/launchd units. The single-CLI path is short;
+the multi-CLI path is a setup project.
 
 What automation can't do (a one-time `hmem init`, disabling legacy superpowers
 dispatch skills if still active), the agent handles conversationally:

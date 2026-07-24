@@ -57,8 +57,15 @@ Use complete, explicit prose regardless of level for:
 
 When reverting, revert only the affected passage — surrounding text stays compressed.
 
-## Why this works
+## Why this works — and how much it's worth
 
-Output tokens are the most expensive tokens: they cost more per token than input
-AND get re-fed as context on every later turn. ~60% output compression compounds
-into ~40%+ total conversation savings and later compaction.
+Output tokens are the priciest per token and get re-fed as context on every
+later turn, so compression compounds. But keep the size honest: measured on
+o9k's own benchmark, output is **~14% of the bill**; cache reads/writes are
+~85%. Even perfect 60% compression removes <9% of cost, and the re-fed output
+returns as cache reads at 2% of the output price.
+
+So compress because a short answer is a *better answer* — signal per token,
+less for the human to wade through, slower context growth. Do not expect it to
+halve the bill; it can't. The lever that actually moves cost is **finishing in
+fewer turns** (see `scout` and `dispatch`). Details: `docs/EVIDENCE.md`.
