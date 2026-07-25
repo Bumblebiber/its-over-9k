@@ -5,6 +5,8 @@ import {
   resolvePassTo,
   findRosterMatches,
   heuristicCliModel,
+  alnumKey,
+  slugifyModelId,
 } from "./pass-to.mjs";
 
 const ROSTER = {
@@ -35,6 +37,43 @@ const ROSTER = {
     },
   },
 };
+
+test("display name GPT 5.6 Sol resolves to roster slug", () => {
+  const r = resolvePassTo("GPT 5.6 Sol", ROSTER);
+  assert.equal(r.status, "ok");
+  assert.equal(r.model, "gpt-5.6-sol");
+  assert.equal(r.cli, "codex");
+  assert.equal(r.source, "exact");
+});
+
+test("hyphenated display GPT-5.6 Sol resolves", () => {
+  const r = resolvePassTo("GPT-5.6 Sol", ROSTER);
+  assert.equal(r.status, "ok");
+  assert.equal(r.model, "gpt-5.6-sol");
+});
+
+test("codex pin with display name resolves", () => {
+  const r = resolvePassTo("codex:GPT 5.6 Sol", ROSTER);
+  assert.equal(r.status, "ok");
+  assert.equal(r.model, "gpt-5.6-sol");
+  assert.equal(r.source, "exact-pin");
+});
+
+test("heuristic slugifies GPT display names for Codex", () => {
+  assert.deepEqual(heuristicCliModel("GPT 5.6 Sol"), {
+    cli: "codex",
+    model: "gpt-5.6-sol",
+  });
+  assert.deepEqual(heuristicCliModel("gpt 5.4 mini"), {
+    cli: "codex",
+    model: "gpt-5.4-mini",
+  });
+});
+
+test("alnumKey and slugifyModelId helpers", () => {
+  assert.equal(alnumKey("GPT 5.6 Sol"), alnumKey("gpt-5.6-sol"));
+  assert.equal(slugifyModelId("GPT 5.6 Sol"), "gpt-5.6-sol");
+});
 
 test("exact model key resolves", () => {
   const r = resolvePassTo("claude-opus", ROSTER);

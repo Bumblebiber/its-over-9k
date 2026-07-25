@@ -38,11 +38,14 @@ User form: `/o9k-pass-to <Modellname>` or "pass to opus / composer-2.5 / …".
 `<Modellname>` is free text. Resolution is **code** (`$ROSTER pass-to`), not
 your judgment:
 
-1. Roster first (exact model key / `cli_model` / `cli:model`, else fuzzy substring).
-2. **One** hit → use it.
+1. Roster first (exact model key / `cli_model` / `cli:model`, else fuzzy /
+   display-name match — `"GPT 5.6 Sol"` ≡ `gpt-5.6-sol`).
+2. **One** hit → use it (spawn uses the **roster slug** / `cli_model`, never a
+   spaced display name — Codex ChatGPT auth rejects `codex -m "GPT 5.6 Sol"`).
 3. **Several** hits → stop, list candidates, ask the human; re-run with exact id.
 4. **Zero** → free-string CLI heuristic (`opus`→claude, `composer*`/`grok*`→cursor,
-   `gpt*`→codex, `deepseek*`→hermes). Still unknown → ask human for `cli:model`.
+   `gpt*`→codex with **slugified** id, `deepseek*`→hermes). Still unknown → ask
+   human for `cli:model`.
 
 ## Steps (in order)
 
