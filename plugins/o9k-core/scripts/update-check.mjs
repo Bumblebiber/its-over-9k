@@ -43,11 +43,16 @@ const INTERVAL_MS =
 
 const flag = process.argv[2] || "";
 
-// npm-global CLIs we can check and safely auto-update. Key = detect.mjs field.
+// npm-global CLIs we can check and safely auto-update.
+// Key = detect.mjs companion field, except `o9k` which is the npm package
+// itself (not a registry companion — probed via npm ls -g when installed).
 const NPM_TARGETS = {
   hmem: "hmem-mcp",
+  tim: "tim-cli",
   astGrep: "@ast-grep/cli",
   ccusage: "ccusage",
+  // Unscoped `o9k` is blocked on npm (name similarity); package is its-over-9k.
+  o9k: "its-over-9k",
 };
 
 // ---------------------------------------------------------------------------
@@ -144,7 +149,13 @@ function performCheck(apply) {
 
   if (npmOk) {
     for (const [key, pkg] of Object.entries(NPM_TARGETS)) {
-      if (!comp[key]) continue;
+      // o9k: only when the global npm package is present (not a companion).
+      if (key === "o9k") {
+        const installed = npmInstalledVersion(pkg);
+        if (!installed) continue;
+      } else if (!comp[key]) {
+        continue;
+      }
       const installed = npmInstalledVersion(pkg);
       const latest = npmLatestVersion(pkg);
       const updatable = !!(installed && latest && newer(latest, installed));
@@ -201,21 +212,30 @@ function hookDirective(cache) {
         " (takes effect for the relevant tool now/next launch)."
     );
   }
-  if (updatable.length) {
+  const companionUpd = updatable.filter(([p]) => p !== "its-over-9k");
+  if (companionUpd.length) {
     lines.push(
       "o9k updates available: " +
-        updatable.map(([p, i]) => `${p} ${i.installed}→${i.latest}`).join(", ") +
+        companionUpd.map(([p, i]) => `${p} ${i.installed}→${i.latest}`).join(", ") +
         (MODE === "auto"
           ? " (not auto-applied — could not update automatically; run /o9k-update)."
           : ". Mention once and offer to apply via /o9k-update; don't nag.")
     );
   }
+  if (cache?.npm?.["its-over-9k"]?.updatable) {
+    const i = cache.npm["its-over-9k"];
+    lines.push(
+      `o9k npm (its-over-9k) ${i.installed}→${i.latest} — ` +
+        "offer `npm i -g its-over-9k@latest` via /o9k-update --apply, then " +
+        '`node "$CLAUDE_PLUGIN_ROOT/scripts/update-check.mjs" --refresh-hosts`.'
+    );
+  }
   if (cache?.o9kRepo?.behind > 0) {
     lines.push(
-      `o9k itself is ${cache.o9kRepo.behind} commit(s) behind upstream — ` +
+      `o9k marketplace clone is ${cache.o9kRepo.behind} commit(s) behind upstream — ` +
         "suggest `/plugin marketplace update o9k`, then " +
         '`node "$CLAUDE_PLUGIN_ROOT/scripts/update-check.mjs" --refresh-hosts` ' +
-        "(o9k plugins are never auto-updated)."
+        "(Claude marketplace plugins are never auto-updated)."
     );
   }
   if (cache?.skills && !cache.skills.ok) {
@@ -266,7 +286,7 @@ if (flag === "--report" || flag === "--apply") {
   console.log(`checked: ${cache.checkedAt}   mode: ${MODE}`);
   console.log("");
   if (!cache.npmAvailable) console.log("npm not found — CLI checks skipped.");
-  const rows = Object.entries(cache.npm);
+  const rows = Object.entries(cache.npm).filter(([pkg]) => pkg !== "its-over-9k");
   if (rows.length) {
     console.log("npm-global companions:");
     for (const [pkg, i] of rows) {
@@ -281,12 +301,23 @@ if (flag === "--report" || flag === "--apply") {
     console.log("no checkable npm-global companions installed.");
   }
   console.log("");
+  if (cache.npm?.["its-over-9k"]) {
+    const i = cache.npm["its-over-9k"];
+    console.log(
+      i.applied
+        ? `o9k npm (its-over-9k): updated → ${i.installed}`
+        : i.updatable
+          ? `o9k npm (its-over-9k): ${i.installed} → ${i.latest} — run: npm i -g its-over-9k@latest` +
+              `\n  then: node "$CLAUDE_PLUGIN_ROOT/scripts/update-check.mjs" --refresh-hosts`
+          : `o9k npm (its-over-9k): up to date (${i.installed}).`
+    );
+  }
   if (cache.o9kRepo) {
     console.log(
       cache.o9kRepo.behind > 0
-        ? `o9k repo: ${cache.o9kRepo.behind} commit(s) behind — run: /plugin marketplace update o9k` +
+        ? `o9k marketplace (git): ${cache.o9kRepo.behind} commit(s) behind — run: /plugin marketplace update o9k` +
             `\n  then: node "$CLAUDE_PLUGIN_ROOT/scripts/update-check.mjs" --refresh-hosts`
-        : "o9k repo: up to date."
+        : "o9k marketplace (git): up to date."
     );
   }
   if (cache.skills) {
@@ -322,15 +353,20 @@ if (flag === "--report" || flag === "--apply") {
   }
   if (flag === "--apply") {
     console.log(app.length ? `Applied ${app.length} update(s).` : "Nothing to apply.");
-    // Host refresh is opt-in: --apply only touches npm-global CLIs unless
-    // explicitly asked to also re-wire host configs (wrappers bake absolute
-    // marketplace paths; skills are copies, so a marketplace update can make
-    // them stale — but silently rewriting user config files on every
-    // --apply is a surprise). Opt in with O9K_REFRESH_HOSTS=on, or run
-    // --refresh-hosts separately.
-    if ((process.env.O9K_REFRESH_HOSTS || "off").toLowerCase() !== "off") {
+    // Host refresh: always after an o9k npm package bump (marketplace files on
+    // disk changed; wrappers bake absolute paths). Otherwise opt-in via
+    // O9K_REFRESH_HOSTS=on, or run --refresh-hosts separately.
+    const o9kApplied = app.some(([p]) => p === "its-over-9k");
+    const refreshHostsOn =
+      o9kApplied ||
+      (process.env.O9K_REFRESH_HOSTS || "off").toLowerCase() !== "off";
+    if (refreshHostsOn) {
       console.log("");
-      console.log("Refreshing multi-CLI skills + hooks…");
+      console.log(
+        o9kApplied
+          ? "its-over-9k npm updated — refreshing multi-CLI skills + hooks…"
+          : "Refreshing multi-CLI skills + hooks…"
+      );
       try {
         const out = refreshHosts({ dryRun: false });
         console.log(

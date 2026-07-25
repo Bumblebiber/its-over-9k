@@ -4,11 +4,17 @@ Versioning: the `[x.y.z]` headings below are **marketplace releases** (the
 repo as a whole). Each plugin keeps its own independent version in its
 `plugin.json`; entries that change a plugin's behavior name it as
 `plugin@version` on first mention. Plugin versions bump when the plugin
-changes, marketplace versions when a release is cut.
+changes, marketplace versions when a release is cut. The npm package
+[`its-over-9k`](https://www.npmjs.com/package/its-over-9k) (CLI bin `o9k`)
+uses the same major when cutting a
+breaking distribution change (e.g. reclaiming the name from the old hmem CLI).
 
 ## [Unreleased]
 
 ### Added
+- **o9k-init memory choice** — interview picks **TIM** (`npm i -g tim-cli`),
+  **hmem** (`npm i -g hmem-mcp`), a **custom** memory MCP, or skip. Snapshot
+  lists choices; registry/update-check track `tim-cli`.
 - **Opt-in o9k statusline (`scripts/statusline/`)** — selectable elements, host
   translation for Claude/Cursor/Hermes; Codex/OpenCode reported unsupported.
   Wired only from `/o9k-init` (default skip) — never from refresh-hosts.
@@ -36,6 +42,10 @@ changes, marketplace versions when a release is cut.
   wait-mailbox shell test on ubuntu/macos × node 20/22.
 - **Fixauftrag** — remaining review findings tracked in
   `docs/superpowers/plans/2026-07-18-gesamtreview-fixauftrag.md`.
+
+### Changed
+- **o9k-core@0.12.0 / o9k-memory@0.3.0** — TIM beta (`tim-cli`) is a first-class
+  memory backend in `/o9k-init` and docs; no longer labeled "planned".
 
 ### Fixed
 - **Stop-hook collect detached (o9k-roster@0.3.0)** — the Claude Stop hook
@@ -65,6 +75,36 @@ changes, marketplace versions when a release is cut.
   were silently dead there (backend.mjs, update-check.mjs, usage-collect.mjs).
 - **Repo hygiene** — `.tim-project` untracked + gitignored; installer's
   `head()` no longer shadows the coreutils binary (renamed `banner()`).
+
+## [2.0.0] — 2026-07-19
+
+### Breaking
+- **npm package reclaim.** [`its-over-9k@2.0.0`](https://www.npmjs.com/package/its-over-9k)
+  ships the meta-framework marketplace + `o9k` CLI (`setup` / `doctor` /
+  `update`). The old `its-over-9k@1.x` tarball was still the hmem memory CLI
+  (`bin: hmem`) — that code lives in [`hmem-mcp`](https://www.npmjs.com/package/hmem-mcp).
+  **Clean reinstall from 1.x:**
+  `npm uninstall -g its-over-9k && npm i -g hmem-mcp && hmem init && npm i -g its-over-9k@latest && o9k setup`.
+  (Unscoped name `o9k` is blocked on npm for similarity.)
+
+### Added
+- **Root `package.json` + `bin/o9k.mjs`** — `npm i -g its-over-9k && o9k setup`
+  wires multi-CLI skills/hooks from the npm install path.
+- **`@bumblebiber/o9k` stub** — prepared under `packages/bumblebiber-o9k-stub/`
+  (depends on `its-over-9k`). npm accepted publishes but the scoped name is not
+  yet publicly resolvable on the registry; use `its-over-9k` until that clears.
+- **Dual update channels (o9k-core@0.11.0)** — `/o9k-update` reports npm
+  global `its-over-9k` and the git marketplace clone separately; `--apply`
+  updates the npm package and auto-runs `--refresh-hosts` after an
+  `its-over-9k` bump. Claude marketplace plugins stay notify-only.
+
+## [2.0.1] — 2026-07-19
+
+### Fixed
+- **1.x → 2.x clean-reinstall hint** — README, `o9k help` / `o9k setup`, and
+  the npm deprecation message now spell out uninstall → `hmem-mcp` →
+  `its-over-9k@latest` → `o9k setup` (in-place `npm i -g its-over-9k@2`
+  alone left stale `hmem` bins ambiguous).
 
 ## [0.11.0] — 2026-07-17
 

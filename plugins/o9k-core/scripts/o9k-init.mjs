@@ -51,8 +51,18 @@ for (const p of PILLARS) console.log(`  ${p.padEnd(14)} ${mark(pillars[p])}`);
 console.log("");
 console.log("Essentials:");
 console.log(`  git                                  ${mark(comp.git)}`);
-const backend = comp.tim ? "TIM" : comp.hmem ? "hmem" : "NONE";
+const backend =
+  comp.tim && comp.hmem
+    ? "TIM+hmem (pick one — hooks prefer TIM)"
+    : comp.tim
+      ? "TIM"
+      : comp.hmem
+        ? "hmem"
+        : "NONE";
 console.log(`  memory backend                       ${backend}`);
+console.log(
+  "  memory choices                       TIM (npm tim-cli) | hmem (npm hmem-mcp) | custom MCP",
+);
 
 const hosts = detectHosts({ home: os.homedir() });
 console.log("");
@@ -77,7 +87,11 @@ for (const [id, f] of Object.entries(REG.frameworks)) {
 console.log("");
 console.log("Bundle deltas (missing pieces only):");
 for (const [name, members] of Object.entries(REG.bundles)) {
-  const missing = members.filter((m) => !comp[m]);
+  // TIM fills the memory slot — don't list hmem as missing when TIM is present.
+  const missing = members.filter((m) => {
+    if (m === "hmem" && comp.tim) return false;
+    return !comp[m];
+  });
   console.log(
     `  ${name.padEnd(12)} ${missing.length ? "needs: " + missing.join(", ") : "complete"}`
   );

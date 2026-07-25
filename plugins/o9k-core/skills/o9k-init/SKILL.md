@@ -81,12 +81,30 @@ Ask, don't lecture. One question at a time, options not essays. In order:
    *delta* from the snapshot ("recommended adds: Context7, beads, Serena —
    you already have hmem and superpowers"). Recommend `recommended` unless
    the machine/repo is clearly tiny (→ minimal) or huge/polyglot (→ max).
-2. **Setup mode** —
+   Bundles still list `hmem` as the memory *slot* — Step 2 memory choice
+   overrides that (TIM / custom → drop `hmem` from the companion install).
+2. **Memory backend** — ask whenever snapshot is `NONE`, both TIM+hmem, or
+   the user is reconfiguring. If exactly one backend is already present and
+   they are not reconfiguring, confirm **keep (default)** vs switch.
+   Options (one pick):
+   - **A. TIM** — npm package `tim-cli` (bin `tim`). Multi-host MCP wiring
+     (`tim setup-agent`). Recommend on a fresh machine (hooks prefer TIM).
+   - **B. hmem** — npm package `hmem-mcp` (bin `hmem`). Stable public
+     default; recommend when TIM is unwanted or already excluded.
+   - **C. Own memory MCP** — user names the server + how to start it; you
+     wire host MCP configs only. `o9k-memory` SessionStart/PreCompact hooks
+     only auto-drive TIM and hmem — for custom, say sessions start without
+     the o9k briefing unless their MCP owns that lifecycle, and set
+     `O9K_MEMORY_HOOK=off` if their hooks already cover it.
+   - **D. Skip** — no memory install; note the gap in the final report.
+   If both TIM and hmem are detected: treat as exclusive-memory conflict
+   (Step 3) — pick one winner, offer uninstall+migrate for the other.
+3. **Setup mode** —
    - **Agent-run (recommend this):** you execute everything non-interactively
      and report at the end. Uses the non-interactive flags below.
    - **User-run:** you print the commands (interactive variants, e.g. plain
-     `hmem init`) and the user drives.
-3. **Statusline (opt-in, default Skip)** — never install without an explicit
+     `hmem init` / `tim init`) and the user drives.
+4. **Statusline (opt-in, default Skip)** — never install without an explicit
    Yes.
    - Ask: *"Set up the o9k statusline?"* Options: **Skip (default)** / Yes.
    - If **Skip**: do not write `~/.o9k/statusline.json`, do not call
@@ -114,9 +132,9 @@ Ask, don't lecture. One question at a time, options not essays. In order:
    - **Hard rule:** `--refresh-hosts`, SessionStart hooks, and plugin enable
      **must never** wire statusline — only this interview path may call
      `wire-all.mjs`.
-4. **Conflicts** — only if Step 1 found rivals; see Step 3.
-5. **Unknowns** — only if Step 1 printed `Unknown installed`; see Step 2b.
-6. **git** — only if missing; see below.
+5. **Conflicts** — only if Step 1 found rivals; see Step 3.
+6. **Unknowns** — only if Step 1 printed `Unknown installed`; see Step 2b.
+7. **git** — only if missing; see below.
 
 ### Step 2b — unknowns: ask, then evaluate (never silent)
 
@@ -161,6 +179,11 @@ Unknowns are **not** auto-rivals. Classification happens only after Go.
    then tell the user to curate `~/.o9k/roster.json` (models, chains) — the
    scaffold is example data. On no, skip; the limit-watch hook stays silent
    without config.
+
+   **After roster exists:** every external CLI worker spawn must complete the
+   mailbox protocol (`runs create` → `dispatch --run-id` → cheap `runs wait`
+   watcher). Say this once in the final report when roster was enabled — see
+   `dispatch` path B and `docs/MULTI-AGENT.md`.
 
 ### Multi-CLI hosts (do not install CLIs)
 
@@ -220,8 +243,8 @@ anything:
    inside the project for repo-local rivals (task-master, spec-kit, BMAD).
    The backup stays even after a successful migration.
 2. **Import what has a home** — follow `NOTES.md`, your judgment on the rest:
-   - memory rivals → hmem: distill `exchange.json` entries into hmem via the
-     memory MCP. Migrate insights, not chat logs.
+   - memory rivals → chosen backend (TIM or hmem): distill `exchange.json`
+     entries via the memory MCP. Migrate insights, not chat logs.
    - task-master → beads: recreate the *open* items from `exchange.json`
      with `bd create`, then wire the dependencies. Done/stale items stay in
      the export only.
@@ -238,20 +261,28 @@ anything:
 Order: git (if agreed) → **memory** → **skills** → **hooks** → **Claude
 pillars** (when Claude present) → **companion bundle** → Step 4 uninstalls.
 
-### 1) Memory (prefer detected backend)
+### 1) Memory (from Step 2 choice — never auto-pick past the interview)
 
-**TIM detected** (snapshot shows `memory backend TIM`):
+Drop `hmem` from the companion-bundle install list when the choice is TIM,
+custom, or skip.
+
+**A. TIM** (npm `tim-cli`, bin `tim`):
 
 ```bash
-# Per present host — TIM owns multi-host MCP wiring when available
-tim setup-agent --host claude    # repeat for codex, cursor, opencode, hermes as present
-# Or `tim init` when it already covers all present hosts in one pass
+npm i -g tim-cli    # agent-run only; skip if `tim` already on PATH
+tim init            # when it covers present hosts in one pass
+# else per present host (TIM hosts today):
+tim setup-agent --host claude    # also: codex, cursor, hermes
 ```
 
-**Else hmem** (default public backend):
+OpenCode: TIM `setup-agent` has no `opencode` host yet — note MCP wiring as
+manual in the final report (or skip). User-run: plain `tim init` /
+interactive `tim setup-agent`.
+
+**B. hmem** (npm `hmem-mcp`, bin `hmem`):
 
 ```bash
-npm i -g hmem-mcp   # agent-run only; user-run: skip if already installed
+npm i -g hmem-mcp   # agent-run only; skip if already installed
 hmem init --global --tools <mapped-list>
 ```
 
@@ -265,10 +296,20 @@ Map present hosts to hmem `--tools` ids:
 | Codex | — | **skip in hmem** until upstream supports it |
 | Hermes | — | **skip in hmem** until upstream supports it |
 
-For Codex/Hermes when TIM is absent: note in the final report that MCP wiring
-is manual for now (or rely on `tim setup-agent` once TIM is installed).
+For Codex/Hermes on hmem-only: note MCP wiring as manual (or switch to TIM).
 
 User-run mode: plain `hmem init` (interactive) instead of `--global`.
+
+**C. Own memory MCP:**
+
+Wire the user's server into each **present** host's MCP config (Claude:
+`claude mcp add …`; Cursor/Codex/OpenCode/Hermes: host-native MCP files —
+same paths `host-wire` / TIM docs use). Do **not** install `tim-cli` or
+`hmem-mcp` unless asked. Record server name + start command in the final
+report. If their MCP owns SessionStart/compact itself → set
+`O9K_MEMORY_HOOK=off`; otherwise warn that o9k-memory hooks will not brief.
+
+**D. Skip:** leave backend unset; final report lists the gap.
 
 ### 2) Skills sync
 

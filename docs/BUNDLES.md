@@ -35,7 +35,7 @@ The three highest-payoff, lowest-risk companions. Good on any project.
 
 | Tool | Concern | Why it's safe |
 |------|---------|---------------|
-| [hmem](https://github.com/Bumblebiber/hmem) | Memory MCP | The available default backend (TIM is planned). One memory owner. |
+| [hmem](https://github.com/Bumblebiber/hmem) / [TIM](https://github.com/Bumblebiber/tim) | Memory MCP | Bundle slot defaults to hmem; `/o9k-init` can install TIM (`tim-cli`) or a custom MCP instead. One memory owner. |
 | [Context7](https://github.com/upstash/context7) | Live docs | Orthogonal — o9k has no docs pillar. |
 | [Ponytail](https://github.com/DietrichGebert/ponytail) | Code minimalism | New axis — trims the *diff*; caveman trims the *prose*. They stack. |
 

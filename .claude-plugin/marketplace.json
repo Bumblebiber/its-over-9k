@@ -26,7 +26,7 @@
     {
       "name": "o9k-memory",
       "source": "./plugins/o9k-memory",
-      "description": "Persistent memory integration: session-start briefing, on-demand recall, save-before-compact. Uses the hmem memory MCP by default; auto-detects and prefers TIM once it ships."
+      "description": "Persistent memory integration: session-start briefing, on-demand recall, save-before-compact. Prefers TIM (npm tim-cli) when present; falls back to hmem (npm hmem-mcp)."
     },
     {
       "name": "o9k-recon",

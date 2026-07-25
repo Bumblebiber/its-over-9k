@@ -48,7 +48,7 @@ if (conflicts.length) {
 
 const gaps = [];
 if (backend === "NONE")
-  gaps.push("no memory backend — sessions start from zero. Fix: npm i -g hmem-mcp && hmem init");
+  gaps.push("no memory backend — sessions start from zero. Fix: /o9k-init (TIM via npm i -g tim-cli, hmem via npm i -g hmem-mcp, or custom MCP)");
 for (const p of PILLARS) {
   if (pillars[p] === false) gaps.push(`pillar ${p} not installed — /plugin install ${p}@o9k`);
 }

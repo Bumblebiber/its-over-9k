@@ -9,9 +9,8 @@ Run the bundled analyzer against the current project:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/scripts/o9k-stats.mjs"
+# different project dir: pass path as first argument
 ```
-
-(Optionally pass a different project directory as the first argument.)
 
 Present the output compactly (caveman rules apply). Interpretation guide:
 

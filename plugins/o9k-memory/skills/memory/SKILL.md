@@ -1,19 +1,26 @@
 ---
 name: memory
-description: "Memory-MCP integration for o9k. Use at session start (load the project briefing), when the user references past work ('the bug we had', 'where did we leave off'), before compaction or /clear (flush state), and when deciding what deserves persisting. Works with hmem (available default) or TIM (planned)."
+description: "Memory-MCP integration for o9k. Use at session start (load the project briefing), when the user references past work ('the bug we had', 'where did we leave off'), before compaction or /clear (flush state), and when deciding what deserves persisting. Works with TIM (npm tim-cli) or hmem (npm hmem-mcp); hooks pick TIM when both are present."
 ---
 
 # memory — Sessions Never Start From Zero
 
 A memory MCP turns the most expensive part of every session — re-establishing
-context — into one cheap call. o9k's available default is **hmem**
-(https://github.com/Bumblebiber/hmem): stable, battle-tested, MCP-native. **TIM**
-(Theoretically Infinite Memory, https://github.com/Bumblebiber/tim) is *planned*
-and not yet published; once it ships the SessionStart hook auto-detects and
-prefers it. Both follow the same token discipline below.
+context — into one cheap call. Supported backends:
 
-No memory MCP configured? Point the user at `npm i -g hmem-mcp && hmem init`
-once, then continue without memory features.
+- **TIM** (Theoretically Infinite Memory, https://github.com/Bumblebiber/tim) —
+  npm `tim-cli` (bin `tim`). Hooks use TIM when both backends exist;
+  SessionStart uses `tim resolve-project`.
+- **hmem** (https://github.com/Bumblebiber/hmem) — npm `hmem-mcp` (bin `hmem`).
+  Stable alternative. Hooks fall back to hmem when TIM is absent.
+
+Both follow the same token discipline below. Choose (or switch) via
+`/o9k-init`. Custom MCPs can be wired manually; o9k-memory hooks only
+auto-drive TIM and hmem.
+
+No memory MCP configured? Point the user at `/o9k-init` (or
+`npm i -g tim-cli && tim init` / `npm i -g hmem-mcp && hmem init`), then
+continue without memory features.
 
 ## Session start — briefing, not history
 

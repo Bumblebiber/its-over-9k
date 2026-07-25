@@ -1,6 +1,6 @@
 ---
 name: o9k-guide
-description: "Personalized o9k orientation for the human. Use when the user invokes /o9k-guide, asks how o9k works or what they need to do, right after first-time setup, or when the SessionStart hook flags an unresolved arbitration. Explains what runs automatically, the few one-time actions left, and the optional commands."
+description: "Personalized o9k orientation for the human. Use when the user invokes /o9k-guide, asks how o9k works or what they need to do, right after first-time setup, or when the SessionStart hook flags an unresolved arbitration. Explains what runs automatically, the few one-time actions left, and on-demand commands (/o9k-init, /o9k-stats, /o9k-update). Agent-only: if ~/.o9k/roster.json exists, external CLI spawns still require dispatch path B — this guide does not exempt that."
 ---
 
 # o9k-guide — The One-Minute Orientation
@@ -34,25 +34,27 @@ already done:
 
 | Gap in report | Tell the user |
 |---------------|---------------|
-| No memory backend | Run `npm i -g hmem-mcp && hmem init` once — without it, sessions start from zero. |
+| No memory backend | `/o9k-init` picks TIM (`npm i -g tim-cli && tim init`), hmem (`npm i -g hmem-mcp && hmem init`), or a custom MCP — without one, sessions start from zero. |
 | Missing pillar(s) | `/plugin install <name>@o9k` for each. |
 | Stock superpowers `dispatching-parallel-agents` still enabled | `o9k-dispatch` owns dispatch by default — offer to disable the superpowers dispatch skill. |
-| Two memory backends | Say which one wins (TIM) and offer to remove the other. |
+| Two memory backends | Say which one wins (TIM preferred by hooks) and offer to remove the other. |
 | Wants the companion stack | `install/o9k-companions.sh recommended` (dry run first — the companion-bundles skill handles it). |
 
 Whenever a fix is something you can execute (an install command, a config
 edit), **offer to do it right now** — the user should never have to copy-paste.
 
-**3. "Optional, when curious" (max 5 lines).**
+**3. "On demand" (max 5 lines — human-facing; agents still obey pillar rules).**
 - `/o9k-init` — guided setup/reconfiguration: companions, git, conflict
   resolution with migration. The fix-everything path when gaps pile up.
 - `/o9k-stats` — proof the savings are real, measured from session logs.
 - `/o9k-update` — check pillars & companions for updates, apply the safe ones.
 - `/o9k-guide` — this orientation, any time.
 - `framework-scout` skill — scouts GitHub for new companion frameworks.
-- Multi-agent roster (only if they opted in at `/o9k-init` and have
-  `~/.o9k/roster.json`): cross-CLI workers via mailbox runs — see
-  `docs/MULTI-AGENT.md`. Single-agent users can ignore this entirely.
+- Multi-agent roster (only when `~/.o9k/roster.json` exists): cross-CLI workers
+  via mailbox runs — see `docs/MULTI-AGENT.md`. Tell the human they can ignore
+  this if they never enabled roster; **if the file exists, you must use
+  `dispatch` path B for every external CLI spawn** (runs create + --run-id +
+  watcher) — not optional for agents.
 - Settings, only if asked: `O9K_UPDATE_CHECK=off|notify|auto` (update policy),
   kill switches `O9K_CORE_HOOK=off`, `O9K_MEMORY_HOOK=off`.
 

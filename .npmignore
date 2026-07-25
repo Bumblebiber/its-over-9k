@@ -1,0 +1,11 @@
+*.test.mjs
+*.test.sh
+.worktrees/
+benchmarks/
+docs/
+.superpowers/
+.github/
+.git/
+.claude/
+.tim-project
+**/.DS_Store

@@ -27,7 +27,7 @@ the pieces multiply instead of colliding.
 | **Output compression** | `o9k-caveman` | Telegraphic output style: ~50–65% fewer output tokens, with automatic fallback to full prose for anything safety-critical. | [caveman](https://github.com/JuliusBrussee/caveman) (MIT) |
 | **Context discipline** | `o9k-scout` | Load structure, not files: search before read, targeted line ranges, one canonical repo map per session. | aider repo-map, [codesight](https://github.com/Houseofmvps/codesight), [ast-grep](https://github.com/ast-grep/ast-grep) |
 | **Subagent isolation** | `o9k-dispatch` | Cost-gated fan-out: offload searches and decomposable work to isolated subagents that return results, not transcripts. Own skill (`dispatch`) with fan-out cost gate + RESULT-only contract. | [Anthropic multi-agent research](https://www.anthropic.com/engineering/multi-agent-research-system) |
-| **Memory** | `o9k-memory` | A memory MCP so sessions never start from zero — compact briefing at session start, deep recall on demand, save-before-compact. | **[hmem](https://github.com/Bumblebiber/hmem)** (available default), [TIM](https://github.com/Bumblebiber/tim) (planned) |
+| **Memory** | `o9k-memory` | A memory MCP so sessions never start from zero — compact briefing at session start, deep recall on demand, save-before-compact. | **[TIM](https://github.com/Bumblebiber/tim)** (npm `tim-cli`, preferred), **[hmem](https://github.com/Bumblebiber/hmem)** (npm `hmem-mcp`), or your own MCP via `/o9k-init` |
 | **Discovery** | `o9k-recon` | Find and classify companion frameworks; one-command companion bundle installs. | — |
 | **Multi-agent roster** | `o9k-roster` | Role→CLI×model fallback chains, subscription usage collector (multi-window `~/.o9k/usage.json`), adaptive watcher, limit-watch + handoff, optional OpenRouter/AA score refresh, cross-CLI mailbox runs. See [docs/MULTI-AGENT.md](docs/MULTI-AGENT.md). | — |
 
@@ -82,7 +82,24 @@ host OS can't honor.
 
 ## Install
 
-o9k is a [Claude Code plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces):
+**Fast path (npm — Cursor, Codex, OpenCode, Hermes, and a global CLI):**
+
+```bash
+npm i -g its-over-9k && o9k setup
+```
+
+`o9k setup` wires shared skills and session hooks for every detected host.
+Then optionally install a memory backend (or pick one in `/o9k-init`):
+
+```bash
+npm install -g tim-cli && tim init          # preferred
+# or: npm install -g hmem-mcp && hmem init
+```
+
+(Scoped alias `@bumblebiber/o9k` is prepared in-repo; install via `its-over-9k`
+until the scoped name is publicly resolvable on the registry.)
+
+**Claude Code (in-session marketplace):**
 
 ```
 /plugin marketplace add Bumblebiber/its-over-9k
@@ -99,20 +116,31 @@ Then run **`/o9k-init`** in a session — it detects your setup, walks you
 through the companion bundle choice, and handles conflicts and migration.
 
 **Works with Claude Code, Codex, Cursor, OpenCode, and Hermes** on the same
-machine: `/o9k-init` syncs shared o9k skills and wires session hooks on every
-detected host (it never installs missing CLI binaries — see the
+machine: `/o9k-init` (or `o9k setup`) syncs shared o9k skills and wires session
+hooks on every detected host (it never installs missing CLI binaries — see the
 [`o9k-init` skill](plugins/o9k-core/skills/o9k-init/SKILL.md)).
 
-Or set up the memory backend by hand. **hmem is the available default** today:
+**TIM** ([npm `tim-cli`](https://www.npmjs.com/package/tim-cli)) and **hmem**
+([npm `hmem-mcp`](https://www.npmjs.com/package/hmem-mcp)) are both supported
+memory backends. `/o9k-init` asks which to install (or wire a custom MCP).
+`o9k-memory` auto-detects and prefers TIM when `tim` is on PATH (or `TIM_CLI`
+is set); otherwise it uses hmem. Track TIM at
+[Bumblebiber/tim](https://github.com/Bumblebiber/tim).
+
+### Migrating from `its-over-9k@1.x` (clean reinstall)
+
+`1.x` was the **old hmem CLI** (`bin: hmem` / `hmem-curate`), not this
+meta-framework. Do a clean swap — do not leave the old global install in place:
 
 ```bash
-npm install -g hmem-mcp && hmem init
+npm uninstall -g its-over-9k
+npm install -g hmem-mcp && hmem init          # memory backend (replaces 1.x)
+npm install -g its-over-9k@latest && o9k setup
 ```
 
-**TIM** is a planned backend — not yet published. Once it ships, `o9k-memory`
-will auto-detect it (`tim resolve-project`) and prefer it; until then the hook
-falls back to hmem automatically, so nothing to change. Track it at
-[Bumblebiber/tim](https://github.com/Bumblebiber/tim).
+After that, `which o9k` should point at the new CLI and `which hmem` at
+`hmem-mcp`. If either still points at a stale path, clear your shell hash
+(`hash -r`) or open a new terminal.
 
 ### One command for the companions
 
@@ -221,9 +249,11 @@ hosts above.
   are updatable, instantly from a cache; the actual version check runs detached
   in the background (once per `O9K_UPDATE_INTERVAL_HOURS`, default 24h), so it
   never slows session start. `O9K_UPDATE_CHECK=notify` (default) reports;
-  `auto` also applies the safe npm-global updates; `off` disables. Plugins and
-  the marketplace are always notify-only — never clobbered. `/o9k-update
-  --refresh-hosts` re-syncs multi-CLI skills/hooks after marketplace updates.
+  `auto` also applies the safe npm-global updates (companions + `its-over-9k`
+  when installed via npm); `off` disables. Claude marketplace plugins
+  stay notify-only — never clobbered. After `/plugin marketplace update o9k`
+  or `npm i -g its-over-9k@latest`, run `/o9k-update --refresh-hosts` (npm
+  `--apply` already refreshes hosts when `its-over-9k` itself was updated).
 - **SessionStart (o9k-memory)** — detects the memory backend (TIM via
   `tim resolve-project`, else hmem) and injects a compact loading *directive*
   (never memory content). Stays silent if the backend's own hooks are already
@@ -263,8 +293,8 @@ Jesse Vincent (MIT), [beads](https://github.com/steveyegge/beads) by Steve Yegge
 (MIT), [aider's repo-map](https://aider.chat/docs/repomap.html),
 [LLMLingua](https://github.com/microsoft/LLMLingua), and Anthropic's
 [multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system)
-write-up. Memory by [hmem](https://github.com/Bumblebiber/hmem) (with
-[TIM](https://github.com/Bumblebiber/tim) planned). Compatibility research also
+write-up. Memory by [TIM](https://github.com/Bumblebiber/tim) (npm `tim-cli`)
+and [hmem](https://github.com/Bumblebiber/hmem) (npm `hmem-mcp`). Compatibility research also
 covers [Context7](https://github.com/upstash/context7),
 [ccusage](https://github.com/ryoppippi/ccusage),
 [claude-mem](https://github.com/thedotmack/claude-mem),

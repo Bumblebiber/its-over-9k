@@ -1,0 +1,47 @@
+{
+  "name": "its-over-9k",
+  "version": "2.0.1",
+  "description": "its-over-9k (o9k) — token-efficiency meta-framework for Claude Code, Cursor, Codex, OpenCode, and Hermes.",
+  "type": "module",
+  "bin": {
+    "o9k": "bin/o9k.mjs"
+  },
+  "files": [
+    ".claude-plugin",
+    "plugins",
+    "install",
+    "bin",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "!**/*.test.mjs",
+    "!**/*.test.sh"
+  ],
+  "scripts": {
+    "o9k": "node bin/o9k.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "o9k",
+    "its-over-9k",
+    "token-efficiency",
+    "claude-code",
+    "cursor",
+    "codex",
+    "opencode",
+    "hermes",
+    "ai-agents"
+  ],
+  "author": "Bumblebiber",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bumblebiber/its-over-9k.git"
+  },
+  "homepage": "https://github.com/Bumblebiber/its-over-9k#readme",
+  "bugs": {
+    "url": "https://github.com/Bumblebiber/its-over-9k/issues"
+  }
+}

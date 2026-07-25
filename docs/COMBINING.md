@@ -37,7 +37,7 @@ state · workflow methodology · subagent dispatch · memory backend.
 | Layer | Tool | Notes |
 |-------|------|-------|
 | Efficiency doctrine | **o9k** (this repo) | The five pillars |
-| Memory MCP | **[hmem](https://github.com/Bumblebiber/hmem)** | Available default. **[TIM](https://github.com/Bumblebiber/tim)** is planned (unreleased) — never run both. |
+| Memory MCP | **[TIM](https://github.com/Bumblebiber/tim)** (npm `tim-cli`) or **[hmem](https://github.com/Bumblebiber/hmem)** (npm `hmem-mcp`) | Pick one in `/o9k-init` — never run both. Custom MCP allowed; o9k hooks only auto-drive TIM/hmem. |
 | Live docs | **[Context7](https://github.com/upstash/context7)** | Orthogonal, near-zero risk, high payoff |
 | Workflow methodology | **[superpowers](https://github.com/obra/superpowers)** | Optional, excellent |
 | Task/plan store | **[beads](https://github.com/steveyegge/beads)** | Optional, shines with multiple agents |
@@ -46,10 +46,9 @@ state · workflow methodology · subagent dispatch · memory backend.
 Install the whole stack in one shot with `o9k-recon`'s bundle installer — see
 [BUNDLES.md](BUNDLES.md).
 
-> **Note on TIM.** TIM is not yet published. The `o9k-memory` SessionStart hook
-> probes for it (`tim resolve-project`) and silently falls back to hmem when it's
-> absent, so hmem is what actually runs today. When TIM ships, no config change
-> is needed — the hook will detect and prefer it.
+> **Note on TIM.** npm package [`tim-cli`](https://www.npmjs.com/package/tim-cli)
+> (bin `tim`). `/o9k-init` can install TIM or hmem (or wire a custom MCP).
+> `o9k-memory` prefers TIM when present, else hmem. Never run both.
 
 ## Compatibility matrix
 

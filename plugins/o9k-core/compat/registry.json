@@ -53,9 +53,10 @@
     },
     "tim": {
       "kind": "companion",
-      "label": "TIM (memory MCP, planned)",
+      "label": "TIM (memory MCP, beta)",
       "concerns": ["memory"],
-      "detect": { "path": ["tim"], "env": ["TIM_CLI"] }
+      "detect": { "path": ["tim"], "env": ["TIM_CLI"] },
+      "install": "npm install -g tim-cli && tim init"
     },
     "context7": {
       "kind": "companion",
