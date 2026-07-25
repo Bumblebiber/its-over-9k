@@ -16,7 +16,7 @@
     "structural-search": { "exclusive": false, "desc": "AST-level queries (feeds overview, builds none)" },
     "discovery": { "exclusive": false, "desc": "scouting new companion frameworks" },
     "vcs": { "exclusive": false, "desc": "version control" },
-    "roster": { "exclusive": false, "desc": "role-based model selection + limit-aware dispatch" }
+    "roster": { "exclusive": false, "desc": "role-based model selection + limit-aware dispatch (runtime owned by standalone team-up; o9k-roster is adapter)" }
   },
 
   "bundles": {

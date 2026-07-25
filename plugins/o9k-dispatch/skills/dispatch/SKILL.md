@@ -3,6 +3,8 @@ name: dispatch
 description: "Cost-gated subagent dispatch for context isolation. Use for broad searches, lookups, log analysis, doc digestion, independent subtasks, OR whenever you spawn an external CLI worker via o9k-roster (planner/implementer/reviewer in tmux, cursor-agent/claude/codex/hermes). Path A = in-host RESULT subagents. Path B = mailbox run + roster dispatch --run-id + cheap in-host watcher (runs wait) — REQUIRED for every external CLI tmux spawn when ~/.o9k/roster.json exists; bare roster dispatch without a watcher is an incomplete spawn (parent never gets notified)."
 ---
 
+> **Note:** Cross-CLI mailbox runtime is owned by standalone \`team-up\` (o9k-roster plugin is a thin adapter). Path-B contract unchanged: create → dispatch \`--run-id\` → \`runs wait\`.
+
 # dispatch — Subagent Isolation
 
 A subagent's context dies with it; only its conclusion survives. Use that:

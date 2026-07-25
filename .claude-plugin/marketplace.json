@@ -1,7 +1,9 @@
 {
   "name": "o9k",
-  "owner": { "name": "Bumblebiber" },
-  "description": "its-over-9k — meta-framework combining token-efficiency frameworks (output compression, context discipline, subagent isolation, memory MCP, multi-agent roster) for Claude Code, Cursor, Codex, OpenCode, and Hermes.",
+  "owner": {
+    "name": "Bumblebiber"
+  },
+  "description": "its-over-9k \u2014 meta-framework combining token-efficiency frameworks (output compression, context discipline, subagent isolation, memory MCP, multi-agent roster) for Claude Code, Cursor, Codex, OpenCode, and Hermes.",
   "plugins": [
     {
       "name": "o9k-core",
@@ -36,7 +38,7 @@
     {
       "name": "o9k-roster",
       "source": "./plugins/o9k-roster",
-      "description": "Multi-agent model roster: role-based selection with fallback chains, usage-limit awareness, tmux dispatch, and limit-triggered handoff. Model choice is deterministic code, never LLM reasoning."
+      "description": "Compatibility adapter for standalone team-up roster/specialist runtime"
     }
   ]
 }
