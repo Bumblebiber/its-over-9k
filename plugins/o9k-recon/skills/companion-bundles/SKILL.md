@@ -1,14 +1,13 @@
 ---
 name: companion-bundles
-description: "Install a conflict-free stack of third-party o9k companion frameworks in one command. Use when the user asks to set up companions, install the recommended stack, or add memory/docs/methodology/symbol tools alongside o9k. Wraps install/o9k-companions.sh and enforces the one-owner-per-concern rule."
+description: "Install a conflict-free stack of third-party o9k companion frameworks in one command. MUST use when the user asks to set up companions, install the recommended stack, add memory/docs/methodology/symbol tools alongside o9k, or extend an existing bundle — never hand-install MCP servers without checking arbitration first. Wraps install/o9k-companions.sh and enforces the one-owner-per-concern rule from using-o9k."
 ---
 
 # companion-bundles — one-command companion install
 
-> **Guided flow available:** `/o9k-init` (o9k-core) wraps this skill in a full
-> interview — detection, bundle choice as a delta, conflict resolution with
-> migration, git setup. Prefer it for first installs; use this skill directly
-> when the user already knows which bundle they want.
+> **First install or unknown delta:** `/o9k-init` (o9k-core) — mandatory
+> interview (detection, bundle choice, conflict migration, git). **Known bundle
+> name** (`minimal` / `recommended` / `max`) → this skill directly.
 
 o9k's pillars are Claude Code plugins. The *companions* (memory backend, live
 docs, methodology, task graph, symbols) live in other ecosystems — npm, uvx,
@@ -16,7 +15,8 @@ MCP, other plugin marketplaces. This skill installs a **curated, internally
 conflict-free** subset in one shot via `install/o9k-companions.sh`.
 
 Each bundle is guaranteed conflict-free: **no two tools in it claim the same o9k
-concern** (see [docs/COMBINING.md](../../../../docs/COMBINING.md)).
+concern** (see [docs/COMBINING.md](../../../../docs/COMBINING.md) and
+[using-o9k arbitration](../../o9k-core/skills/using-o9k/SKILL.md)).
 
 ## Bundles
 
@@ -28,8 +28,8 @@ concern** (see [docs/COMBINING.md](../../../../docs/COMBINING.md)).
 
 ## How to run
 
-1. Always **dry-run first** — it prints the plan and prerequisite check, executes
-   nothing:
+1. **Dry-run first — mandatory.** Prints the plan and prerequisite check;
+   executes nothing:
    ```bash
    install/o9k-companions.sh recommended
    ```
@@ -46,14 +46,22 @@ concern** (see [docs/COMBINING.md](../../../../docs/COMBINING.md)).
    npm/go/brew package to script against) stays with the user — point at
    the upstream repo, don't guess an install command.
 
-## Companion notes (`recommended` / `max`)
+## Arbitration (using-o9k)
+
+Before adding anything beyond the bundle script, read the concern→owner table in
+[using-o9k](../../o9k-core/skills/using-o9k/SKILL.md). One active owner per
+concern — no exceptions.
 
 **Dispatch:** `o9k-dispatch` owns subagent isolation (native `dispatch` skill).
 Superpowers contributes methodology only. If upstream superpowers still has
-`dispatching-parallel-agents` enabled, disable it — do not run two dispatch owners.
+`dispatching-parallel-agents` enabled, **disable it** — two dispatch owners is
+a 🔴 collision per using-o9k arbitration.
 
 **Plan owner:** with beads, beads owns work items; see [BUNDLES.md](../../../../docs/BUNDLES.md)
 and [COMBINING.md](../../../../docs/COMBINING.md) for plan-store rules.
+
+**Memory:** TIM or hmem — one backend. Hooks pick TIM when both are present;
+do not install a second memory MCP "for comparison" on the live config.
 
 ## Do not
 
@@ -62,10 +70,13 @@ and [COMBINING.md](../../../../docs/COMBINING.md) for plan-store rules.
   store). A bundle stays conflict-free only if you don't hand-add collisions.
 - **Don't** run `--run` without showing the dry-run plan first — installs touch
   global npm and register MCP servers.
+- **Don't** install an unknown companion without `framework-scout` scoring it
+  first — bundle script only ships pre-vetted tools.
 
 ## Extending a bundle
 
 Found a new companion via `framework-scout`? If it's 🟢 or ⚪ and doesn't
 duplicate a concern already in the bundle, add a `step`/`manual` entry to
 `install/o9k-companions.sh` and a row to [docs/BUNDLES.md](../../../../docs/BUNDLES.md).
-Never add a 🔴 framework to a bundle.
+Never add a 🔴 framework to a bundle. Combo promotion to `recommended` still
+requires `bundle-bench` measured pass rates.

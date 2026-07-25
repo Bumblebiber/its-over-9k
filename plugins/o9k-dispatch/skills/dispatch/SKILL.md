@@ -1,6 +1,6 @@
 ---
 name: dispatch
-description: "Cost-gated subagent dispatch for context isolation. Use for broad searches, lookups, log analysis, doc digestion, or tasks that decompose into independent subtasks — anything whose working noise shouldn't live in the main context. Includes the fan-out cost gate and the RESULT-only subagent contract. Optional branch: when o9k-roster is configured for cross-CLI workers, use mailbox runs + cheap watcher instead of LLM-polling tmux."
+description: "Cost-gated subagent dispatch for context isolation. Use for broad searches, lookups, log analysis, doc digestion, independent subtasks, OR whenever you spawn an external CLI worker via o9k-roster (planner/implementer/reviewer in tmux, cursor-agent/claude/codex/hermes). Path A = in-host RESULT subagents. Path B = mailbox run + roster dispatch --run-id + cheap in-host watcher (runs wait) — REQUIRED for every external CLI tmux spawn when ~/.o9k/roster.json exists; bare roster dispatch without a watcher is an incomplete spawn (parent never gets notified)."
 ---
 
 # dispatch — Subagent Isolation
@@ -10,39 +10,63 @@ run the noisy work where the noise is free.
 
 ## Two paths — pick by setup, not by habit
 
-Most users never leave the **default** path. Multi-agent / cross-CLI is opt-in.
-
 | Path | When | What you do |
 |---|---|---|
-| **A — In-host (default)** | Always, unless path B applies | Host Task/subagent tool; RESULT-only contract below |
-| **B — Cross-CLI mailbox** | `o9k-roster` installed **and** `~/.o9k/roster.json` exists **and** the work is an **external** CLI worker in tmux (Codex/Cursor/…), not an in-host search subagent | `runs.mjs` create → dispatch `--run-id` → cheap watcher runs `runs wait` → return/respawn on question — see `roster` skill § Cross-CLI runs |
+| **A — In-host (default)** | Greps, digests, memory lookup, Haiku-class helpers — work that stays inside this host's subagent tool | Host Task/subagent tool; RESULT-only contract below |
+| **B — Cross-CLI mailbox** | `~/.o9k/roster.json` exists **and** you are putting work in an **external** CLI process (tmux via `$ROSTER dispatch`, or equivalent Cursor/Claude/Codex/Hermes worker the parent will not drive turn-by-turn) | Mailbox + `--run-id` + **cheap in-host watcher** — see checklist below |
 
-**Do not** invent path B for greps, doc digests, or Haiku-class in-host helpers.
-**Do not** LLM-poll tmux from the frontier parent when path B applies — that is
-what the watcher + `wait-mailbox.sh` are for.
+Roster installed is **opt-in for the machine**. Once it is installed, Path B is **not** optional for external CLI workers. Skipping the watcher is how parents go silent while tmux sits idle or stuck.
 
 Detection (cheap):
 
 ```bash
-# Path B only if both succeed and the task is external-CLI work:
+# Path B applies when BOTH succeed AND the work is an external CLI worker:
 test -f ~/.o9k/roster.json && test -f "<marketplace>/plugins/o9k-roster/scripts/runs.mjs"
 ```
 
-Without roster / without `roster.json` → path A only. Missing files = no-op,
-never an error for single-agent users.
+Without `roster.json` → Path A only (or legacy Hermes notify_on_complete). Missing files = no-op for single-agent users — never invent Path B.
+
+## Incomplete-spawn gate (read before you tell the human "it's running")
+
+A Path B spawn is **complete** only when all three exist:
+
+1. Mailbox run id from `$RUNS create …`
+2. Worker started with `$ROSTER dispatch … --run-id <id>` (or linked equivalent)
+3. A **cheap in-host watcher subagent** whose sole job is `$RUNS wait <id>` (one blocking OS wait — not a model polling loop)
+
+If you only have a tmux session name / attach string and no watcher → **you did not finish the spawn**. **STOP.** Do not report "running", "spawned", or paste an attach command to the human until step 3 exists. Add mailbox + watcher first, or kill the orphan and redo.
+
+Why: tmux has no callback into this chat. Without `runs wait`, the parent never learns `done|question|failed`. That is the failure mode this section exists to prevent.
+
+Quick self-check before any status message: can you answer "what is `$RUNS wait` returning right now?" If no → incomplete spawn.
+
+## Anti-pattern (real failure)
+
+```text
+# WRONG — looks busy, notifies nobody
+$ROSTER dispatch --role planner --prompt-file PLANNER_PROMPT.md --dir ~/tasks/foo
+# → prints tmux session; parent moves on; human waits; worker may even be
+#   stuck on an interactive prompt with zero artifacts written
+```
+
+```text
+# RIGHT — parent gets a status back
+$RUNS create … --prompt-file PLANNER_PROMPT.md   # → runId
+$ROSTER dispatch --role planner --prompt-file PLANNER_PROMPT.md --dir ~/tasks/foo --run-id <runId>
+# spawn cheap in-host watcher: only `$RUNS wait <runId>`, return status, exit
+```
+
+**Do not** invent Path B for greps, doc digests, or Haiku-class in-host helpers.
+**Do not** LLM-poll tmux from the frontier parent when Path B applies — that is
+what the watcher is for.
 
 ## When to dispatch (any one suffices)
 
-- **Search/lookup with unknown scope** — "where is X handled?", "does Y exist?",
-  fan-out greps across many files.
-- **High-noise, low-conclusion work** — digest a log file, read documentation,
-  analyze a dataset; the answer is 3 lines, the working set is 30k tokens.
-- **Independent subtasks** — the task splits into parts that don't need each
-  other's intermediate state.
-- **Memory recall** — searching the memory store (see `memory` skill) without
-  loading candidate entries into the main context.
-- **External implementer/reviewer CLI** (path B only) — long coding phase on
-  another host CLI; parent stays free to talk to the human.
+- **Search/lookup with unknown scope** — Path A.
+- **High-noise, low-conclusion work** — Path A.
+- **Independent subtasks** — Path A fan-out (cost gate below).
+- **Memory recall** — Path A (see `memory` skill).
+- **External planner / implementer / reviewer / long coding CLI** — Path B when roster is configured; never bare `dispatch` without mailbox+watcher.
 
 ## The cost gate — dispatch is not free
 
@@ -76,16 +100,56 @@ no sign-off:
 - What to do on failure: return `[RESULT] NOT FOUND: <what was tried> [/RESULT]`
   — never a transcript of attempts.
 
-## Path B — External CLI (only if roster configured)
+## Path B — External CLI checklist
 
-Short form (full protocol in `roster` skill):
+Full protocol detail lives in the `roster` skill § Cross-CLI runs.
 
-1. `$RUNS create … --prompt-file …` (worker-prompt template / HEARTBEAT).
-2. `$ROSTER dispatch … --run-id <id>` (or equivalent tmux spawn linked to the run).
-3. Spawn a **cheap** in-host watcher whose sole job is `$RUNS wait <runId>`, then
-   return `{question|done|failed|watching}` and exit.
+### Copy-paste recipe (Overseer / parent)
+
+Always use `node` (scripts are not +x). Prefer repo or plugin-cache path:
+
+```bash
+ROSTER="node $HOME/projects/o9k/plugins/o9k-roster/scripts/roster.mjs"
+RUNS="node $HOME/projects/o9k/plugins/o9k-roster/scripts/runs.mjs"
+TASK_DIR="~/projects/tasks/task-foo"
+PROMPT="$TASK_DIR/PLANNER_PROMPT.md"   # bare task text is fine — create wraps it
+
+# 1) Mailbox (wraps PROMPT with templates/worker-prompt.md → HEARTBEAT + STATUS=done)
+CREATE=$($RUNS create --cwd "$TASK_DIR" --role planner \
+  --parent-cli cursor --parent-attach manual \
+  --worker-cli claude --prompt-file "$PROMPT" --project P0062)
+RUN_ID=$(echo "$CREATE" | awk '/^runId:/{print $2}')
+
+# 2) Worker — with --run-id, dispatch injects mailbox/PROMPT.md (wrapped), NOT the bare file
+$ROSTER pick --role planner          # expect chain exhausted? stop or curate fallbacks
+$ROSTER dispatch --role planner --prompt-file "$PROMPT" --dir "$TASK_DIR" --run-id "$RUN_ID"
+
+# 3) Cheap in-host watcher (Path A) — sole job:
+#    $RUNS wait "$RUN_ID" --ceiling-sec 7200
+#    return status; see templates/watcher-prompt.md
+```
+
+Minimum mental model:
+
+1. `$RUNS create …` (auto-wraps mailbox protocol into `mailbox/PROMPT.md`).
+2. `$ROSTER dispatch … --run-id <id>` (tmux worker gets the **wrapped** prompt).
+3. Spawn a **cheap** in-host watcher: only `$RUNS wait <runId>`, return
+   `{question|done|failed|watching}`, exit.
 4. On `question`: answer or escalate to human → `$RUNS answer` → **respawn** watcher.
-5. On `done`/`failed`: read mailbox RESULT; memory/TIM closeout only if useful.
+5. On `done`/`failed`: read `mailbox/RESULT.md` (and task-dir artifacts); memory/TIM closeout only if useful.
+
+### Disk artifacts ≠ done
+
+`PLAN.md` / `GRILL.md` in the task dir can exist while mailbox `STATUS` is still
+`watching`. That is a **protocol miss** (worker forgot closeout). The watcher
+will not return `done` until `mailbox/STATUS=done` **and** `mailbox/RESULT.md`
+exist. Do not treat cwd files alone as completion — wait for the watcher, or
+recover with `$RUNS set-status <id> done` only after writing `mailbox/RESULT.md`
+yourself (parent recovery, rare).
+
+`wait-mailbox.sh` ignores HEARTBEAT / non-terminal STATUS changes — it only
+wakes on `done|failed|cancelled|waiting_human`. A watcher that returns
+`watching` after a few seconds is a bug (or ceiling), not success.
 
 Watcher is disposable; mailbox on disk is continuity. Parent does not hot-loop
 poll. After host crash: `$RUNS resume` (agentless) — not your problem mid-turn
@@ -99,9 +163,16 @@ context, say so explicitly and resolve it — don't silently keep both versions.
 ## Model choice (when o9k-roster is installed)
 
 Dispatch decides WHETHER to delegate; roster decides WHO does it. Before
-spawning a **non-trivial** worker (path B, or a heavy in-host role), map the
-task to a roster role and consult `roster pick --role <role>` — or hand the
-spawn to `roster dispatch`. See the `roster` skill.
+spawning a Path B worker, map the task to a roster role and use
+`roster dispatch` (with `--run-id`) — never invent a model by vibe. See the
+`roster` skill.
 
 Without o9k-roster / without `~/.o9k/roster.json`, skip this section entirely
-(path A uses the host's normal subagent model defaults).
+(Path A uses the host's normal subagent model defaults).
+
+## Skill metadata (maintainers)
+
+The YAML `description` is the trigger line — hosts match it before loading this
+file. Keep it **pushy**: Path B + mailbox + watcher + "incomplete spawn" must stay
+in the one-liner. Softening it ("optional mailbox", "consider watcher") recreates
+the silent-parent failure mode; do not trim that language when editing.

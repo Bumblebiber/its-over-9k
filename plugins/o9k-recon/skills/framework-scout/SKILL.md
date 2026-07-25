@@ -1,29 +1,31 @@
 ---
 name: framework-scout
-description: "GitHub Scout for agent frameworks. Use when asked to find, evaluate, or triage new Claude Code / AI-agent frameworks, MCP servers, or plugins, or to refresh the o9k compatibility matrix. Tells the agent where to hunt, how to score a candidate, and how to classify it as symbiotic / orthogonal / blocking before proposing a bundle or matrix update."
+description: "GitHub Scout for agent frameworks. MUST run before installing an unknown companion, extending a bundle, refreshing the o9k compatibility matrix, or answering 'what's new/better than X' for Claude Code plugins, MCP servers, or agent frameworks. Repeatable recon loop: hunt, score, classify against using-o9k arbitration, trial in sandbox, report — never dump raw search results into context."
 ---
 
 # framework-scout — the GitHub Scout
 
-The agent ecosystem moves weekly. This skill is a **repeatable recon loop**: go
-out, find what's new, score it, and slot it into o9k's compatibility matrix —
-without dumping raw search results into context. Think of it as a scout that
-brings back a one-page report, not the whole map.
+The agent ecosystem moves weekly. This skill is a **repeatable recon loop**:
+find what's new, score it, slot it into o9k's compatibility matrix — without
+dumping raw search results into context. Scout brings back a one-page verdict,
+not the whole map.
 
-Scouting is expensive (many searches, many pages). Treat it like a `dispatch`
-job: fan the searches out, keep only the shortlist, and **write findings to
-memory** so the next session starts from the last scout, not from zero.
+Scouting is expensive (many searches, many pages). **Dispatch is mandatory**
+for broad sweeps: fan searches to `dispatch` path A, keep only the shortlist.
+Write findings to memory (`memory` skill) so the next session diffs from the
+last scout, not from zero.
 
 ## When to run
 
 - User asks "what's new / better than X?" or "find a framework for Y".
 - Refreshing [docs/COMBINING.md](../../../../docs/COMBINING.md) or the README
   matrix.
-- Before proposing a new companion bundle.
+- Before proposing a new companion bundle or hand-installing an MCP server.
 - **`/o9k-init` Step 2b** — user gave Go to evaluate an *unknown* installed
   tool (not in `compat/registry.json`). Start at Step 2 (score); escalate to
   Step 4 trial / `bundle-bench` only if the README verdict is inconclusive.
-- **Not** every session — schedule it (weekly-ish). Recon has a cost; amortize it.
+- **Not every session** — scheduled recon (weekly-ish). Recon has a cost;
+  amortize it.
 
 ## Step 1 — Hunt (where to look)
 
@@ -58,18 +60,20 @@ For each candidate, answer six questions. Reject early — most fail #1 or #2.
 |---|--------|-----------|
 | 1 | **Concern** — which o9k concern does it claim? (memory · overview · symbols · plan · methodology · dispatch · output · docs · none) | Can't name one — it's not in scope. |
 | 2 | **Alive** — last commit / release recency, open-issue responsiveness | Stale (no commits in ~6 months) or archived. |
-| 3 | **Traction** — stars, install count, forks — as a *prior*, not proof | Fine to keep low-star if novel; note the risk. |
+| 3 | **Traction** — stars, install count, forks — as a *prior*, not proof | Low-star is acceptable only when novel; flag the risk explicitly. |
 | 4 | **License** — MIT / Apache / permissive? | Copyleft or unclear → flag, don't bundle. |
 | 5 | **Install mechanism** — `/plugin`, `claude mcp add`, npm/uvx CLI? | No clean install path → note as manual-only. |
 | 6 | **Claim vs reality** — "90% token savings" etc. — is it measured or vibes? | Take numbers as hypotheses; verify with `/o9k-stats` before repeating them. |
 
 Do **not** read the whole repo. Read the README's install + "how it works"
-sections and the topic — that's enough to classify. (This is `scout` discipline
+sections and the topic — that's enough to classify. (`scout` discipline
 applied to recon itself.)
 
 ## Step 3 — Classify (slot into the matrix)
 
-Map concern → verdict using the o9k arbitration table:
+Map concern → verdict using the **[using-o9k arbitration
+table](../../o9k-core/skills/using-o9k/SKILL.md)** — exactly one owner per
+concern:
 
 - **🟢 Symbiotic** — claims a concern o9k has no pillar for (docs, cost, review,
   methodology) or *feeds* a pillar (structure extractors feed scout). Install
@@ -77,11 +81,12 @@ Map concern → verdict using the o9k arbitration table:
 - **⚪ Orthogonal** — touches no o9k concern at all. Safe by construction.
 - **🔴 Blocking** — claims a concern a pillar owns (memory, overview, output,
   dispatch) or duplicates another companion's concern (two plan stores, two
-  methodologies). One active owner only.
+  methodologies). One active owner only — disable the loser per using-o9k.
 
 The tie-breaker question for every candidate: *"If I install this, do two things
 now inject at SessionStart / rewrite output / build an overview / own the plan?"*
-If yes → 🔴, and name which owner wins.
+If yes → 🔴, and name which owner wins. Unresolved 🔴 → surface once via
+`/o9k-guide`; do not install both owners.
 
 ## Step 4 — Trial (measure before adopting, never on the live config)
 
@@ -141,7 +146,8 @@ Then, if it earns a slot:
    headline-worthy).
 2. If it belongs in a stack, add it to a bundle in
    [install/o9k-companions.sh](../../../../install/o9k-companions.sh) and
-   [docs/BUNDLES.md](../../../../docs/BUNDLES.md).
+   [docs/BUNDLES.md](../../../../docs/BUNDLES.md) — via `companion-bundles`
+   workflow only after 🔴 checks pass.
 3. Save the finding to memory (`memory` skill) so the next scout diffs against it.
 4. Before it graduates into a *recommended* bundle: measure the combination,
    not just the candidate — that's the `bundle-bench` skill
@@ -157,5 +163,7 @@ Then, if it earns a slot:
 - **Don't** install a candidate into the live `~/.claude` to "just try it" —
   that's what the trial sandbox is for.
 - **Don't** bundle a 🔴 framework next to the pillar it collides with — a bundle
-  must be internally conflict-free.
-- **Don't** scout every session — it's a scheduled recon, not a per-turn habit.
+  must be internally conflict-free per using-o9k arbitration.
+- **Don't** scout every session — it's scheduled recon, not a per-turn habit.
+- **Don't** hand-install an unknown MCP because the user asked once — run
+  framework-scout first.

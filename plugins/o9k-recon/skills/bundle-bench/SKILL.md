@@ -1,6 +1,6 @@
 ---
 name: bundle-bench
-description: "Benchmark companion combos on a fixed task set to find the best-measured o9k bundle. Use when the user wants to test/compare companion combinations, validate the existing setup with numbers, or contribute benchmark results back to the o9k repo. Wraps benchmarks/run-bench.sh with sandbox isolation and an ablation plan."
+description: "Benchmark companion combos on a fixed task set to find the best-measured o9k bundle. MUST run before promoting any combo to a recommended bundle, after framework-scout Step 4 passes but the stack is untested, when the user asks to compare/validate companion stacks with numbers, or when contributing measured results to the o9k repo. Wraps benchmarks/run-bench.sh with sandbox isolation and an ablation plan — numbers beat README claims."
 ---
 
 # bundle-bench — measured bundles, not believed ones
@@ -57,17 +57,19 @@ PR needs them. The `bare` baseline gets credentials and nothing else.
 benchmarks/run-bench.sh <combo-name> "$SB" [model]
 ```
 
-Dispatch doctrine applies: drive long ablation series from a background
-subagent; only the result JSONs belong in main context. Pin the model across
-the whole series.
+**Dispatch is mandatory** for ablation series: hand the full combo list to
+`dispatch` path A (background subagent); main context receives only result
+JSONs. Pin the model across the whole series. External CLI workers with
+`~/.o9k/roster.json` → `dispatch` path B — see
+[using-o9k arbitration](../../o9k-core/skills/using-o9k/SKILL.md).
 
 ## Step 4 — Verdict & upstream
 
 - Rank by `passed`, tie-break by cost (see `results/SCHEMA.md`).
 - The winning combo is a **proposal** for the `bundles` block in
-  `plugins/o9k-core/compat/registry.json` — registry changes still need the
-  one-owner-per-concern rule and a human merge, numbers don't override
-  conflicts.
+  `plugins/o9k-core/compat/registry.json`. Registry changes still obey
+  **one owner per concern** ([using-o9k arbitration](../../o9k-core/skills/using-o9k/SKILL.md)) —
+  measured pass rates do not override 🔴 collisions; resolve owners first.
 - **Contribute:** commit the `benchmarks/results/*.json` files and open a PR
   against the o9k repo. State the exact sandbox contents (plugins + MCP
   servers, versions) in the PR body. This is how the community grows the
@@ -83,3 +85,5 @@ the whole series.
 - **Don't** let a cheap-but-failing combo win — pass count ranks first,
   always.
 - **Don't** start a full ablation without telling the user what it costs.
+- **Don't** promote a combo to `recommended` / `max` without bundle-bench —
+  framework-scout Step 4 alone is not enough.

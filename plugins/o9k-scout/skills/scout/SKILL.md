@@ -1,6 +1,6 @@
 ---
 name: scout
-description: "Context-loading discipline for codebases. Use BEFORE opening, reading, or exploring files: search first, read narrow, build one repo map per session instead of wandering. Prevents the 20k-token 'let me look around' burn."
+description: "Context-loading discipline for codebases. Use BEFORE opening, reading, or exploring files — and for monorepo/broad greps (TODO sweeps, 'where is X'): search first, read narrow, one repo map per session. Pair with dispatch path A when the sweep would pollute main context. Prevents the 20k-token 'let me look around' burn."
 ---
 
 # scout — Context Discipline
@@ -28,7 +28,9 @@ The cheapest token is the one never loaded. Explore structure, not content.
 - **Never load generated artifacts** (lockfiles, dist/, minified, fixtures)
   unless they ARE the subject of the task.
 - **Broad sweep needed?** (many files, unknown naming, "where is X handled?")
-  → don't do it inline; hand it to `dispatch` and receive the conclusion only.
+  → don't do it inline; hand it to `dispatch` path A and receive the conclusion
+  only. External CLI coding workers with `~/.o9k/roster.json` → `dispatch` path B
+  (mailbox + watcher), not inline exploration.
 - **Docs/logs over ~200 lines:** extract the relevant slice (grep the error ID,
   read the section) — never the whole thing.
 

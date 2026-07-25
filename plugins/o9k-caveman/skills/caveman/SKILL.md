@@ -1,6 +1,6 @@
 ---
 name: caveman
-description: "Token-compressed output style — telegraphic fragments, zero filler, code byte-exact. Levels: lite/full/ultra. Use when the user enables caveman mode, asks for terse/compressed output, or the o9k doctrine is active. Auto-reverts to full prose for safety-critical content."
+description: "Token-compressed output style — telegraphic fragments, zero filler, code byte-exact. Levels: lite/full/ultra. Standing order under o9k doctrine (hooks inject every session) — compress routine output unless user says caveman off. Also use when user asks for terse/compressed output. Auto-reverts to full prose for safety-critical content."
 ---
 
 # caveman — Output Compression
