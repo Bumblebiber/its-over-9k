@@ -33,3 +33,24 @@ test("missing binary prints actionable error and exits nonzero", () => {
   assert.equal(code, 1);
   assert.match(missingTeamUpMessage(), /TEAM_UP_BIN/);
 });
+
+test("resolveTeamUpBin prefers TEAM_UP_BIN then TEAM_UP_ROOT then PATH", async () => {
+  const { resolveTeamUpBin, resolveTeamUpRoot } = await import("./team-up-adapter.mjs");
+  assert.equal(
+    resolveTeamUpBin({ TEAM_UP_BIN: "/explicit/bin/team-up.mjs", TEAM_UP_ROOT: "/other" }),
+    "/explicit/bin/team-up.mjs"
+  );
+  const root = "/home/bbbee/projects/tasks/task-team-up-mvp/repos/team-up";
+  assert.equal(
+    resolveTeamUpBin({ TEAM_UP_ROOT: root, PATH: "" }),
+    `${root}/bin/team-up.mjs`
+  );
+  assert.equal(resolveTeamUpBin({ PATH: "" }), "team-up");
+  assert.equal(
+    resolveTeamUpRoot({ TEAM_UP_BIN: `${root}/bin/team-up.mjs` }),
+    root
+  );
+  const fs = await import("node:fs");
+  const src = fs.readFileSync(new URL("./team-up-adapter.mjs", import.meta.url), "utf8");
+  assert.doesNotMatch(src, /task-team-up-mvp/);
+});
