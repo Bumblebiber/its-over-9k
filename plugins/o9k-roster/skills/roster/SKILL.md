@@ -19,6 +19,31 @@ Chain entries are **CLI×model** cells, not models alone:
   pins the pair
 - bare `"claude-sonnet-5"` still works → uses `models[m].cli[0]`
 
+### Effort (CLI-native)
+
+Precedence (highest wins): `chain-entry.effort` > `roles.<role>.effort` >
+`models.<id>.effort` > omitted. Values are raw per-CLI strings — **never
+mapped**: Claude `low|medium|high|xhigh|max` (`--effort`), Codex
+`low|medium|high|xhigh|max|ultra` (`-c model_reasoning_effort=…`; per-model
+support — check `codex debug models`). When effort is unset, the `{effort}`
+template element **and its preceding flag** are dropped from argv. Effort set
+for a CLI whose `cmd` has no `{effort}` → stderr warning, spawn proceeds. Put
+effort on chain entries (CLI-pinned) unless the model has exactly one CLI.
+`refresh --apply` rewrites chain heads as `cli:model` strings → chain-entry
+effort on a replaced head is lost; use `roles.<role>.effort` for durable role
+depth.
+
+```json
+"advisor": {
+  "effort": "max",
+  "chain": [
+    { "cli": "claude", "model": "claude-fable-5", "effort": "max" },
+    { "cli": "codex", "model": "gpt-5.6-sol", "effort": "ultra" },
+    "claude:claude-opus"
+  ]
+}
+```
+
 All commands below: `ROSTER="node <marketplace>/plugins/o9k-roster/scripts/roster.mjs"`
 (in Claude Code: `node "${CLAUDE_PLUGIN_ROOT}/scripts/roster.mjs"` when this
 plugin is active). Cross-CLI mailbox runs:

@@ -7,8 +7,9 @@ Hermes) with role-based model selection.
 
 - **Registry** (`~/.o9k/roster.json`): your models, CLIs, tiers, prices, and
   role chains as **CLI×model** cells (e.g. `cursor:grok-4.5-high`,
-  `hermes:deepseek-v4-pro`). Yours to curate — o9k ships only the schema and
-  example data.
+  `hermes:deepseek-v4-pro`). Chain cells may carry a CLI-native `effort`
+  string (precedence: chain-entry > role > model; see skill `roster` § Effort).
+  Yours to curate — o9k ships only the schema and example data.
 - **`roster.mjs`**: deterministic selection. `pick` answers "who", `dispatch`
   spawns the worker in tmux, `mark-limited` reacts to rate-limit errors,
   `handoff` moves a dying session's work to a successor.

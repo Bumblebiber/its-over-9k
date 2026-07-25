@@ -11,8 +11,8 @@ import { fileURLToPath } from "node:url";
 
 const ROSTER = {
   clis: {
-    claude: { cmd: ["claude", "--model", "{model}", "{prompt}"] },
-    codex: { cmd: ["codex", "--model", "{model}", "{prompt}"] },
+    claude: { cmd: ["claude", "--model", "{model}", "--effort", "{effort}", "{prompt}"] },
+    codex: { cmd: ["codex", "--model", "{model}", "-c", "model_reasoning_effort={effort}", "{prompt}"] },
     cursor: { cmd: ["cursor-agent", "--model", "{model}", "{prompt}"] },
     opencode: { cmd: ["opencode", "--model", "{model}", "--prompt", "{prompt}"] },
     hermes: { cmd: ["hermes", "chat", "-q", "{prompt}", "--model", "{model}"] },
@@ -90,12 +90,48 @@ test("pick throws on unknown role", () => {
 });
 
 test("parseChainEntry accepts bare model, cli:model, and objects", () => {
-  assert.deepEqual(parseChainEntry("model-a"), { model: "model-a", cli: null });
-  assert.deepEqual(parseChainEntry("cursor:model-g"), { model: "model-g", cli: "cursor" });
-  assert.deepEqual(parseChainEntry({ model: "model-c", cli: "hermes" }), { model: "model-c", cli: "hermes" });
-  assert.deepEqual(parseChainEntry({ model: "model-a" }), { model: "model-a", cli: null });
+  assert.deepEqual(parseChainEntry("model-a"), { model: "model-a", cli: null, effort: null });
+  assert.deepEqual(parseChainEntry("cursor:model-g"), { model: "model-g", cli: "cursor", effort: null });
+  assert.deepEqual(parseChainEntry({ model: "model-c", cli: "hermes" }), { model: "model-c", cli: "hermes", effort: null });
+  assert.deepEqual(parseChainEntry({ model: "model-a" }), { model: "model-a", cli: null, effort: null });
   assert.throws(() => parseChainEntry(":nope"), /invalid chain entry/);
   assert.throws(() => parseChainEntry({}), /invalid chain entry/);
+});
+
+test("parseChainEntry carries chain-entry effort", () => {
+  assert.deepEqual(
+    parseChainEntry({ model: "model-a", cli: "claude", effort: "max" }),
+    { model: "model-a", cli: "claude", effort: "max" },
+  );
+  assert.throws(() => parseChainEntry({ model: "model-a", effort: 3 }), /effort/);
+});
+
+test("pick resolves effort precedence", () => {
+  const roster = {
+    ...ROSTER,
+    models: { ...ROSTER.models, "model-a": { ...ROSTER.models["model-a"], effort: "high" } },
+    roles: {
+      planner: {
+        effort: "medium",
+        chain: [{ cli: "claude", model: "model-a", effort: "max" }],
+      },
+    },
+  };
+  assert.equal(pick({ roster, usage: null, role: "planner", now: NOW }).effort, "max");
+
+  roster.roles.planner.chain = [{ cli: "claude", model: "model-a" }];
+  assert.equal(pick({ roster, usage: null, role: "planner", now: NOW }).effort, "medium");
+
+  delete roster.roles.planner.effort;
+  assert.equal(pick({ roster, usage: null, role: "planner", now: NOW }).effort, "high");
+
+  delete roster.models["model-a"].effort;
+  assert.equal(pick({ roster, usage: null, role: "planner", now: NOW }).effort, null);
+});
+
+test("pick returns effort null for plain string chain entries", () => {
+  const r = pick({ roster: ROSTER, usage: null, role: "planner", now: NOW });
+  assert.equal(r.effort, null);
 });
 
 test("pick honors cli:model pins and object entries", () => {
@@ -224,6 +260,23 @@ test("checkThresholds warns at warn_at and instructs handoff at handoff_at", () 
 test("buildCommand substitutes model and prompt per argv element", () => {
   const argv = buildCommand({ roster: ROSTER, model: "model-a", cli: "claude", prompt: "do the thing" });
   assert.deepEqual(argv, ["claude", "--model", "model-a", "do the thing"]);
+});
+
+test("buildCommand injects effort into flag-pair and -c templates", () => {
+  const claude = buildCommand({ roster: ROSTER, model: "model-a", cli: "claude", prompt: "x", effort: "max" });
+  assert.deepEqual(claude, ["claude", "--model", "model-a", "--effort", "max", "x"]);
+  const codex = buildCommand({ roster: ROSTER, model: "model-b", cli: "codex", prompt: "y", effort: "ultra" });
+  assert.deepEqual(codex, ["codex", "--model", "model-b", "-c", "model_reasoning_effort=ultra", "y"]);
+});
+
+test("buildCommand drops flag+value when effort unset", () => {
+  const claude = buildCommand({ roster: ROSTER, model: "model-a", cli: "claude", prompt: "x" });
+  assert.deepEqual(claude, ["claude", "--model", "model-a", "x"]);
+  assert.ok(!claude.includes(""));
+  const codex = buildCommand({ roster: ROSTER, model: "model-b", cli: "codex", prompt: "y" });
+  assert.deepEqual(codex, ["codex", "--model", "model-b", "y"]);
+  assert.ok(!codex.includes(""));
+  assert.ok(!codex.includes("-c"));
 });
 
 test("buildCommand throws when cli template is missing", () => {
@@ -461,6 +514,29 @@ test("validateRoster warns (not errors) on unknown model/cli chain refs", () => 
   assert.deepEqual(errors, []);
   assert.ok(warnings.some((w) => w.includes("typo-model")));
   assert.ok(warnings.some((w) => w.includes('cli "codex"')));
+});
+
+test("validateRoster rejects non-string effort", () => {
+  const modelBad = validateRoster({
+    models: { "model-a": { provider: "anthropic", cli: ["claude"], effort: 7 } },
+    clis: { claude: { cmd: ["claude", "{prompt}"] } },
+    roles: { planner: { chain: ["model-a"] } },
+  });
+  assert.ok(modelBad.errors.some((e) => e.includes("models.model-a.effort")));
+
+  const roleBad = validateRoster({
+    models: { "model-a": { provider: "anthropic", cli: ["claude"] } },
+    clis: { claude: { cmd: ["claude", "{prompt}"] } },
+    roles: { planner: { effort: 7, chain: ["model-a"] } },
+  });
+  assert.ok(roleBad.errors.some((e) => e.includes("roles.planner.effort")));
+
+  const chainBad = validateRoster({
+    models: { "model-a": { provider: "anthropic", cli: ["claude"] } },
+    clis: { claude: { cmd: ["claude", "{prompt}"] } },
+    roles: { planner: { chain: [{ model: "model-a", effort: 3 }] } },
+  });
+  assert.ok(chainBad.errors.some((e) => e.includes("effort")));
 });
 
 test("validateRoster rejects non-object roster", () => {

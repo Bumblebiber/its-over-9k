@@ -58,27 +58,39 @@ function markedUntil(usage, key, now) {
 }
 
 /**
- * Parse a chain entry into {model, cli|null}.
- * - "model-id"           → { model, cli: null }  (cli resolved from models[m].cli[0])
- * - "cli:model-id"       → { model, cli }
- * - { model, cli? }      → same
+ * Parse a chain entry into {model, cli|null, effort|null}.
+ * - "model-id"           → { model, cli: null, effort: null }  (cli resolved from models[m].cli[0])
+ * - "cli:model-id"       → { model, cli, effort: null }
+ * - { model, cli?, effort? } → same; effort is null unless a non-empty string
  */
 export function parseChainEntry(entry) {
   if (entry && typeof entry === "object" && !Array.isArray(entry)) {
     if (typeof entry.model !== "string" || !entry.model) {
       throw new Error(`invalid chain entry object: ${JSON.stringify(entry)}`);
     }
-    return { model: entry.model, cli: entry.cli ?? null };
+    if (entry.effort !== undefined && entry.effort !== null && typeof entry.effort !== "string") {
+      throw new Error(`invalid chain entry effort (must be a string): ${JSON.stringify(entry)}`);
+    }
+    return { model: entry.model, cli: entry.cli ?? null, effort: entry.effort || null };
   }
   if (typeof entry !== "string" || !entry) {
     throw new Error(`invalid chain entry: ${entry}`);
   }
   const i = entry.indexOf(":");
-  if (i === -1) return { model: entry, cli: null };
+  if (i === -1) return { model: entry, cli: null, effort: null };
   const cli = entry.slice(0, i);
   const model = entry.slice(i + 1);
   if (!cli || !model) throw new Error(`invalid chain entry: ${entry}`);
-  return { model, cli };
+  return { model, cli, effort: null };
+}
+
+/**
+ * CLI-native effort string for a spawn. Highest wins:
+ * chain-entry.effort > roles.<role>.effort > models.<id>.effort > null.
+ * Values are raw per-CLI strings (claude: low|…|max, codex: low|…|ultra) — never mapped.
+ */
+export function resolveEffort({ roster, role, model, entryEffort }) {
+  return entryEffort || roster.roles?.[role]?.effort || roster.models?.[model]?.effort || null;
 }
 
 function entryLabel(model, cli) {
@@ -110,7 +122,7 @@ function dispatchFreshnessMs(roster) {
 }
 
 /**
- * Walk role's chain, return first viable {model, cli, skipped}. Viability:
+ * Walk role's chain, return first viable {model, cli, effort, skipped}. Viability:
  * defined in roster.models, resolved CLI has a template and is listed on the
  * model (when model.cli is set), provider and CLI usage below handoff_at, no
  * unexpired mark on the model / provider / CLI. model:null when exhausted.
@@ -180,9 +192,14 @@ export function pick({ roster, usage, role, now = Date.now() }) {
       skipped.push({ model: label, reason: `cli marked limited until ${usage.marked[cli].until}` });
       continue;
     }
-    return { model: name, cli, skipped };
+    return {
+      model: name,
+      cli,
+      effort: resolveEffort({ roster, role, model: name, entryEffort: parsed.effort }),
+      skipped,
+    };
   }
-  return { model: null, cli: null, skipped };
+  return { model: null, cli: null, effort: null, skipped };
 }
 
 export function parseTtl(str) {
@@ -301,6 +318,9 @@ export function validateRoster(roster) {
       if (model.provider !== undefined && typeof model.provider !== "string") {
         errors.push(`models.${id}.provider must be a string`);
       }
+      if (model.effort !== undefined && typeof model.effort !== "string") {
+        errors.push(`models.${id}.effort must be a string`);
+      }
     }
   }
 
@@ -309,6 +329,9 @@ export function validateRoster(roster) {
       if (!isPlainObject(role) || !Array.isArray(role.chain) || role.chain.length === 0) {
         errors.push(`roles.${id}.chain must be a non-empty array`);
         continue;
+      }
+      if (role.effort !== undefined && typeof role.effort !== "string") {
+        errors.push(`roles.${id}.effort must be a string`);
       }
       for (const entry of role.chain) {
         let parsed;
@@ -393,6 +416,7 @@ function cmdPick(args) {
   }
   console.log(`model: ${r.model}`);
   console.log(`cli: ${r.cli}`);
+  if (r.effort) console.log(`effort: ${r.effort}`);
 }
 
 function cmdMarkLimited(args) {
@@ -451,10 +475,31 @@ async function cmdUsageRefresh(args) {
   if (!results.some((r) => r.ok)) process.exit(1);
 }
 
-export function buildCommand({ roster, model, cli, prompt }) {
+export function buildCommand({ roster, model, cli, prompt, effort = null }) {
   const template = roster.clis?.[cli]?.cmd;
   if (!template) throw new Error(`no cli template for "${cli}" in roster.json clis section`);
-  return template.map((part) => part.replaceAll("{model}", model).replaceAll("{prompt}", prompt));
+  // Roster keys may be logical ids (claude-opus); CLIs often want short aliases (opus).
+  const cliModel = roster.models?.[model]?.cli_model || model;
+  const hasSlot = template.some((p) => p.includes("{effort}"));
+  if (effort && !hasSlot) {
+    console.error(`roster: effort "${effort}" set but clis.${cli}.cmd has no {effort} — ignored`);
+  }
+  const argv = [];
+  for (let i = 0; i < template.length; i++) {
+    const part = template[i];
+    // Unset effort: drop the slot element and its flag ("--effort" / "-c") so no
+    // dangling empty value reaches the CLI.
+    if (part.includes("{effort}") && !effort) {
+      if (argv.length && template[i - 1]?.startsWith("-")) argv.pop();
+      continue;
+    }
+    argv.push(
+      part.replaceAll("{model}", cliModel)
+        .replaceAll("{prompt}", prompt)
+        .replaceAll("{effort}", effort ?? "")
+    );
+  }
+  return argv;
 }
 
 function shellQuote(s) {
@@ -515,7 +560,7 @@ export function resolvePickAfterRefresh({
   ) {
     return priorPick;
   }
-  return { model: null, cli: null, skipped: r2.skipped };
+  return { model: null, cli: null, effort: null, skipped: r2.skipped };
 }
 
 async function spawnInTmux({ roster, role, dir, prompt, runId }) {
@@ -527,7 +572,7 @@ async function spawnInTmux({ roster, role, dir, prompt, runId }) {
     console.error(`chain exhausted for role ${role} — no viable model`);
     process.exit(2);
   }
-  const priorPick = { model: r.model, cli: r.cli, skipped: r.skipped };
+  const priorPick = { model: r.model, cli: r.cli, effort: r.effort, skipped: r.skipped };
   try {
     const { isSubscriptionCli, collectUsageForCli } = await import("./usage-collect.mjs");
     const { isCliUsageFresh } = await import("./usage-windows.mjs");
@@ -557,11 +602,12 @@ async function spawnInTmux({ roster, role, dir, prompt, runId }) {
   } catch {
     // stale cache — proceed with pick above
   }
-  const argv = buildCommand({ roster, model: r.model, cli: r.cli, prompt });
+  const argv = buildCommand({ roster, model: r.model, cli: r.cli, prompt, effort: r.effort });
   const session = `o9k-${role}-${Date.now().toString(36)}`;
   execFileSync("tmux", tmuxArgs({ session, dir, argv }), { stdio: "inherit" });
   linkDispatchToRun(runId, session);
   console.log(`model: ${r.model} (${r.cli})`);
+  if (r.effort) console.log(`effort: ${r.effort}`);
   console.log(`tmux session: ${session}`);
   console.log(`attach: tmux attach -t ${session}`);
 }

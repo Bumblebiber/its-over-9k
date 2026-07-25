@@ -1,8 +1,8 @@
 {
-  "$comment": "o9k-roster user config. Copied to ~/.o9k/roster.json by 'roster init'. Curate models/roles/chains yourself — o9k ships no live model list. cmd templates are argv arrays; {model} and {prompt} are substituted literally per element. Chain entries may be bare model ids (uses models[m].cli[0]) or CLI×model pins ('cursor:grok-4.5-high' / {\"cli\":\"hermes\",\"model\":\"deepseek-v4-pro\"}).",
+  "$comment": "o9k-roster user config. Copied to ~/.o9k/roster.json by 'roster init'. Curate models/roles/chains yourself — o9k ships no live model list. cmd templates are argv arrays; {model}, {prompt}, and {effort} are substituted per element. Effort is a CLI-native string; precedence chain-entry > role > model; unset drops the flag and its value from argv; no cross-CLI mapping. Chain entries may be bare model ids (uses models[m].cli[0]) or CLI×model pins ('cursor:grok-4.5-high' / {\"cli\":\"hermes\",\"model\":\"deepseek-v4-pro\"}).",
   "clis": {
-    "claude": { "cmd": ["claude", "--model", "{model}", "{prompt}"] },
-    "codex": { "cmd": ["codex", "--model", "{model}", "{prompt}"] },
+    "claude": { "cmd": ["claude", "--model", "{model}", "--effort", "{effort}", "{prompt}"] },
+    "codex": { "cmd": ["codex", "--model", "{model}", "-c", "model_reasoning_effort={effort}", "{prompt}"] },
     "cursor": { "cmd": ["cursor-agent", "--model", "{model}", "{prompt}"] },
     "opencode": { "cmd": ["opencode", "--model", "{model}", "--prompt", "{prompt}"] },
     "hermes": { "cmd": ["hermes", "chat", "-q", "{prompt}", "--model", "{model}"] }
@@ -17,6 +17,7 @@
       "provider": "anthropic",
       "tier": "frontier",
       "cli": ["claude"],
+      "effort": "high",
       "limit_windows": ["claude:session", "claude:week", "claude:5h", "claude:fable-week"],
       "price": { "in": null, "out": null, "note": "fill in per effort level" },
       "strengths": ["architecture", "review"],
@@ -103,8 +104,10 @@
       ]
     },
     "advisor": {
+      "effort": "max",
       "chain": [
-        "claude:claude-fable-5",
+        { "cli": "claude", "model": "claude-fable-5", "effort": "max" },
+        { "cli": "codex", "model": "gpt-5.6-sol", "effort": "ultra" },
         "claude:claude-opus"
       ]
     },
