@@ -226,6 +226,18 @@ test("buildCommand substitutes model and prompt per argv element", () => {
   assert.deepEqual(argv, ["claude", "--model", "model-a", "do the thing"]);
 });
 
+test("buildCommand prefers models[m].cli_model for {model} substitution", () => {
+  const roster = {
+    ...ROSTER,
+    models: {
+      ...ROSTER.models,
+      "model-a": { ...(ROSTER.models?.["model-a"] || {}), cli_model: "opus" },
+    },
+  };
+  const argv = buildCommand({ roster, model: "model-a", cli: "claude", prompt: "hi" });
+  assert.deepEqual(argv, ["claude", "--model", "opus", "hi"]);
+});
+
 test("buildCommand throws when cli template is missing", () => {
   assert.throws(
     () => buildCommand({ roster: ROSTER, model: "model-b", cli: "nosuch", prompt: "x" }),

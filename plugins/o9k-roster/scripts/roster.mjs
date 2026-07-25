@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // roster.mjs — deterministic model selection for multi-agent delegation.
 //
-// Subcommands: init | pick | usage | mark-limited | dispatch | handoff.
+// Subcommands: init | pick | usage | mark-limited | dispatch | handoff | pass-to.
 // Selection walks a role's fallback chain (CLI×model cells: "cli:model",
 // {cli,model}, or bare model id) and skips entries whose provider usage is
 // at/over limits.handoff_at or which carry an unexpired mark-limited entry
@@ -13,7 +13,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { linkDispatchToRun } from "./runs.mjs";
+import { linkDispatchToRun, runDir, wrapPromptWithMailboxProtocol, promptHasMailboxProtocol, atomicWriteText } from "./runs.mjs";
 import { modelUsageGate, windowIsBlocking, effectiveResetAt } from "./usage-windows.mjs";
 
 /** First non-flag argv token; skips values that belong to --flags. */
@@ -454,7 +454,11 @@ async function cmdUsageRefresh(args) {
 export function buildCommand({ roster, model, cli, prompt }) {
   const template = roster.clis?.[cli]?.cmd;
   if (!template) throw new Error(`no cli template for "${cli}" in roster.json clis section`);
-  return template.map((part) => part.replaceAll("{model}", model).replaceAll("{prompt}", prompt));
+  // Roster keys may be logical ids (claude-opus); CLIs often want short aliases (opus).
+  const cliModel = roster.models?.[model]?.cli_model || model;
+  return template.map((part) =>
+    part.replaceAll("{model}", cliModel).replaceAll("{prompt}", prompt)
+  );
 }
 
 function shellQuote(s) {
@@ -557,13 +561,39 @@ async function spawnInTmux({ roster, role, dir, prompt, runId }) {
   } catch {
     // stale cache — proceed with pick above
   }
-  const argv = buildCommand({ roster, model: r.model, cli: r.cli, prompt });
-  const session = `o9k-${role}-${Date.now().toString(36)}`;
+  await spawnPinnedInTmux({
+    roster,
+    model: r.model,
+    cli: r.cli,
+    dir,
+    prompt,
+    runId,
+    sessionPrefix: `o9k-${role}`,
+  });
+}
+
+/** Spawn a pinned CLI×model in detached tmux (no role chain / usage pick). */
+export async function spawnPinnedInTmux({
+  roster,
+  model,
+  cli,
+  dir,
+  prompt,
+  runId,
+  sessionPrefix = "o9k-pass",
+}) {
+  if (!roster.clis?.[cli]?.cmd) {
+    console.error(`no cli template for "${cli}" in roster.json clis section`);
+    process.exit(1);
+  }
+  const argv = buildCommand({ roster, model, cli, prompt });
+  const session = `${sessionPrefix}-${Date.now().toString(36)}`;
   execFileSync("tmux", tmuxArgs({ session, dir, argv }), { stdio: "inherit" });
   linkDispatchToRun(runId, session);
-  console.log(`model: ${r.model} (${r.cli})`);
+  console.log(`model: ${model} (${cli})`);
   console.log(`tmux session: ${session}`);
   console.log(`attach: tmux attach -t ${session}`);
+  return { session, model, cli };
 }
 
 async function cmdDispatch(args) {
@@ -571,11 +601,43 @@ async function cmdDispatch(args) {
   const promptFile = argValue(args, "--prompt-file");
   const dir = argValue(args, "--dir") || process.cwd();
   const runId = argValue(args, "--run-id");
-  if (!role || !promptFile) {
+  if (!role || (!promptFile && !runId)) {
     console.error("usage: roster.mjs dispatch --role <role> --prompt-file <file> [--dir <taskdir>] [--run-id <id>]");
+    console.error("  with --run-id: prefers ~/.o9k/runs/<id>/mailbox/PROMPT.md (mailbox-wrapped)");
     process.exit(1);
   }
-  const prompt = fs.readFileSync(promptFile, "utf8").trim();
+  let prompt = null;
+  // When linked to a run, inject the mailbox-wrapped PROMPT — not the bare task file.
+  // Bare --prompt-file alone caused workers to skip STATUS=done (2026-07-20).
+  if (runId) {
+    const mbPrompt = path.join(runDir(runId), "mailbox", "PROMPT.md");
+    if (fs.existsSync(mbPrompt)) {
+      prompt = fs.readFileSync(mbPrompt, "utf8").trim();
+      if (!promptHasMailboxProtocol(prompt) && promptFile) {
+        const bare = fs.readFileSync(promptFile, "utf8");
+        prompt = wrapPromptWithMailboxProtocol(bare, {
+          runId,
+          runDirectory: runDir(runId),
+        }).trim();
+        atomicWriteText(mbPrompt, prompt);
+      }
+    } else if (promptFile) {
+      const bare = fs.readFileSync(promptFile, "utf8");
+      prompt = wrapPromptWithMailboxProtocol(bare, {
+        runId,
+        runDirectory: runDir(runId),
+      }).trim();
+      fs.mkdirSync(path.dirname(mbPrompt), { recursive: true });
+      atomicWriteText(mbPrompt, prompt);
+    }
+  }
+  if (!prompt) {
+    if (!promptFile) {
+      console.error("dispatch: need --prompt-file or an existing mailbox PROMPT for --run-id");
+      process.exit(1);
+    }
+    prompt = fs.readFileSync(promptFile, "utf8").trim();
+  }
   await spawnInTmux({ roster: requireRoster(), role, dir, prompt, runId });
 }
 
@@ -595,6 +657,47 @@ async function cmdHandoff(args) {
     role,
     dir,
     prompt: "Read HANDOFF.md in this directory and continue the task it describes.",
+  });
+}
+
+/**
+ * Manual model-pinned handoff (skill /o9k-pass-to). Does not walk a role chain.
+ * Exit 3 = ambiguous roster matches (print candidates); exit 4 = unresolved.
+ */
+async function cmdPassTo(args) {
+  const { resolvePassTo } = await import("./pass-to.mjs");
+  const query = argValue(args, "--model") || firstPositional(args);
+  const dir = argValue(args, "--dir") || process.cwd();
+  if (!query) {
+    console.error("usage: roster.mjs pass-to --model <name|cli:model> [--dir <taskdir>]");
+    process.exit(1);
+  }
+  if (!fs.existsSync(path.join(dir, "HANDOFF.md"))) {
+    console.error(`no HANDOFF.md in ${dir} — write it first (state, done, open, verification), then re-run`);
+    process.exit(1);
+  }
+  const roster = requireRoster();
+  const resolved = resolvePassTo(query, roster);
+  if (resolved.status === "ambiguous") {
+    console.error(`ambiguous model "${query}" — pick one and re-run with --model <exact>:`);
+    for (const m of resolved.matches) console.error(`  ${m.label}`);
+    process.exit(3);
+  }
+  if (resolved.status !== "ok") {
+    console.error(
+      `unresolved model "${query}"${resolved.reason ? ` — ${resolved.reason}` : ""}`
+    );
+    console.error("use a roster model id, cli:model pin, or a recognizable free string (opus, composer-2.5, gpt-…)");
+    process.exit(4);
+  }
+  console.log(`resolved: ${resolved.label} (via ${resolved.source})`);
+  await spawnPinnedInTmux({
+    roster,
+    model: resolved.model,
+    cli: resolved.cli,
+    dir,
+    prompt: "Read HANDOFF.md in this directory and continue the task it describes.",
+    sessionPrefix: "o9k-pass",
   });
 }
 
@@ -702,6 +805,7 @@ const HANDLERS = {
   usage: cmdUsage,
   dispatch: cmdDispatch,
   handoff: cmdHandoff,
+  "pass-to": cmdPassTo,
   refresh: cmdRefresh,
   propose: cmdPropose,
   "apply-scores": cmdApplyScores,

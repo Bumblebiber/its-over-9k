@@ -29,6 +29,16 @@ $ROSTER refresh --fixture-dir ... --apply
 4. Show the user the APPLY vs SKIP sections verbatim.
 5. Hosted open-weight models (Hermes/OpenCode) are included; local Ollama is not.
 
+Refresh updates **scores/prices** and may promote chain **heads** — it does not
+fix burst-window exhaustion. When `pick`/`dispatch` fails because every Claude
+model is skipped at `handoff_at_burst` (default 0.8 on `claude:5h` /
+`claude:session`), the user must **curate role chains** with non-Claude
+CLI×model pins in `roster.json` (see `roster` § Burst windows). No amount of
+refresh replaces that config.
+
+`cli_model` aliases and `clis.claude.cmd` flags (`--dangerously-skip-permissions`)
+are manual config — refresh never touches them.
+
 ## Manual-only
 
 `$ROSTER propose` — report without writing.
@@ -44,3 +54,10 @@ Hermes job id `e0c56515831c` exists but is **paused** (avoids double-fire).
 Reports: `~/.hermes/cron-outputs/roster-refresh/`.
 
 Manual: `bash ~/.hermes/scripts/roster-refresh-wrapper.sh`
+
+## After apply
+
+If APPLY rewrote a chain head, remind the user that `pin_head: true` on a role
+freezes that head from future semiauto apply. Burst-window skips at dispatch time
+are independent of score rank — check `roster usage --check` when dispatch
+starts failing with "all models skipped".

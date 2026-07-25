@@ -36,6 +36,35 @@ function newRunId(now = new Date()) {
   return `${iso}-${short}`;
 }
 
+/** Plugin root (…/o9k-roster) — templates live beside scripts/. */
+export function rosterPluginRoot() {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+}
+
+/** True when the prompt already carries the mailbox closeout contract. */
+export function promptHasMailboxProtocol(text) {
+  const t = text || "";
+  return /mailbox\/STATUS|STATUS\s*=\s*`?done`?/i.test(t) && /HEARTBEAT/i.test(t);
+}
+
+/**
+ * Wrap a bare task prompt with templates/worker-prompt.md so the worker
+ * knows to set mailbox STATUS=done. Without this, parents hang on `runs wait`
+ * while PLAN.md already exists on disk (2026-07-20 live failure).
+ */
+export function wrapPromptWithMailboxProtocol(taskBody, { runId, runDirectory } = {}) {
+  const body = (taskBody || "").trim();
+  if (promptHasMailboxProtocol(body)) return body.endsWith("\n") ? body : `${body}\n`;
+  const tplPath = path.join(rosterPluginRoot(), "templates", "worker-prompt.md");
+  let tpl = fs.readFileSync(tplPath, "utf8");
+  const rd = runDirectory || (runId ? runDir(runId) : "{{RUN_DIR}}");
+  tpl = tpl
+    .replaceAll("{{RUN_DIR}}", rd)
+    .replaceAll("{{RUN_ID}}", runId || "{{RUN_ID}}")
+    .replace("{{TASK_BODY}}", body);
+  return tpl.endsWith("\n") ? tpl : `${tpl}\n`;
+}
+
 export function createRun({
   cwd, project, role, parent, worker, prompt, now = new Date(),
 }) {
@@ -70,7 +99,8 @@ export function createRun({
   fs.mkdirSync(mb, { recursive: true });
   atomicWriteJson(path.join(rd, "STATE.json"), state);
   atomicWriteText(path.join(mb, "STATUS"), "starting");
-  atomicWriteText(path.join(mb, "PROMPT.md"), prompt);
+  const wrapped = wrapPromptWithMailboxProtocol(prompt, { runId, runDirectory: rd });
+  atomicWriteText(path.join(mb, "PROMPT.md"), wrapped);
   return state;
 }
 

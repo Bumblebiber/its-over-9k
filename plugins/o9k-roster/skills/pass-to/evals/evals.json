@@ -1,0 +1,42 @@
+{
+  "skill_name": "o9k-pass-to",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Mid-task in /home/bbbee/projects/o9k. User says: /o9k-pass-to opus. ~/.o9k/roster.json exists. Do NOT actually run tmux or TIM writes — write the exact ordered steps and commands you would run, including the HANDOFF.md outline and the final user-facing attach lines you would paste. Then stop.",
+      "expected_output": "Ordered plan: HANDOFF.md → TIM handoff → roster pass-to --model opus → report tmux session + attach; then stop. No role-chain handoff, no mailbox watcher.",
+      "files": [],
+      "expectations": [
+        "Writes or outlines HANDOFF.md with state/done/open/verification",
+        "Mentions TIM handoff or tim-handoff / checkpoint",
+        "Uses roster pass-to with --model opus (not handoff --role)",
+        "Reports tmux session id and attach command to the user",
+        "Does NOT spawn a mailbox watcher / runs wait",
+        "Stops after reporting attach (outgoing agent ends)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "User: pass this session to composer-2.5 please. Roster is configured. You already know current work is half-done on a bugfix. Plan the handoff steps only — do not execute.",
+      "expected_output": "Same pass-to flow with --model composer-2.5 (or that string).",
+      "files": [],
+      "expectations": [
+        "Uses pass-to not handoff --role",
+        "Model argument is composer-2.5 or similar",
+        "Includes HANDOFF.md before spawn",
+        "Gives user tmux attach string"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Session limit hook just fired at 95%. User did NOT say pass-to. What do you do?",
+      "expected_output": "Use roster limit handoff protocol (HANDOFF.md + handoff --role), not /o9k-pass-to.",
+      "files": [],
+      "expectations": [
+        "Chooses roster handoff --role (limit protocol)",
+        "Does NOT claim this is /o9k-pass-to",
+        "Still writes HANDOFF.md"
+      ]
+    }
+  ]
+}

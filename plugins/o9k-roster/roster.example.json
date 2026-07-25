@@ -135,13 +135,6 @@
         "codex:gpt-5.6-luna"
       ]
     },
-    "triager": {
-      "chain": [
-        "claude:claude-haiku",
-        "codex:gpt-5.4-mini",
-        "hermes:deepseek-v4-flash"
-      ]
-    },
     "scout": {
       "chain": [
         "claude:claude-haiku",

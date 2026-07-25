@@ -19,7 +19,6 @@ export const ROLE_SCORE_FIELDS = {
   planner: ["agentic_index", "coding_index"],
   reviewer: ["agentic_index", "coding_index"],
   "prompt-writer": ["intelligence_index"],
-  triager: ["intelligence_index"],
   summarizer: ["intelligence_index"],
 };
 

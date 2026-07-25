@@ -10,6 +10,7 @@ import {
   classifyMailbox, writeAnswer, buildResumePlan, INJECT, buildCliArgv,
   setStatus, resumeAll, linkDispatchToRun, listActiveStates,
   buildColdStartArgv, acquireResumeLock, resumeLockPath, waitTmuxReady,
+  wrapPromptWithMailboxProtocol, promptHasMailboxProtocol,
 } from "./runs.mjs";
 
 const RUNS_BIN = fileURLToPath(new URL("./runs.mjs", import.meta.url));
@@ -59,6 +60,8 @@ test("createRun writes STATE + mailbox skeleton", withTempRuns(async () => {
   assert.ok(fs.existsSync(path.join(rd, "mailbox", "STATUS")));
   assert.equal(fs.readFileSync(path.join(rd, "mailbox", "STATUS"), "utf8").trim(), "starting");
   assert.match(fs.readFileSync(path.join(rd, "mailbox", "PROMPT.md"), "utf8"), /Do the thing/);
+  assert.match(fs.readFileSync(path.join(rd, "mailbox", "PROMPT.md"), "utf8"), /HEARTBEAT/);
+  assert.match(fs.readFileSync(path.join(rd, "mailbox", "PROMPT.md"), "utf8"), /STATUS.*done/i);
   assert.deepEqual(loadState(state.runId).runId, state.runId);
 }));
 
@@ -354,3 +357,22 @@ test("CLI wait ceiling returns exit 2", withTempRuns(async (dir) => {
     assert.equal(e.status, 2);
   }
 }));
+
+test("wrapPromptWithMailboxProtocol wraps bare tasks", () => {
+  const out = wrapPromptWithMailboxProtocol("Do the thing", {
+    runId: "r1",
+    runDirectory: "/tmp/runs/r1",
+  });
+  assert.match(out, /Do the thing/);
+  assert.match(out, /HEARTBEAT/);
+  assert.match(out, /STATUS.*done/i);
+  assert.match(out, /r1/);
+  assert.equal(promptHasMailboxProtocol(out), true);
+  assert.equal(promptHasMailboxProtocol("Do the thing"), false);
+});
+
+test("wrapPromptWithMailboxProtocol is idempotent on already-wrapped prompts", () => {
+  const once = wrapPromptWithMailboxProtocol("Task A", { runId: "r2", runDirectory: "/tmp/r2" });
+  const twice = wrapPromptWithMailboxProtocol(once, { runId: "r2", runDirectory: "/tmp/r2" });
+  assert.equal(twice, once.endsWith("\n") ? once : `${once}\n`);
+});
