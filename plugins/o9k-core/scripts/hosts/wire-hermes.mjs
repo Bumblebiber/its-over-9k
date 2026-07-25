@@ -8,7 +8,9 @@ import {
   writeFileWithBackup,
 } from "./common.mjs";
 
-const PRE_LLM_WIRE = HOOK_WRAPPERS.filter((w) => w.name !== "o9k-memory-precompact");
+const PRE_LLM_WIRE = HOOK_WRAPPERS.filter(
+  (w) => w.name !== "o9k-memory-precompact" && w.name !== "o9k-md-provenance"
+);
 
 // o9k-update-check already throttles itself via its own on-disk cache
 // (see update-check.mjs), so it doesn't need the once-per-session marker

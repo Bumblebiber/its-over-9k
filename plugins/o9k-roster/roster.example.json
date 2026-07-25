@@ -1,9 +1,9 @@
 {
   "$comment": "o9k-roster user config. Copied to ~/.o9k/roster.json by 'roster init'. Curate models/roles/chains yourself — o9k ships no live model list. cmd templates are argv arrays; {model} and {prompt} are substituted literally per element. Chain entries may be bare model ids (uses models[m].cli[0]) or CLI×model pins ('cursor:grok-4.5-high' / {\"cli\":\"hermes\",\"model\":\"deepseek-v4-pro\"}).",
   "clis": {
-    "claude": { "cmd": ["claude", "--model", "{model}", "{prompt}"] },
-    "codex": { "cmd": ["codex", "--model", "{model}", "{prompt}"] },
-    "cursor": { "cmd": ["cursor-agent", "--model", "{model}", "{prompt}"] },
+    "claude": { "cmd": ["claude", "--dangerously-skip-permissions", "--model", "{model}", "{prompt}"] },
+    "codex": { "cmd": ["codex", "--dangerously-bypass-approvals-and-sandbox", "--model", "{model}", "{prompt}"] },
+    "cursor": { "cmd": ["cursor-agent", "--yolo", "--model", "{model}", "{prompt}"] },
     "opencode": { "cmd": ["opencode", "--model", "{model}", "--prompt", "{prompt}"] },
     "hermes": { "cmd": ["hermes", "chat", "-q", "{prompt}", "--model", "{model}"] }
   },

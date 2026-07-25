@@ -64,15 +64,19 @@ export const HOOK_WRAPPERS = [
   { name: "o9k-update-check", target: "core/update-check", timeout: 20 },
   { name: "o9k-memory-precompact", target: "memory/pre-compact", timeout: 30 },
   { name: "o9k-roster-limit-watch", target: "roster/limit-watch", timeout: 10 },
+  { name: "o9k-md-provenance", target: "core/md-provenance", timeout: 10 },
 ];
+
+/** Targets that must NOT run on session-start / pre-LLM-call hosts. */
+const NON_SESSION_TARGETS = new Set(["memory/pre-compact", "core/md-provenance"]);
 
 /**
  * Session-start hook targets for hosts that run everything on one event
  * (OpenCode). Derived from HOOK_WRAPPERS so a new hook shows up everywhere;
- * pre-compact is excluded — it wires to the host's compacting event.
+ * file-edit and pre-compact hooks are excluded.
  */
 export const SESSION_START_TARGETS = HOOK_WRAPPERS.filter(
-  (w) => w.target !== "memory/pre-compact"
+  (w) => !NON_SESSION_TARGETS.has(w.target)
 ).map((w) => w.target);
 
 /**

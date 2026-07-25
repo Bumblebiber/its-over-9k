@@ -16,6 +16,22 @@ stop; suggest `/o9k-init` roster setup.
 `ROSTER="node <marketplace>/plugins/o9k-roster/scripts/roster.mjs"`
 (Claude Code plugin: `node "${CLAUDE_PLUGIN_ROOT}/scripts/roster.mjs"`).
 
+## Auto-approve flags (required for tmux)
+
+Detached tmux has no human on the TTY for permission prompts. The spawned
+harness **must** run fully auto-approved via `clis.*.cmd` in
+`~/.o9k/roster.json`:
+
+| CLI | Required flag(s) in `cmd` (before `{model}` / `{prompt}`) |
+|---|---|
+| `claude` | `--dangerously-skip-permissions` |
+| `cursor` | `--yolo` (alias of `--force`) |
+| `codex` | `--yolo` if supported; else `--dangerously-bypass-approvals-and-sandbox` (or `-a never`) |
+
+Before `$ROSTER pass-to`, skim those `cmd` arrays. If a flag is missing → fix
+`roster.json` (or tell the human), then spawn. Without these flags the worker
+blocks on approvals and the handoff looks "hung".
+
 ## Argument
 
 User form: `/o9k-pass-to <Modellname>` or "pass to opus / composer-2.5 / …".

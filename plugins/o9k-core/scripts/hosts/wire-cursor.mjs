@@ -33,6 +33,12 @@ function buildCursorHooksPatch(home) {
           timeout: byName["o9k-memory-precompact"].timeout,
         },
       ],
+      afterFileEdit: [
+        {
+          command: cmd("o9k-md-provenance.sh"),
+          timeout: byName["o9k-md-provenance"].timeout,
+        },
+      ],
     },
   };
 }
