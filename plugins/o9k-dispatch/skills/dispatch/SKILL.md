@@ -3,6 +3,8 @@ name: dispatch
 description: "Cost-gated subagent dispatch for context isolation. Use for broad searches, lookups, log analysis, doc digestion, or tasks that decompose into independent subtasks — anything whose working noise shouldn't live in the main context. Includes the fan-out cost gate and the RESULT-only subagent contract. Optional branch: when o9k-roster is configured for cross-CLI workers, use mailbox runs + cheap watcher instead of LLM-polling tmux."
 ---
 
+> **Note:** Cross-CLI mailbox runtime is owned by standalone \`team-up\` (o9k-roster plugin is a thin adapter). Path-B contract unchanged: create → dispatch \`--run-id\` → \`runs wait\`.
+
 # dispatch — Subagent Isolation
 
 A subagent's context dies with it; only its conclusion survives. Use that:

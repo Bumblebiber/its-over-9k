@@ -1,8 +1,8 @@
 {
   "name": "o9k-roster",
-  "displayName": "o9k Roster",
+  "displayName": "o9k Roster (team-up adapter)",
   "version": "0.3.0",
-  "description": "Multi-agent model registry: role-based model selection with fallback chains, usage-limit awareness, tmux worker dispatch, limit-triggered session handoff, mailbox runs + crash resume. Selection is deterministic code, not LLM reasoning.",
+  "description": "Compatibility adapter for the standalone team-up roster engine. Role-based model selection, mailbox runs, and specialist launch now live in team-up; this plugin forwards CLI calls and keeps transitional in-process helpers.",
   "author": {
     "name": "Bumblebiber"
   },

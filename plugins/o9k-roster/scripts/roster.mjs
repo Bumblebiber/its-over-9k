@@ -812,13 +812,11 @@ const HANDLERS = {
 };
 
 async function main() {
-  const [cmd, ...args] = process.argv.slice(2);
-  const handler = HANDLERS[cmd];
-  if (!handler) {
-    console.error(`usage: roster.mjs <${Object.keys(HANDLERS).join("|")}> [options]`);
-    process.exit(1);
-  }
-  await handler(args);
+  // Compatibility adapter: CLI ownership moved to standalone team-up.
+  // In-process exports remain for transitional imports/tests.
+  const { runTeamUpCli } = await import("./team-up-adapter.mjs");
+  const code = runTeamUpCli("roster", process.argv.slice(2));
+  process.exit(code);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

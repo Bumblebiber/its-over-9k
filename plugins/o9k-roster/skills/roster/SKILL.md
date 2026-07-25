@@ -3,6 +3,8 @@ name: roster
 description: "Role-based model selection for multi-agent delegation. Use when o9k-roster is installed and ~/.o9k/roster.json exists — before delegating to another model/CLI, spawning planner/implementer/reviewer workers, on rate-limit errors (mark-limited), session-limit handoff, or cross-CLI mailbox runs (create/wait/answer/resume). Every external CLI tmux spawn must use runs create + dispatch --run-id + a cheap in-host watcher (runs wait); bare dispatch without a mailbox is incomplete. Not for ordinary in-host search subagents (see dispatch path A). Selection is deterministic code — never reason about which model to use."
 ---
 
+> **Runtime owner:** standalone `team-up` (set `TEAM_UP_BIN` or PATH). This o9k plugin is a compatibility adapter. Migrate config from `~/.o9k` to `~/.team-up`. Path-B remains: `runs create` → `dispatch --run-id` → `runs wait`.
+
 # roster — Who Does the Work
 
 **Prerequisite:** this pillar is optional *to install*. If `~/.o9k/roster.json` is

@@ -4,6 +4,8 @@ description: "Manual session handoff to a named model in its native CLI (tmux). 
 disable-model-invocation: true
 ---
 
+> **Runtime owner:** standalone `team-up` (set `TEAM_UP_BIN` or PATH). This o9k plugin is a compatibility adapter. Migrate config from `~/.o9k` to `~/.team-up`. Path-B remains: `runs create` → `dispatch --run-id` → `runs wait`.
+
 # o9k-pass-to — Manual model handoff
 
 You are the **outgoing** main agent. The human asked to continue in another

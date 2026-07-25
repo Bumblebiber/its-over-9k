@@ -574,13 +574,11 @@ const HANDLERS = {
 };
 
 function main() {
-  const [cmd, ...args] = process.argv.slice(2);
-  const handler = HANDLERS[cmd];
-  if (!handler) {
-    console.error(`usage: runs.mjs <${Object.keys(HANDLERS).join("|")}> [options]`);
-    process.exit(1);
-  }
-  handler(args);
+  // Compatibility adapter: CLI ownership moved to standalone team-up.
+  import("./team-up-adapter.mjs").then(({ runTeamUpCli }) => {
+    const code = runTeamUpCli("runs", process.argv.slice(2));
+    process.exit(code);
+  });
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

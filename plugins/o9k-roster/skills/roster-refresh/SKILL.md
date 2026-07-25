@@ -3,6 +3,8 @@ name: roster-refresh
 description: "Refresh o9k-roster scores/prices from OpenRouter (Artificial Analysis indices + model catalog), then semiauto-apply chain updates when score rises and cost does not. Use weekly, after major model releases, or when the user asks to update the matrix. Includes hosted open-weight models for Hermes/OpenCode."
 ---
 
+> **Runtime owner:** standalone `team-up` (set `TEAM_UP_BIN` or PATH). This o9k plugin is a compatibility adapter. Migrate config from `~/.o9k` to `~/.team-up`. Path-B remains: `runs create` → `dispatch --run-id` → `runs wait`.
+
 # roster-refresh — Keep the Matrix Current
 
 Scores and prices are evidence; chains stay deterministic. Never invent
