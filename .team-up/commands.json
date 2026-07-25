@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "commands": {
+    "project-test": {
+      "argv": [
+        "node",
+        "--test",
+        "plugins/o9k-roster/scripts/team-up-adapter.test.mjs",
+        "plugins/o9k-core/scripts/hosts/common.test.mjs",
+        "plugins/o9k-core/scripts/hosts/wire-codex.test.mjs",
+        "plugins/o9k-core/scripts/hosts/wire-cursor.test.mjs",
+        "plugins/o9k-core/scripts/hosts/wire-hermes.test.mjs",
+        "plugins/o9k-core/scripts/hosts/wire-opencode.test.mjs"
+      ],
+      "cwd": ".",
+      "timeout_seconds": 1800,
+      "environment": {}
+    }
+  }
+}
