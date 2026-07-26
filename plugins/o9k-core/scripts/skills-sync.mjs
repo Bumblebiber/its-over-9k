@@ -254,14 +254,33 @@ export function skillDrift(options = {}) {
     }
   }
 
+  // Canonical skills the marketplace no longer ships at all — left behind when
+  // a pillar is removed (syncSkills only ever adds). These keep working as
+  // symlinks, so nothing else notices: a stale skill stays in every host's
+  // catalog and its hook wrapper keeps firing at a target that no longer
+  // resolves. Compare against ALL marketplace skills, not just enabled
+  // pillars, so a merely-disabled pillar is never called stale.
+  const shipped = new Set(discoverSkillSources(marketplaceRoot).map(([, name]) => name));
+  let staleCanonical = [];
+  try {
+    staleCanonical = fs
+      .readdirSync(canonical, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && !shipped.has(e.name))
+      .map((e) => e.name);
+  } catch {
+    // no canonical dir yet — nothing can be stale
+  }
+
   return {
     newPillars,
     missingCanonical,
     missingLinks,
+    staleCanonical,
     ok:
       newPillars.length === 0 &&
       missingCanonical.length === 0 &&
-      missingLinks.length === 0,
+      missingLinks.length === 0 &&
+      staleCanonical.length === 0,
   };
 }
 

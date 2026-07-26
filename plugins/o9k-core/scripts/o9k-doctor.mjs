@@ -135,6 +135,9 @@ export function doctor(options = {}) {
           drift.newPillars?.length ? `new pillars ${drift.newPillars.join(",")}` : "",
           drift.missingCanonical?.length ? `missing canonical ${drift.missingCanonical.join(",")}` : "",
           drift.missingLinks?.length ? `${drift.missingLinks.length} missing links` : "",
+          drift.staleCanonical?.length
+            ? `stale canonical (marketplace no longer ships these — delete them and their host links): ${drift.staleCanonical.join(",")}`
+            : "",
         ]
           .filter(Boolean)
           .join("; ")

@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { syncSkills } from "./skills-sync.mjs";
+import { syncSkills, skillDrift } from "./skills-sync.mjs";
 
 const coreRoot = fileURLToPath(new URL("..", import.meta.url)); // plugins/o9k-core
 const marketRoot = path.join(coreRoot, "..");
@@ -86,5 +86,23 @@ test("syncSkills discovers o9k-recon skills dynamically (not hardcoded)", () => 
   assert.ok(fs.existsSync(path.join(tmp, ".agents/skills/o9k/companion-bundles/SKILL.md")));
   assert.ok(fs.existsSync(path.join(tmp, ".agents/skills/o9k/framework-scout/SKILL.md")));
   assert.ok(fs.lstatSync(path.join(tmp, ".codex/skills/o9k-framework-scout")).isSymbolicLink());
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+// Regression: removing a pillar used to leave its canonical skills behind
+// forever — syncSkills only adds. The leftovers stayed symlinked into every
+// host, so nothing reported a problem while a dead skill sat in the catalog.
+test("skillDrift flags canonical skills the marketplace no longer ships", () => {
+  const { tmp, pathEnv } = makeTmpHome();
+  syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot, pathEnv });
+
+  const clean = skillDrift({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
+  assert.deepEqual(clean.staleCanonical, []);
+
+  fs.mkdirSync(path.join(tmp, ".agents/skills/o9k/ghost-pillar-skill"), { recursive: true });
+  const drifted = skillDrift({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot });
+  assert.deepEqual(drifted.staleCanonical, ["ghost-pillar-skill"]);
+  assert.equal(drifted.ok, false);
+
   fs.rmSync(tmp, { recursive: true, force: true });
 });
