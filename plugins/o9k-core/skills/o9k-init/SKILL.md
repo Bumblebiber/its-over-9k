@@ -154,11 +154,13 @@ Rules for this loop:
 - **Already-installed pillars are not re-asked.** They show `yes`; leave them.
   Only offer removal if the user brings it up.
 
-Then, in the same style, the **Spun out of o9k** section: `caveman-mode`,
-`team-up`, `o9k-statusline`, `md-provenance`, `bundle-bench`. These used to be
-pillars and now live in their own repos — same for/not-for framing, same
-default-no, install via the `install:` line the snapshot prints. Skip
-`team-up` on native Windows and say why (needs tmux/bash → WSL).
+Then, in the same style, the **Spun out of o9k** section: `caveman`, `team-up`,
+`o9k-statusline`, `md-provenance`, `bundle-bench`. These used to be pillars and
+now live outside this repo — same for/not-for framing, same default-no, install
+via the `install:` line the snapshot prints. Read the `caveat:` line out loud
+when one is present: `caveman` is **upstream's** project, not an o9k fork, and
+two of its four skills claim concerns o9k assigns elsewhere. Skip `team-up` on
+native Windows and say why (needs tmux/bash → WSL).
 
 If the user says "just give me the usual" or otherwise delegates the whole
 choice: install `o9k-core` + `o9k-scout` + `o9k-dispatch`, say that in one
@@ -373,8 +375,8 @@ not the `/plugin` REPL-only slash command:
 
 ```bash
 claude plugin install o9k-scout@o9k                      # pillars the user said yes to
-claude plugin marketplace add Bumblebiber/caveman-mode   # spun-out, own marketplace
-claude plugin install caveman-mode
+claude plugin marketplace add JuliusBrussee/caveman      # upstream, not an o9k repo
+claude plugin install caveman
 claude plugin marketplace add DietrichGebert/ponytail    # third-party, from source
 claude plugin install ponytail
 ```

@@ -37,7 +37,7 @@ state · workflow methodology · subagent dispatch · memory backend.
 | Layer | Tool | Notes |
 |-------|------|-------|
 | Arbitration & wiring | **o9k-core** (this repo) | Required. Every other pillar is opt-in — `/o9k-init` asks one at a time. |
-| Output style | **[caveman-mode](https://github.com/Bumblebiber/caveman-mode)** | Spun out of o9k. One style owner, ever. |
+| Output style | **[caveman](https://github.com/JuliusBrussee/caveman)** | Upstream project. One style owner, ever — disable its `cavecrew` and `caveman-stats` skills. |
 | Multi-agent roster | **[team-up](https://github.com/Bumblebiber/team-up)** | Spun out of o9k. Only if you drive several CLIs. |
 | Memory MCP | **[TIM](https://github.com/Bumblebiber/tim)** (npm `tim-cli`) or **[hmem](https://github.com/Bumblebiber/hmem)** (npm `hmem-mcp`) | Pick one in `/o9k-init` — never run both. Custom MCP allowed; o9k hooks only auto-drive TIM/hmem. |
 | Live docs | **[Context7](https://github.com/upstash/context7)** | Orthogonal, near-zero risk, high payoff |
@@ -61,7 +61,7 @@ pillar it blocks — check before you report a conflict.
 | Framework | Concern it claims | vs o9k | Owner rule |
 |-----------|-------------------|:------:|------------|
 | [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me) | Spec-challenge questioning | 🟢 | New axis — o9k has no spec-review pillar. Not a methodology owner (single skill file, no hooks/state); slots into whichever spine's "plan" step wants it. |
-| [Ponytail](https://github.com/DietrichGebert/ponytail) | Code minimalism (YAGNI / smallest diff) | 🟢 | New axis — o9k has no code-volume pillar. Composes with caveman-mode. |
+| [Ponytail](https://github.com/DietrichGebert/ponytail) | Code minimalism (YAGNI / smallest diff) | 🟢 | New axis — o9k has no code-volume pillar. Composes with caveman. |
 | [Context7](https://github.com/upstash/context7) | Live library-docs injection | ⚪ | None — o9k has no docs pillar. |
 | [ccusage](https://github.com/ryoppippi/ccusage) | Cost ($) / usage reporting | ⚪ | Complements `/o9k-stats` (context share ≠ dollars). |
 | pr-review / LSP / semgrep plugins | Review, code-intel, security | ⚪ | Different job entirely. |
@@ -78,7 +78,7 @@ pillar it blocks — check before you report a conflict.
 | [claude-context](https://github.com/zilliztech/claude-context) | Semantic code index | 🔴 | Overview builder (vector). Collides with scout's map. Pick one. |
 | [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp) | Code knowledge graph | 🔴 | Overview builder (graph). Collides with scout's map. Pick one. |
 | [tokenmax-mcp](https://github.com/justinjamesmathew/tokenmax-mcp) | Compressed symbol map | 🔴 | Overview builder + symbol view. Collides with scout **and** Serena. |
-| [token-optimizer-mcp](https://github.com/ooples/token-optimizer-mcp) | Output + tool compression | 🔴 | Overlaps `caveman-mode` + `scout`. Replacement, not addition. |
+| [token-optimizer-mcp](https://github.com/ooples/token-optimizer-mcp) | Output + tool compression | 🔴 | Overlaps `caveman` + `scout`. Replacement, not addition. |
 | [BMAD](https://github.com/bmad-code-org/BMAD-METHOD) | Methodology + roles + plan | 🔴 | Methodology owner. Collides with superpowers *and* carries its own plan store. Pick one spine. |
 | [spec-kit](https://github.com/github/spec-kit) | Spec-driven methodology | 🔴 | Methodology owner. One process spine. |
 | [SuperClaude](https://github.com/SuperClaude-Org/SuperClaude_Framework) | Methodology + commands | 🔴 | Methodology owner. One process spine. |
@@ -244,8 +244,8 @@ revisit if a turnkey MCP wrapper appears.
 
 - **Two memory MCPs** (hmem + TIM, or either + claude-mem / mem0 / memory-mcp):
   double SessionStart injection, split-brain state. One only.
-- **Two output/tool compressors** (caveman-mode + upstream caveman;
-  caveman-mode/scout + token-optimizer-mcp).
+- **Two output/tool compressors** (caveman + any other output style;
+  caveman/scout + token-optimizer-mcp).
 - **Two+ overview builders** (scout's map + Graphify + claude-context +
   codebase-memory-mcp + Serena onboarding + codesight) on the same repo in the
   same session.

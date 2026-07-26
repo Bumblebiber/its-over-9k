@@ -30,9 +30,9 @@ const companions = detectCompanions();
 const conflicts = detectConflicts(pillars, companions);
 
 const active = [];
-// caveman is a companion now (its own repo), but the standing order is still
+// caveman is upstream's project, not ours, but the standing order is still
 // o9k's to issue — arbitrating installed frameworks is what o9k is for.
-if (companions["caveman-mode"]) active.push("compress output (caveman)");
+if (companions["caveman"]) active.push("compress output (caveman)");
 if (pillars["o9k-scout"]) active.push("search-before-read, one repo map (scout)");
 if (pillars["o9k-dispatch"]) active.push("isolate broad sweeps in subagents (dispatch)");
 if (pillars["o9k-memory"]) active.push("persist state before compaction (memory)");

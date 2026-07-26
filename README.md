@@ -45,7 +45,7 @@ same for/skip framing, and o9k keeps arbitrating their concerns.
 
 | Package | Concern | Who it's for |
 |---------|---------|--------------|
-| [caveman-mode](https://github.com/Bumblebiber/caveman-mode) | output style | Long sessions where the agent's own prose is a real share of the context. ~50–65% fewer output tokens; code and safety-critical text stay uncompressed. Adapted from [caveman](https://github.com/JuliusBrussee/caveman) (MIT). |
+| [caveman](https://github.com/JuliusBrussee/caveman) *(upstream, not ours)* | output style | Long sessions where the agent's own prose is a real share of the context. ~65% measured output reduction; code, commands and error strings stay verbatim. Disable its `cavecrew` and `caveman-stats` skills — those concerns belong to `o9k-dispatch` and `/o9k-stats`. |
 | [team-up](https://github.com/Bumblebiber/team-up) | multi-agent roster | Driving several CLIs/models at once: role→model fallback chains, usage collector, limit watch, cross-CLI mailbox runs. See [docs/MULTI-AGENT.md](docs/MULTI-AGENT.md). |
 | [o9k-statusline](https://github.com/Bumblebiber/o9k-statusline) | status bar | Model, context fill, limit headroom, git and memory project at a glance in Claude Code, Cursor or Hermes. |
 | [md-provenance](https://github.com/Bumblebiber/md-provenance) | file attribution | Repos filling up with agent-written HANDOFF/PLAN/RESULT files, where you later need to know who wrote what and why. |

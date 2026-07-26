@@ -95,6 +95,7 @@ if (spun.length) {
     console.log(`  ${id.padEnd(16)} ${mark(comp[id])}   (was ${f.wasPillar})`);
     if (f.audience) console.log(`      for:     ${f.audience}`);
     if (f.notFor) console.log(`      not for: ${f.notFor}`);
+    if (f.caveats) console.log(`      caveat:  ${f.caveats}`);
     if (f.install) console.log(`      install: ${f.install}`);
   }
 }

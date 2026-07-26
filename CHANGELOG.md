@@ -19,7 +19,7 @@ into standalone repos, keeping their git history:
 | Was | Now | Concern |
 |-----|-----|---------|
 | `o9k-roster` pillar | [team-up](https://github.com/Bumblebiber/team-up) | multi-agent roster |
-| `o9k-caveman` pillar | [caveman-mode](https://github.com/Bumblebiber/caveman-mode) | output style |
+| `o9k-caveman` pillar | upstream [caveman](https://github.com/JuliusBrussee/caveman) — fork dropped, not re-published | output style |
 | `o9k-core/scripts/statusline/` | [o9k-statusline](https://github.com/Bumblebiber/o9k-statusline) | host status bar |
 | `o9k-core` md-provenance | [md-provenance](https://github.com/Bumblebiber/md-provenance) | file attribution |
 | `benchmarks/` + `bundle-bench` skill | [bundle-bench](https://github.com/Bumblebiber/bundle-bench) | benchmarking |
@@ -28,6 +28,16 @@ All five stay first-class in `compat/registry.json` as companions with
 `audience` / `notFor` text — o9k still arbitrates their concerns, offers to
 install them in `/o9k-init`, and enforces `dispatch` path B once a team-up
 roster exists. It just no longer owns the code.
+
+**caveman was not re-published.** o9k's `o9k-caveman` was a 64-line stripped
+fork of [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) (167
+files, 7 skills, its own evals). A maintained fork of someone else's skill is
+itself an "own feature", and it only ever existed because upstream ships
+neighbouring skills that collide with o9k pillars — which is precisely what the
+arbitration layer is for. So the fork is gone and upstream is the registered
+`output-style` companion, carrying a new `caveats` field: disable `cavecrew`
+(subagent delegation → `o9k-dispatch`) and `caveman-stats` (→ `/o9k-stats`),
+and leave `caveman-compress` off when `o9k-memory` is installed.
 
 - **Every pillar past `o9k-core` is opt-in, default no.** `/o9k-init` asks one
   pillar at a time and reads out both who it's for and who should skip it (from

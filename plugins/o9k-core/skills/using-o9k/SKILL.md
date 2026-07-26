@@ -18,7 +18,7 @@ user opted into — read the table, not your memory of a default install.
 
 | Situation | Concern | Owner (if installed) |
 |-----------|---------|----------------------|
-| Writing any response | Output compression | `caveman` (caveman-mode) |
+| Writing any response | Output compression | `caveman` (upstream project) |
 | About to open/read/explore code | Context discipline | `scout` (o9k-scout) |
 | A search, lookup, or decomposable task | Subagent isolation | `dispatch` path A (o9k-dispatch) |
 | External CLI worker (tmux / cross-CLI) | Multi-agent roster | `team-up` + `dispatch` path B — **required** once a roster exists |
@@ -72,7 +72,7 @@ through it and offers to apply the fix.
 
 | Concern | Owner | Displaced alternatives |
 |---------|-------|------------------------|
-| Output style / tone | `caveman-mode` (own repo) | Claude Code output-styles, persona skills |
+| Output style / tone | upstream `caveman` | Claude Code output-styles, persona skills; caveman's own `cavecrew` (dispatch) and `caveman-stats` (cost) skills — disable those two |
 | Session-start context injection | the memory MCP's hook (TIM or hmem) | any other SessionStart injector |
 | The repo overview map | `o9k-scout` (one map per session) | codesight + Serena + repo-map all generating overviews |
 | Symbol-level navigation/edits | Serena MCP if installed, else plain tools | — |

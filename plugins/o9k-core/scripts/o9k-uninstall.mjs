@@ -150,7 +150,7 @@ export function uninstall(options = {}) {
   const manual = [
     "Claude Code plugins: /plugin uninstall o9k-<pillar>@o9k (repeat per pillar), then /plugin marketplace remove o9k",
     "User data kept on purpose: ~/.o9k (logs/, statusline.json, …) — delete manually if wanted",
-    "Spun-out packages uninstall themselves: npm rm -g o9k-statusline team-up; /plugin uninstall caveman-mode md-provenance bundle-bench",
+    "Spun-out packages uninstall themselves: npm rm -g o9k-statusline team-up; /plugin uninstall md-provenance bundle-bench",
   ];
 
   return { removed, changedFiles, errors, manual };
