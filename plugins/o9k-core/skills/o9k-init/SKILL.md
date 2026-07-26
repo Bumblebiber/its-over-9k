@@ -407,6 +407,14 @@ o9k-statusline-wire --hosts claude:replace,cursor:replace
 For statusline, collect keep/replace/skip per **present** host first; Codex and
 OpenCode report `unsupported` — surface that rather than pretending to wire.
 
+Its built-in segments are generic (model, context, git, device). Anything
+tool-specific is a **provider**: a command in `~/.o9k/statusline.json` that
+prints one line. So when the user's stack already contains a tool that can
+report, offer to add the matching provider entry — memory project from TIM or
+hmem, usage windows from team-up, cost from ccusage. Do **not** add a provider
+for a tool the snapshot did not detect, and never invent a flag: check the
+tool's own docs, or leave it out and say so.
+
 If the snapshot's `Spun out of o9k` section shows a host still wired to the
 **old in-tree** statusline, `node "${CLAUDE_PLUGIN_ROOT}/scripts/o9k-doctor.mjs"`
 flags it as `orphaned`. Fix by installing `o9k-statusline` and re-wiring, or by

@@ -161,7 +161,7 @@
       "concerns": ["statusline"],
       "detect": { "path": ["o9k-statusline"] },
       "install": "npm install -g o9k-statusline && o9k-statusline-wire --hosts claude:replace",
-      "audience": "People who want model, context fill, limit headroom, git state and memory project visible at a glance in Claude Code, Cursor or Hermes.",
+      "audience": "People who want model, context fill and git state at a glance in Claude Code, Cursor or Hermes. Tool-specific lines (memory project, roster limits, cost) plug in as providers — commands that print one line — so it works with whatever backend you run.",
       "notFor": "Codex and OpenCode users (no statusline API), and anyone already happy with a custom status bar.",
       "wasPillar": "o9k-core/statusline"
     },
