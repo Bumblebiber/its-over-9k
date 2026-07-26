@@ -33,20 +33,23 @@ const label = (id) => REG.frameworks[id]?.label || id;
 
 const PLATFORM_NOTES = {
   linux: "linux — full support",
-  darwin:
-    "macOS — core pillars: full. Roster/runs need tmux (brew install tmux); " +
-    "watcher/resume ship as launchd plists (see plugins/o9k-roster/launchd/).",
+  darwin: "macOS — full support. The team-up companion additionally needs tmux (brew install tmux).",
   win32:
-    "Windows — core/memory/update hooks work; the roster/runs/collector stack " +
-    "(tmux, expect, bash) does not. Use WSL for multi-agent features.",
+    "Windows — all pillars work. The team-up companion (multi-agent runtime) " +
+    "needs tmux/bash and therefore WSL.",
 };
 
 console.log("== o9k init snapshot ==");
 console.log("");
 console.log(`Platform: ${PLATFORM_NOTES[process.platform] || process.platform}`);
 console.log("");
-console.log("Pillars:");
-for (const p of PILLARS) console.log(`  ${p.padEnd(14)} ${mark(pillars[p])}`);
+console.log("Pillars (o9k-core required, every other one opt-in — ask per pillar):");
+for (const p of PILLARS) {
+  const f = REG.frameworks[p] || {};
+  console.log(`  ${p.padEnd(14)} ${mark(pillars[p])}${f.required ? "   [required]" : ""}`);
+  if (f.audience) console.log(`      for:     ${f.audience}`);
+  if (f.notFor) console.log(`      not for: ${f.notFor}`);
+}
 
 console.log("");
 console.log("Essentials:");
@@ -80,6 +83,20 @@ console.log("Companions detected:");
 for (const [id, f] of Object.entries(REG.frameworks)) {
   if (f.kind !== "companion" || id === "tim") continue;
   console.log(`  ${f.label.padEnd(36)} ${mark(comp[id])}`);
+}
+
+// Formerly pillars, now their own repos. They are ordinary companions, but the
+// interview should offer them with the same for/not-for framing as a pillar.
+const spun = Object.entries(REG.frameworks).filter(([, f]) => f.wasPillar);
+if (spun.length) {
+  console.log("");
+  console.log("Spun out of o9k (own repos — offer like a pillar, opt-in):");
+  for (const [id, f] of spun) {
+    console.log(`  ${id.padEnd(16)} ${mark(comp[id])}   (was ${f.wasPillar})`);
+    if (f.audience) console.log(`      for:     ${f.audience}`);
+    if (f.notFor) console.log(`      not for: ${f.notFor}`);
+    if (f.install) console.log(`      install: ${f.install}`);
+  }
 }
 
 // Bundle membership from the registry — lets the skill present each bundle
@@ -145,7 +162,7 @@ if (classified.unknownCount) {
     "  → Do NOT research GitHub/README or run trials without explicit user Go."
   );
   console.log(
-    "  → On Go: framework-scout (README) → if still unclear, trial / bundle-bench."
+    "  → On Go: framework-scout (README) → if still unclear, trial / the bundle-bench companion."
   );
   console.log(
     "  → If better than an o9k pick: propose Issue/PR to its-over-9k."

@@ -6,11 +6,17 @@ description: "Guided first-install and reconfiguration flow for o9k. Use when th
 # o9k-init — Guided Setup
 
 The one flow that takes a machine from "just added the marketplace" to a
-complete, conflict-free o9k stack. It detects before it asks, asks before it
-acts, and never destroys data. `/o9k-guide` explains a setup; **`/o9k-init`
-builds one.** After `/o9k-update` reports a **NEW PILLAR**, re-run this flow to
-wire its skills, hooks and config — `--refresh-hosts` alone only syncs existing
-pillars.
+conflict-free stack of exactly the pieces this user wants. It detects before it
+asks, asks before it acts, and never destroys data. `/o9k-guide` explains a
+setup; **`/o9k-init` builds one.** After `/o9k-update` reports a **NEW PILLAR**,
+re-run this flow to offer it — `--refresh-hosts` alone only syncs pillars that
+are already installed.
+
+**Complete is not the goal.** o9k connects frameworks; it does not sell all of
+them. `o9k-core` is the connector and installs unasked. Everything else — the
+four other pillars and the five spun-out packages — is a separate opt-in with a
+default of **no**. A user who only wants core plus scout has a correct install,
+not a partial one.
 
 ## Step 0 — model check (do this before anything else)
 
@@ -33,17 +39,21 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/o9k-init.mjs"
 ```
 
 Read-only, instant. The first line is a **Platform** note — surface it to the
-user *before* the interview when it lists limitations (macOS: roster needs
-tmux + launchd units; Windows: multi-agent stack needs WSL). Never silently
-wire half a stack on an OS that can't run the other half — skip the roster
-questions on native Windows and say why.
+user *before* the interview when it lists limitations (team-up needs tmux;
+native Windows needs WSL for it). Never offer something the OS can't run —
+skip the team-up question on native Windows and say why.
 
-The snapshot also gives you: pillars, git, memory backend, companions,
-**bundle deltas** (what each bundle would still add), rival frameworks, open
+The snapshot also gives you: pillars (each with its `for:` / `not for:` line),
+git, memory backend, companions, a **Spun out of o9k** section, **bundle
+deltas** (what each bundle would still add), rival frameworks, open
 arbitrations, a **Hosts** section, and an **Unknown installed** section
 (plugins / MCPs / skills present on the machine that are **not** in
 `compat/registry.json`). Detection is best-effort — "no" means *not
 detected*, so if the user says they have a tool, believe them.
+
+The `for:` / `not for:` lines come from `compat/registry.json`. Use them — they
+are the script for Step 2a. Never invent your own audience description, and
+never edit the registry to change one.
 
 The unknown list is open-world for **plugins and MCP servers** across hosts.
 **Skills** are scoped to `~/.agents/skills` and Claude's skill dir only
@@ -77,6 +87,9 @@ wire after they create the home dir / install the binary (see Step 2).
 
 Ask, don't lecture. One question at a time, options not essays. In order:
 
+0. **Pillars — one opt-in question each.** See Step 2a. Do this *first*: every
+   later question depends on which pillars exist (no memory pillar → skip the
+   backend question; no recon → no bundle question).
 1. **Bundle** — offer `minimal` / `recommended` / `max`, each shown as its
    *delta* from the snapshot ("recommended adds: Context7, beads, Serena —
    you already have hmem and superpowers"). Recommend `recommended` unless
@@ -104,37 +117,53 @@ Ask, don't lecture. One question at a time, options not essays. In order:
      and report at the end. Uses the non-interactive flags below.
    - **User-run:** you print the commands (interactive variants, e.g. plain
      `hmem init` / `tim init`) and the user drives.
-4. **Statusline (opt-in, default Skip)** — never install without an explicit
-   Yes.
-   - Ask: *"Set up the o9k statusline?"* Options: **Skip (default)** / Yes.
-   - If **Skip**: do not write `~/.o9k/statusline.json`, do not call
-     `wire-all.mjs`.
-   - If **Yes**:
-     1. Multi-select elements: `tim`, `device`, `limits`, `context`, `model`,
-        `git` (at least one).
-     2. Write config with `saveConfig(defaultConfig({ elements }))` via a
-        short node invocation against
-        `${CLAUDE_PLUGIN_ROOT}/scripts/statusline/config.mjs`.
-     3. For each **present** host from Step 1:
-        - Claude / Cursor / Hermes: if an existing non-o9k statusline command
-          is detected → ask **keep** / **replace** (replace backs up first).
-        - Codex / OpenCode: report `statusline: unsupported` — do not pretend
-          to wire.
-     4. During Step 5, run:
-        ```bash
-        node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/wire-all.mjs" \
-          --marketplace "${CLAUDE_PLUGIN_ROOT}/.." \
-          --hosts claude:replace,cursor:replace,hermes:replace,codex:replace
-        ```
-        Use `keep` / `replace` / `skip` per host from the interview; omit
-        absent hosts. Codex/OpenCode entries return `unsupported` in JSON —
-        surface that in the final report.
-   - **Hard rule:** `--refresh-hosts`, SessionStart hooks, and plugin enable
-     **must never** wire statusline — only this interview path may call
-     `wire-all.mjs`.
-5. **Conflicts** — only if Step 1 found rivals; see Step 3.
-6. **Unknowns** — only if Step 1 printed `Unknown installed`; see Step 2b.
-7. **git** — only if missing; see below.
+4. **Conflicts** — only if Step 1 found rivals; see Step 3.
+5. **Unknowns** — only if Step 1 printed `Unknown installed`; see Step 2b.
+6. **git** — only if missing; see below.
+
+### Step 2a — pillars: opt-in, one at a time
+
+**Nothing is preselected.** `o9k-core` is the only pillar that installs
+unasked — it *is* o9k (arbitration, host wiring, the `/o9k-*` commands), and
+the user already has it if they got this far. Every other pillar, and every
+spun-out companion, is a separate yes/no.
+
+Not everyone writes much code, and o9k is a connector, not a bundle: a pillar
+nobody uses is pure session-start tax. So for **each** pillar the snapshot
+shows as `no`:
+
+> **`<pillar>`** — `<audience line from the snapshot>`
+> Skip it if: `<not-for line from the snapshot>`
+> Install it? (yes / no / tell me more)
+
+Rules for this loop:
+
+- **One pillar per question.** Do not present a checklist of five and ask for
+  a multi-select — the user cannot weigh five audience descriptions at once.
+- **Read them the `not for:` line too**, not just the pitch. A user who
+  recognizes themselves in it should feel free to say no.
+- **Default is no.** Silence, "whatever you think", or an unclear answer is a
+  **skip**, not a yes. Say which way you took it and move on.
+- **No pressure, no second ask.** One "no" per pillar per run. `/o9k-init` is
+  re-runnable; that is the answer to "what if I want it later", and worth
+  saying once at the end.
+- **Recommend only when the machine says so.** If the snapshot shows a large
+  repo, many hosts, or an existing memory backend, name that as the reason
+  ("you already run TIM, so o9k-memory has something to wire"). Never
+  recommend a pillar from enthusiasm alone.
+- **Already-installed pillars are not re-asked.** They show `yes`; leave them.
+  Only offer removal if the user brings it up.
+
+Then, in the same style, the **Spun out of o9k** section: `caveman-mode`,
+`team-up`, `o9k-statusline`, `md-provenance`, `bundle-bench`. These used to be
+pillars and now live in their own repos — same for/not-for framing, same
+default-no, install via the `install:` line the snapshot prints. Skip
+`team-up` on native Windows and say why (needs tmux/bash → WSL).
+
+If the user says "just give me the usual" or otherwise delegates the whole
+choice: install `o9k-core` + `o9k-scout` + `o9k-dispatch`, say that in one
+line, and note that memory, recon and the spun-out packages are one
+`/o9k-init` away. Do not silently install more than that on a delegation.
 
 ### Step 2b — unknowns: ask, then evaluate (never silent)
 
@@ -171,19 +200,18 @@ Registry rivals already have a WHY. Unknowns do not. For **each** unknown
 
 Unknowns are **not** auto-rivals. Classification happens only after Go.
 
-7. **Multi-agent roster** — only if the `o9k-roster` pillar is installed and
-   `~/.o9k/roster.json` is missing: *"Use the multi-agent setup (roster)? It
-   routes work to models by role with fallback chains and warns before
-   session limits."* On yes, during setup run:
-   `node "<marketplace>/plugins/o9k-roster/scripts/roster.mjs" init`
-   then tell the user to curate `~/.o9k/roster.json` (models, chains) — the
-   scaffold is example data. On no, skip; the limit-watch hook stays silent
-   without config.
+### Multi-agent roster (team-up) — companion, not a pillar
 
-   **After roster exists:** every external CLI worker spawn must complete the
-   mailbox protocol (`runs create` → `dispatch --run-id` → cheap `runs wait`
-   watcher). Say this once in the final report when roster was enabled — see
-   `dispatch` path B and `docs/MULTI-AGENT.md`.
+Role-based model selection, fallback chains and mailbox runs live in the
+standalone **team-up** package (`npm i -g team-up`), offered in the Step 2a
+spun-out list. o9k neither ships nor wraps that runtime; it only arbitrates
+the `roster` concern and points at it.
+
+If the user installs team-up, run `team-up init` and tell them to curate the
+roster (models, chains) — the scaffold is example data. Say once in the final
+report: **every external CLI worker spawn must complete the mailbox protocol**
+(`runs create` → `dispatch --run-id` → cheap `runs wait` watcher) — see
+`dispatch` path B and `docs/MULTI-AGENT.md`.
 
 ### Multi-CLI hosts (do not install CLIs)
 
@@ -344,14 +372,17 @@ user.** `claude plugin install <name>@<marketplace>` and
 not the `/plugin` REPL-only slash command:
 
 ```bash
-claude plugin install o9k-caveman@o9k    # missing o9k pillars
-claude plugin marketplace add DietrichGebert/ponytail   # third-party, from source
+claude plugin install o9k-scout@o9k                      # pillars the user said yes to
+claude plugin marketplace add Bumblebiber/caveman-mode   # spun-out, own marketplace
+claude plugin install caveman-mode
+claude plugin marketplace add DietrichGebert/ponytail    # third-party, from source
 claude plugin install ponytail
 ```
 
-Loop for every missing pillar and every bundle plugin (superpowers, Ponytail,
-…). After installing, tell the user to run `/reload-plugins` once (that one
-genuinely can't be done from a shell).
+Loop over **exactly the pillars the user opted into in Step 2a** — never "every
+missing pillar" — plus the spun-out packages they accepted and every bundle
+plugin (superpowers, Ponytail, …). After installing, tell the user to run
+`/reload-plugins` once (that one genuinely can't be done from a shell).
 
 ### 5) Companion bundle (unchanged)
 
@@ -360,21 +391,24 @@ Always **dry-run the bundle first** and show the plan:
 companions dropped in Step 3, and for anything Step 1 already showed as
 installed).
 
-### 6) Statusline (only if Step 2 = Yes)
+### 6) Spun-out packages (only the ones accepted in Step 2a)
 
-Dry-run first when agent-run, then wire:
+Each owns its own install and wiring — run the `install:` line the snapshot
+printed and let the package do the rest. o9k does not wire them.
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/wire-all.mjs" --dry-run \
-  --marketplace "${CLAUDE_PLUGIN_ROOT}/.." \
-  --hosts claude:replace,cursor:replace,hermes:replace
-node "${CLAUDE_PLUGIN_ROOT}/scripts/statusline/wire-all.mjs" \
-  --marketplace "${CLAUDE_PLUGIN_ROOT}/.." \
-  --hosts claude:replace,cursor:replace,hermes:replace
+npm i -g o9k-statusline
+o9k-statusline-wire --dry-run --hosts claude:replace,cursor:replace   # show the plan
+o9k-statusline-wire --hosts claude:replace,cursor:replace
 ```
 
-Use the keep/replace/skip modes collected in Step 2. Skip this block entirely
-when the user chose **Skip** — no config file, no wire.
+For statusline, collect keep/replace/skip per **present** host first; Codex and
+OpenCode report `unsupported` — surface that rather than pretending to wire.
+
+If the snapshot's `Spun out of o9k` section shows a host still wired to the
+**old in-tree** statusline, `node "${CLAUDE_PLUGIN_ROOT}/scripts/o9k-doctor.mjs"`
+flags it as `orphaned`. Fix by installing `o9k-statusline` and re-wiring, or by
+deleting the dead `statusLine` entry. Never leave it dangling.
 
 ### Other
 
@@ -401,10 +435,14 @@ time, `/o9k-stats` measures the effect.
   in Step 2b — listing it in the snapshot is enough until then.
 - One question at a time. The snapshot decides what's asked — never walk a
   fully-set-up user through the whole interview.
+- **Every pillar past `o9k-core` is opt-in, default no** (Step 2a). Never
+  install a pillar because it exists, because the stack "looks incomplete",
+  or because it pairs nicely with another. A pillar nobody uses is session
+  cost with no return.
+- **Read the `not for:` line out loud too.** Selling only the upside is how a
+  user ends up with five pillars and three of them idle.
 - Re-runs are normal: `/o9k-init` on a configured machine is how you *extend*
-  (e.g. minimal → recommended) — same flow, smaller deltas.
-- **Statusline is opt-in only** — default Skip; never write
-  `~/.o9k/statusline.json` or call `wire-all.mjs` from `--refresh-hosts`,
-  SessionStart, or plugin enable.
+  (e.g. minimal → recommended, or add a pillar you skipped) — same flow,
+  smaller deltas. Say this once instead of pushing a pillar twice.
 - Don't fight the user's choice. B (keep the rival) is legitimate; state the
   consequence once and move on.

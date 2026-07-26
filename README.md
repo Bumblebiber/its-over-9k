@@ -5,11 +5,11 @@
 
 ![It's Over 9000](https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExc3h1MDJxbWE0MnU0Y3Y2cmc3Z3ZkOWdjaThwYzVqbTkwbHo1eWM1NCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tPKoWQJk3cEbC/giphy.gif)
 
-**o9k is a meta-framework for AI coding agents.** It doesn't invent yet another
-technique — it *combines* the best token-efficiency and agent-quality frameworks
-into one coherent, conflict-free system of skills and plugins, wired to a
-persistent memory MCP. Primary packaging is a Claude Code marketplace; the same
-pillars also wire into **Cursor, Codex, OpenCode, and Hermes** via `/o9k-init`.
+**o9k is the connector between AI coding agent frameworks.** It invents no
+technique of its own. It decides which installed framework owns which concern,
+wires them into every host, and keeps their interplay efficient. Primary
+packaging is a Claude Code marketplace; the same pillars also wire into
+**Cursor, Codex, OpenCode, and Hermes** via `/o9k-init`.
 
 Every framework below saves tokens or improves output on its own. Combined
 naively, they fight each other — two plugins hooking `SessionStart`, two output
@@ -17,22 +17,39 @@ styles rewriting your prose, two "plans" claiming to be the source of truth.
 o9k's job is the **arbitration layer**: each concern has exactly one owner, and
 the pieces multiply instead of colliding.
 
+**Everything is opt-in.** `o9k-core` is the connector itself and the only piece
+the others assume. Every other pillar is a separate yes/no in `/o9k-init`, with
+a plain statement of who it's for and who should skip it. A machine running
+core plus one pillar is a correct install, not a partial one.
+
 ---
 
-## The Seven Pillars
+## The pillars
 
-| Pillar | Plugin | What it does | Standing on the shoulders of |
-|--------|--------|--------------|------------------------------|
-| **Doctrine & arbitration** | `o9k-core` | The rules of engagement: who owns which hook, which style, which plan. Loaded once, always on. | Anthropic context-engineering guidance |
-| **Output compression** | `o9k-caveman` | Telegraphic output style: ~50–65% fewer output tokens, with automatic fallback to full prose for anything safety-critical. | [caveman](https://github.com/JuliusBrussee/caveman) (MIT) |
-| **Context discipline** | `o9k-scout` | Load structure, not files: search before read, targeted line ranges, one canonical repo map per session. | aider repo-map, [codesight](https://github.com/Houseofmvps/codesight), [ast-grep](https://github.com/ast-grep/ast-grep) |
-| **Subagent isolation** | `o9k-dispatch` | Cost-gated fan-out: offload searches and decomposable work to isolated subagents that return results, not transcripts. Own skill (`dispatch`) with fan-out cost gate + RESULT-only contract. | [Anthropic multi-agent research](https://www.anthropic.com/engineering/multi-agent-research-system) |
-| **Memory** | `o9k-memory` | A memory MCP so sessions never start from zero — compact briefing at session start, deep recall on demand, save-before-compact. | **[TIM](https://github.com/Bumblebiber/tim)** (npm `tim-cli`, preferred), **[hmem](https://github.com/Bumblebiber/hmem)** (npm `hmem-mcp`), or your own MCP via `/o9k-init` |
-| **Discovery** | `o9k-recon` | Find and classify companion frameworks; one-command companion bundle installs. | — |
-| **Multi-agent roster** | `o9k-roster` | Role→CLI×model fallback chains, subscription usage collector (multi-window `~/.o9k/usage.json`), adaptive watcher, limit-watch + handoff, optional OpenRouter/AA score refresh, cross-CLI mailbox runs. See [docs/MULTI-AGENT.md](docs/MULTI-AGENT.md). | — |
+`o9k-core` is required. The rest are opt-in — `/o9k-init` asks about each one
+separately and defaults to **no**.
 
-Each pillar is an independent plugin. Install all seven or cherry-pick — `o9k-core`
-is the only one the others assume.
+| Pillar | Plugin | Who it's for | Skip it if |
+|--------|--------|--------------|------------|
+| **Doctrine & arbitration** | `o9k-core` *(required)* | Everyone. The arbitration table, host wiring, and the `/o9k-*` commands. This is o9k. | — |
+| **Context discipline** | `o9k-scout` | People working in real codebases, especially large or unfamiliar ones. Search before read, one canonical repo map per session. | Your sessions touch few files, or your work isn't code. |
+| **Subagent isolation** | `o9k-dispatch` | Work with broad sweeps — repo-wide searches, log analysis, digesting long docs. Subagents return conclusions, not transcripts. | Short, single-file sessions; a subagent then costs more than it saves. |
+| **Memory** | `o9k-memory` | Projects spanning many sessions. Briefing at session start, recall on demand, flush before compaction. | One-off tasks, or you don't want a memory MCP ([TIM](https://github.com/Bumblebiber/tim) / [hmem](https://github.com/Bumblebiber/hmem)) installed. |
+| **Discovery** | `o9k-recon` | People who curate their tool stack — scouting new frameworks, installing companion bundles. | Your stack is settled. Install it the day you go shopping. |
+
+### Spun out of o9k
+
+o9k connects frameworks; it does not ship features of its own. These used to be
+pillars and now live in their own repos. `/o9k-init` offers each one with the
+same for/skip framing, and o9k keeps arbitrating their concerns.
+
+| Package | Concern | Who it's for |
+|---------|---------|--------------|
+| [caveman-mode](https://github.com/Bumblebiber/caveman-mode) | output style | Long sessions where the agent's own prose is a real share of the context. ~50–65% fewer output tokens; code and safety-critical text stay uncompressed. Adapted from [caveman](https://github.com/JuliusBrussee/caveman) (MIT). |
+| [team-up](https://github.com/Bumblebiber/team-up) | multi-agent roster | Driving several CLIs/models at once: role→model fallback chains, usage collector, limit watch, cross-CLI mailbox runs. See [docs/MULTI-AGENT.md](docs/MULTI-AGENT.md). |
+| [o9k-statusline](https://github.com/Bumblebiber/o9k-statusline) | status bar | Model, context fill, limit headroom, git and memory project at a glance in Claude Code, Cursor or Hermes. |
+| [md-provenance](https://github.com/Bumblebiber/md-provenance) | file attribution | Repos filling up with agent-written HANDOFF/PLAN/RESULT files, where you later need to know who wrote what and why. |
+| [bundle-bench](https://github.com/Bumblebiber/bundle-bench) | benchmarking | Maintainers who want pass-count and cost numbers for a companion combo instead of README claims. |
 
 ## Why combining multiplies
 
@@ -71,11 +88,11 @@ install gets three sentences: *everything runs by itself, nothing to do,
 
 ## Platforms
 
-| OS | Core pillars (doctrine, caveman, scout, dispatch, memory, recon) | Multi-agent (roster, runs, collector) |
-|----|------------------------------------------------------------------|----------------------------------------|
-| **Linux** | ✅ full | ✅ full (systemd units for watcher/resume) |
-| **macOS** | ✅ full | ⚠️ needs `brew install tmux`; watcher/resume via launchd plists (`plugins/o9k-roster/launchd/`) |
-| **Windows** | ✅ hooks + update check work natively | ❌ tmux/expect/bash stack — use **WSL** |
+| OS | o9k pillars | team-up companion (multi-agent) |
+|----|-------------|----------------------------------|
+| **Linux** | ✅ full | ✅ full |
+| **macOS** | ✅ full | ⚠️ needs `brew install tmux` |
+| **Windows** | ✅ full | ❌ tmux/bash stack — use **WSL** |
 
 `/o9k-init` prints this as a Platform line first and skips setup questions the
 host OS can't honor.
@@ -104,13 +121,11 @@ until the scoped name is publicly resolvable on the registry.)
 ```
 /plugin marketplace add Bumblebiber/its-over-9k
 /plugin install o9k-core@o9k
-/plugin install o9k-caveman@o9k
-/plugin install o9k-scout@o9k
-/plugin install o9k-dispatch@o9k
-/plugin install o9k-memory@o9k
-/plugin install o9k-recon@o9k
-/plugin install o9k-roster@o9k
 ```
+
+`o9k-core` is all you install by hand. Run `/o9k-init` next — it walks the
+optional pillars one at a time, tells you who each is for and who should skip
+it, and installs only what you say yes to.
 
 Then run **`/o9k-init`** in a session — it detects your setup, walks you
 through the companion bundle choice, and handles conflicts and migration.
@@ -238,8 +253,8 @@ proposing a bundle or matrix update. See
 
 ## Status
 
-Early but functional. Seven pillars; hooks and multi-CLI wiring ship for the
-hosts above.
+Early but functional. Five pillars (one required, four opt-in); hooks and
+multi-CLI wiring ship for the hosts above.
 
 - **SessionStart (o9k-core)** — injects a ~70-token doctrine directive (never
   documentation) so all installed pillars apply automatically; flags open
@@ -261,23 +276,11 @@ hosts above.
 - **PreCompact (o9k-memory)** — fires the backend's checkpoint (`tim checkpoint`
   / `hmem checkpoint`) in the background before compaction summarizes the
   session away. Never blocks or delays compaction.
-- **Limit watch (o9k-roster)** — reads `~/.o9k/usage.json` (no provider API
-  calls) and warns / instructs handoff when a provider, CLI, or **usage window**
-  crosses its threshold: burst windows like `claude:5h`/`claude:session`
-  (reset in hours) hand off at `limits.handoff_at_burst` (default 0.8);
-  week/monthly windows like `codex:weekly` hand off at `limits.handoff_at`
-  (default 0.95). Wired on all hosts; model choice stays in `roster.mjs`,
-  never in LLM reasoning.
-- **Subscription usage collector (o9k-roster)** — optional adaptive watcher +
-  `roster usage --refresh` populate per-window fractions for Claude/Codex/Cursor
-  (`claude -p "/usage"` fast path; PTY for interactive tables). `pick`/`dispatch`
-  gate per model; pre-dispatch refresh when cache is stale. Install:
-  `o9k-usage-watcher.sh` (symlink or `O9K_ROSTER_SCRIPTS` + systemd drop-in).
-  Spec: `docs/superpowers/specs/2026-07-17-o9k-roster-usage-collector-design.md`.
-- **Cross-CLI runs (o9k-roster, opt-in)** — disk mailbox under
-  `~/.o9k/runs/<id>/`, blocking `runs.mjs wait`, systemd `o9k-resume.service`.
-  Only when `~/.o9k/roster.json` exists; single-agent installs stay on dispatch
-  path A. Spec: `docs/superpowers/specs/2026-07-17-cross-cli-run-resume-design.md`.
+- **Multi-agent (team-up, separate package)** — limit watch, subscription usage
+  collector, and cross-CLI mailbox runs live in
+  [team-up](https://github.com/Bumblebiber/team-up). o9k arbitrates the concern
+  and requires `dispatch` path B once a roster exists; it ships none of that
+  code. See [docs/MULTI-AGENT.md](docs/MULTI-AGENT.md).
 
 `o9k-core` also ships **`/o9k-guide`** (personalized setup orientation backed by
 a read-only detector script), **`/o9k-update`** (check pillars & companions for

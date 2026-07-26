@@ -3,42 +3,32 @@
   "owner": {
     "name": "Bumblebiber"
   },
-  "description": "its-over-9k \u2014 meta-framework combining token-efficiency frameworks (output compression, context discipline, subagent isolation, memory MCP, multi-agent roster) for Claude Code, Cursor, Codex, OpenCode, and Hermes.",
+  "description": "its-over-9k (o9k) — the connector between agent frameworks for Claude Code, Cursor, Codex, OpenCode and Hermes. Arbitrates which tool owns which concern, wires them into every host, and keeps the interplay efficient. Ships no features of its own.",
   "plugins": [
     {
       "name": "o9k-core",
       "source": "./plugins/o9k-core",
-      "description": "The o9k doctrine: efficiency rules of engagement and the arbitration layer that keeps all other efficiency plugins from colliding. Zero-effort: a SessionStart hook activates everything automatically; /o9k-guide explains the rest. Install this first."
-    },
-    {
-      "name": "o9k-caveman",
-      "source": "./plugins/o9k-caveman",
-      "description": "Output compression: telegraphic response style with lite/full/ultra levels and automatic fallback to full prose for safety-critical content. Adapted from JuliusBrussee/caveman (MIT)."
+      "description": "Required. The o9k doctrine: efficiency rules of engagement plus the arbitration layer that keeps every other framework from colliding. Owns host wiring, /o9k-init, /o9k-guide, /o9k-update, /o9k-stats. Install this first — the other pillars are opt-in."
     },
     {
       "name": "o9k-scout",
       "source": "./plugins/o9k-scout",
-      "description": "Context discipline: load structure before files, search before read, one canonical repo map per session."
+      "description": "Optional. Context discipline: load structure before files, search before read, one canonical repo map per session. For people working in real codebases."
     },
     {
       "name": "o9k-dispatch",
       "source": "./plugins/o9k-dispatch",
-      "description": "Cost-gated subagent fan-out: isolate searches and decomposable work in subagents that return results, not transcripts."
+      "description": "Optional. Cost-gated subagent fan-out: isolate searches and decomposable work in subagents that return results, not transcripts. For work with broad sweeps."
     },
     {
       "name": "o9k-memory",
       "source": "./plugins/o9k-memory",
-      "description": "Persistent memory integration: session-start briefing, on-demand recall, save-before-compact. Prefers TIM (npm tim-cli) when present; falls back to hmem (npm hmem-mcp)."
+      "description": "Optional. Persistent memory integration: session-start briefing, on-demand recall, save-before-compact. Prefers TIM (npm tim-cli), falls back to hmem (npm hmem-mcp). For projects spanning many sessions."
     },
     {
       "name": "o9k-recon",
       "source": "./plugins/o9k-recon",
-      "description": "Discovery & onboarding: a GitHub Scout skill (framework-scout) for finding new agent frameworks and classifying them symbiotic/orthogonal/blocking, plus one-command companion bundle installs (companion-bundles)."
-    },
-    {
-      "name": "o9k-roster",
-      "source": "./plugins/o9k-roster",
-      "description": "Compatibility adapter for standalone team-up roster/specialist runtime"
+      "description": "Optional. Discovery & onboarding: framework-scout finds new agent frameworks and classifies them symbiotic/orthogonal/blocking; companion-bundles installs a conflict-free stack in one command. For people who curate their tool stack."
     }
   ]
 }

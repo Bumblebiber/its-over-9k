@@ -79,4 +79,4 @@ Found a new companion via `framework-scout`? If it's 🟢 or ⚪ and doesn't
 duplicate a concern already in the bundle, add a `step`/`manual` entry to
 `install/o9k-companions.sh` and a row to [docs/BUNDLES.md](../../../../docs/BUNDLES.md).
 Never add a 🔴 framework to a bundle. Combo promotion to `recommended` still
-requires `bundle-bench` measured pass rates.
+requires measured pass rates from the `bundle-bench` companion (own repo).

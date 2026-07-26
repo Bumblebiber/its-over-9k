@@ -83,10 +83,8 @@ test("syncSkills discovers o9k-recon skills dynamically (not hardcoded)", () => 
   const { tmp, pathEnv } = makeTmpHome();
   fs.mkdirSync(path.join(tmp, ".codex"), { recursive: true });
   syncSkills({ home: tmp, pluginRoot: coreRoot, marketplaceRoot: marketRoot, pathEnv });
-  assert.ok(fs.existsSync(path.join(tmp, ".agents/skills/o9k/bundle-bench/SKILL.md")));
   assert.ok(fs.existsSync(path.join(tmp, ".agents/skills/o9k/companion-bundles/SKILL.md")));
   assert.ok(fs.existsSync(path.join(tmp, ".agents/skills/o9k/framework-scout/SKILL.md")));
-  assert.ok(fs.existsSync(path.join(tmp, ".agents/skills/o9k/roster/SKILL.md")));
-  assert.ok(fs.lstatSync(path.join(tmp, ".codex/skills/o9k-bundle-bench")).isSymbolicLink());
+  assert.ok(fs.lstatSync(path.join(tmp, ".codex/skills/o9k-framework-scout")).isSymbolicLink());
   fs.rmSync(tmp, { recursive: true, force: true });
 });

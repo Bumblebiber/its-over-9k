@@ -1,6 +1,6 @@
 ---
 name: using-o9k
-description: "Meta-skill for the o9k efficiency doctrine and pillar arbitration (who owns hooks, style, plan, map, dispatch). Load at session start, on conflicts between efficiency skills, and whenever unsure Path A vs Path B — if ~/.o9k/roster.json exists, external CLI tmux workers require roster + dispatch mailbox/watcher (not bare dispatch). Also use when caveman vs other output-styles collide."
+description: "Meta-skill for the o9k doctrine and arbitration — who owns output style, the repo map, dispatch, memory, the plan. Load at session start, on conflicts between efficiency skills, and whenever unsure Path A vs Path B — if a team-up roster exists, external CLI tmux workers require team-up + dispatch mailbox/watcher (not bare dispatch). Also use when caveman vs other output-styles collide."
 ---
 
 # using-o9k — The Doctrine
@@ -9,26 +9,35 @@ You are running under the o9k efficiency framework. Its goal: maximize the
 fraction of your context window doing useful work. Every token you emit or load
 gets re-read on every subsequent turn — waste compounds.
 
-## The five pillars and when each applies
+o9k itself owns no efficiency feature. It is the connector: it decides which
+installed framework owns which concern, wires them into every host, and keeps
+them from colliding. Whether a given rule below applies depends on what the
+user opted into — read the table, not your memory of a default install.
 
-| Situation | Pillar | Skill |
-|-----------|--------|-------|
-| Writing any response | Output compression | `caveman` |
-| About to open/read/explore code | Context discipline | `scout` |
-| A search, lookup, or decomposable task | Subagent isolation | `dispatch` path A |
-| External CLI worker (tmux / cross-CLI) | Multi-agent roster | `roster` + `dispatch` path B — **required** when `~/.o9k/roster.json` exists |
-| Session start, project questions, "what was the state?" | Memory | `memory` |
+## What applies, and when
+
+| Situation | Concern | Owner (if installed) |
+|-----------|---------|----------------------|
+| Writing any response | Output compression | `caveman` (caveman-mode) |
+| About to open/read/explore code | Context discipline | `scout` (o9k-scout) |
+| A search, lookup, or decomposable task | Subagent isolation | `dispatch` path A (o9k-dispatch) |
+| External CLI worker (tmux / cross-CLI) | Multi-agent roster | `team-up` + `dispatch` path B — **required** once a roster exists |
+| Session start, project questions, "what was the state?" | Memory | `memory` (o9k-memory) |
 | Conflict between any of the above | Arbitration | this skill |
+
+A row whose owner is not installed simply does not apply. Do not emulate a
+missing pillar by hand, and do not tell the user they are missing one unless
+they ask.
 
 **Roster detection gate** (run before any external CLI spawn):
 
 ```bash
-test -f ~/.o9k/roster.json && test -f "<marketplace>/plugins/o9k-roster/scripts/runs.mjs"
+command -v team-up && test -f ~/.team-up/roster.json
 ```
 
-- **No `roster.json`** → Path A only (in-host RESULT subagents).
-- **`roster.json` present** → external CLI workers **must** use Path B:
-  `runs create` → `roster dispatch --run-id` → cheap in-host `runs wait` watcher.
+- **No roster** → Path A only (in-host RESULT subagents).
+- **Roster present** → external CLI workers **must** use Path B:
+  `runs create` → `team-up dispatch --run-id` → cheap in-host `runs wait` watcher.
   Bare tmux dispatch without mailbox + watcher = **incomplete spawn** — parent
   never gets notified. See `dispatch` § Incomplete-spawn gate.
 
@@ -42,7 +51,7 @@ test -f ~/.o9k/roster.json && test -f "<marketplace>/plugins/o9k-roster/scripts/
    later turn. Say it once, say it short (see `caveman`).
 4. **Isolate the noisy work.** Broad searches, log dumps, doc reading — send a
    subagent (see `dispatch` path A); keep only the conclusion.
-5. **External workers need a callback.** When `~/.o9k/roster.json` exists and
+5. **External workers need a callback.** When a team-up roster exists and
    you spawn an external CLI in tmux, Path B is mandatory — not a shortcut,
    not "when you remember." Three steps or the spawn is incomplete: `runs
    create`, `dispatch --run-id`, watcher on `runs wait`. Never report "running"
@@ -63,7 +72,7 @@ through it and offers to apply the fix.
 
 | Concern | Owner | Displaced alternatives |
 |---------|-------|------------------------|
-| Output style / tone | `o9k-caveman` | Claude Code output-styles, persona skills |
+| Output style / tone | `caveman-mode` (own repo) | Claude Code output-styles, persona skills |
 | Session-start context injection | the memory MCP's hook (TIM or hmem) | any other SessionStart injector |
 | The repo overview map | `o9k-scout` (one map per session) | codesight + Serena + repo-map all generating overviews |
 | Symbol-level navigation/edits | Serena MCP if installed, else plain tools | — |
@@ -71,7 +80,9 @@ through it and offers to apply the fix.
 | Task/issue state | beads if installed, else memory T-entries | parallel TODO markdown files |
 | Workflow methodology (TDD, review, brainstorm) | superpowers if installed | — |
 | Subagent dispatch (in-host) | `o9k-dispatch` path A | superpowers' `dispatching-parallel-agents` (disabled 2026-07-17 — owner is o9k) |
-| Cross-CLI who/spawn + mailbox | `o9k-roster` + `o9k-dispatch` path B when `~/.o9k/roster.json` exists | hard-coded model picks; bare `roster dispatch` without `runs create` + `--run-id` + watcher; a second dispatch owner |
+| Cross-CLI who/spawn + mailbox | `team-up` (own repo) + `o9k-dispatch` path B once a roster exists | hard-coded model picks; bare `team-up dispatch` without `runs create` + `--run-id` + watcher; a second dispatch owner |
+| The host status bar | `o9k-statusline` (own repo) | a second statusLine command per host |
+| Markdown attribution | `md-provenance` (own repo) | hand-written "written by" headers |
 
 ## Exceptions that override everything
 

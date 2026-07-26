@@ -14,18 +14,6 @@
           }
         ]
       }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/md-provenance.mjs\"",
-            "timeout": 10
-          }
-        ]
-      }
     ]
   }
 }

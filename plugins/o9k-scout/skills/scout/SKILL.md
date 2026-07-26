@@ -29,7 +29,7 @@ The cheapest token is the one never loaded. Explore structure, not content.
   unless they ARE the subject of the task.
 - **Broad sweep needed?** (many files, unknown naming, "where is X handled?")
   → don't do it inline; hand it to `dispatch` path A and receive the conclusion
-  only. External CLI coding workers with `~/.o9k/roster.json` → `dispatch` path B
+  only. External CLI coding workers with a `team-up` roster → `dispatch` path B
   (mailbox + watcher), not inline exploration.
 - **Docs/logs over ~200 lines:** extract the relevant slice (grep the error ID,
   read the section) — never the whole thing.

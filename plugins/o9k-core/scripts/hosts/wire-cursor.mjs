@@ -18,25 +18,16 @@ function buildCursorHooksPatch(home) {
   return {
     version: 1,
     hooks: {
-      sessionStart: [
-        "o9k-core-session",
-        "o9k-memory-session",
-        "o9k-update-check",
-        "o9k-roster-limit-watch",
-      ].map((name) => ({
-        command: cmd(`${name}.sh`),
-        timeout: byName[name].timeout,
-      })),
+      sessionStart: ["o9k-core-session", "o9k-memory-session", "o9k-update-check"].map(
+        (name) => ({
+          command: cmd(`${name}.sh`),
+          timeout: byName[name].timeout,
+        })
+      ),
       preCompact: [
         {
           command: cmd("o9k-memory-precompact.sh"),
           timeout: byName["o9k-memory-precompact"].timeout,
-        },
-      ],
-      afterFileEdit: [
-        {
-          command: cmd("o9k-md-provenance.sh"),
-          timeout: byName["o9k-md-provenance"].timeout,
         },
       ],
     },

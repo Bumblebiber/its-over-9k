@@ -1,6 +1,6 @@
 ---
 name: o9k-guide
-description: "Personalized o9k orientation for the human. Use when the user invokes /o9k-guide, asks how o9k works or what they need to do, right after first-time setup, or when the SessionStart hook flags an unresolved arbitration. Explains what runs automatically, the few one-time actions left, and on-demand commands (/o9k-init, /o9k-stats, /o9k-update). Agent-only: if ~/.o9k/roster.json exists, external CLI spawns still require dispatch path B — this guide does not exempt that."
+description: "Personalized o9k orientation for the human. Use when the user invokes /o9k-guide, asks how o9k works or what they need to do, right after first-time setup, or when the SessionStart hook flags an unresolved arbitration. Explains what runs automatically, the few one-time actions left, and on-demand commands (/o9k-init, /o9k-stats, /o9k-update). Agent-only: if a team-up roster exists, external CLI spawns still require dispatch path B — this guide does not exempt that."
 ---
 
 # o9k-guide — The One-Minute Orientation
@@ -50,10 +50,10 @@ edit), **offer to do it right now** — the user should never have to copy-paste
 - `/o9k-update` — check pillars & companions for updates, apply the safe ones.
 - `/o9k-guide` — this orientation, any time.
 - `framework-scout` skill — scouts GitHub for new companion frameworks.
-- Multi-agent roster (only when `~/.o9k/roster.json` exists): cross-CLI workers
-  via mailbox runs — see `docs/MULTI-AGENT.md`. Tell the human they can ignore
-  this if they never enabled roster; **if the file exists, you must use
-  `dispatch` path B for every external CLI spawn** (runs create + --run-id +
+- Multi-agent roster (only when the `team-up` companion is installed): cross-CLI
+  workers via mailbox runs — see `docs/MULTI-AGENT.md`. Tell the human they can
+  ignore this if they never installed team-up; **if a roster exists, you must
+  use `dispatch` path B for every external CLI spawn** (runs create + --run-id +
   watcher) — not optional for agents.
 - Settings, only if asked: `O9K_UPDATE_CHECK=off|notify|auto` (update policy),
   kill switches `O9K_CORE_HOOK=off`, `O9K_MEMORY_HOOK=off`.

@@ -88,11 +88,13 @@ Three drift cases, three remedies:
 | **Missing canonical** (existing pillar gained a new upstream skill; some skills wired, some not) | `skills missing canonical` in report | Run `--refresh-hosts` — copies the new skill into `~/.agents/skills/o9k/` and wires hosts. |
 | **Missing links** (canonical skills exist but a host's symlink or Cursor rule is missing/wrong) | `skills missing links` in report | Run `--refresh-hosts` — re-syncs canonical skills + re-wires host hooks. |
 
-Concrete example (2026-07-17): `o9k-roster` installed as a plugin; source skills
-present under `plugins/o9k-roster/skills/` but NOT exposed under
-`~/.claude/skills/` or `~/.agents/skills/o9k/`. Old `/o9k-update` saw nothing
-wrong (npm companions current). Now `--report` flags it as **NEW PILLAR** →
-recommends `/o9k-init`.
+Concrete example: a pillar installed as a plugin, source skills present under
+`plugins/<pillar>/skills/` but NOT exposed under `~/.claude/skills/` or
+`~/.agents/skills/o9k/`. Old `/o9k-update` saw nothing wrong (npm companions
+current). Now `--report` flags it as **NEW PILLAR** → recommends `/o9k-init`.
+
+**NEW PILLAR is an offer, not a task.** Pillars are opt-in — report it and let
+`/o9k-init` ask. Never wire a pillar the user never said yes to.
 
 After a marketplace update (`/plugin marketplace update o9k`) or an npm bump
 of `its-over-9k`, always ensure hosts are refreshed (npm path does this

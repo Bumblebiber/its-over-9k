@@ -1,92 +1,58 @@
-# Multi-Agent Delegation with o9k-roster
+# Multi-Agent Delegation
 
-How to run a multi-CLI agent team (Claude Code, Codex, Cursor, OpenCode,
-Hermes) with role-based model selection.
+Running a multi-CLI agent team (Claude Code, Codex, Cursor, OpenCode, Hermes)
+with role-based model selection is **not** an o9k feature. It lives in the
+standalone [team-up](https://github.com/Bumblebiber/team-up) package.
 
-## The pieces
+```bash
+npm i -g team-up && team-up init
+```
 
-- **Registry** (`~/.o9k/roster.json`): your models, CLIs, tiers, prices, and
-  role chains as **CLI×model** cells (e.g. `cursor:grok-4.5-high`,
-  `hermes:deepseek-v4-pro`). Yours to curate — o9k ships only the schema and
-  example data.
-- **`roster.mjs`**: deterministic selection. `pick` answers "who", `dispatch`
-  spawns the worker in tmux, `mark-limited` reacts to rate-limit errors,
-  `handoff` moves a dying session's work to a successor.
-- **limit-watch hook**: warns the active agent at 90% usage, triggers the
-  handoff protocol at 95% (week/monthly windows) or 80% (burst windows —
-  `claude:5h`/`claude:session` — see `handoff_at_burst`). Wired on all
-  supported hosts by `/o9k-init`.
-- **Scores refresh** (`roster refresh`): OpenRouter pulls Artificial Analysis
-  indices + prices (incl. hosted open-weight for Hermes/OpenCode) into
-  `~/.o9k/roster-scores.json`; `--apply` semiauto-promotes chain heads when
-  score rises and cost does not. See skill `roster-refresh`.
-- **Subscription usage collector** (optional): maintains multi-window
-  `~/.o9k/usage.json` for Claude/Codex/Cursor; `pick` skips models when any
-  applicable window is at/over its threshold (`handoff_at_burst` for
-  5h/session windows, `handoff_at` otherwise). Refresh via
-  `roster usage --refresh` or the
-  adaptive watcher (`o9k-usage-watcher.sh`, cron, systemd user unit on Linux,
-  or launchd agent on macOS — see `plugins/o9k-roster/systemd/` and
-  `plugins/o9k-roster/launchd/`). Foreign installs: symlink the wrapper from
-  the repo **or** set `O9K_ROSTER_SCRIPTS` in a systemd drop-in / plist
-  `EnvironmentVariables`.
+o9k ships none of that runtime. What it does is arbitrate the concern: once a
+team-up roster exists, o9k's `dispatch` skill makes the mailbox protocol
+**mandatory** for external CLI workers. That contract is the only thing this
+page still owns.
 
-## The standard pipeline (plan → implement → review)
+## What team-up covers
 
-A proven 3-phase shape for non-trivial code tasks:
+Roster registry, deterministic `pick`/`dispatch`, limit watch, the subscription
+usage collector, score refresh, session-limit handoff, the plan→implement→review
+pipeline, and cross-CLI mailbox runs with reboot resume. Its own README and
+`roster` skill are the reference — this page deliberately does not mirror them,
+because a copy would drift.
 
-1. **Plan** (`planner` role, frontier/high tier): challenge the spec first —
-   classify every ambiguity as guess-safe or blocker; blockers go back to the
-   human BEFORE any code is written. Then produce the plan.
-2. **Implement** (`implementer` role, mid tier): execute the plan.
-3. **Review** (`reviewer` role, frontier/high tier): fresh session, does NOT
-   get the plan or the implementer's reasoning — findings only.
-4. Loop 2–3 until approved, with a hard cycle cap (3 is a good default).
+## The one o9k rule: Path B is not optional
 
-Each phase starts with `roster dispatch --role <phase-role>` — the phase
-never chooses its own successor's model.
+`dispatch` has two paths:
 
-## Worker contract
+- **Path A** — in-host subagents (searches, digests, lookups). Always available,
+  no roster needed. Single-agent users stay here and can ignore the rest.
+- **Path B** — an **external** CLI process the parent will not drive turn by
+  turn. Applies once team-up is installed and a roster exists.
 
-Every dispatched worker prompt is self-contained and specifies: the task with
-all paths/constraints inlined, the output artifact (e.g. a RESULT.md with
-outcome, commits, test status, open questions marked BLOCKER), and what to do
-on failure. The orchestrator reads the artifact, never the transcript.
+A Path B spawn is complete only with all three:
 
-## Session-limit handoff
+1. a mailbox run id from `team-up runs create …`
+2. the worker started via `team-up dispatch --run-id <id> …`
+3. a cheap in-host watcher blocking on `team-up runs wait <id>`
 
-The active agent gets warned by limit-watch (or its own `roster usage
---check` in degraded mode). At the handoff threshold it writes HANDOFF.md
-(state, done, open, verification commands), runs `roster handoff`, reports
-the tmux session + attach command, and stops. The successor starts with
-"read HANDOFF.md and continue" — no work is lost to a hard limit.
+Bare `team-up dispatch` without mailbox and watcher is an **incomplete spawn**:
+the parent goes silent while tmux sits idle or stuck, and nobody notices. Never
+report "it's running" to the human before the watcher exists.
 
-## Cross-CLI runs (mailbox + resume)
+Detection, before any external spawn:
 
-**Opt-in.** Only for installs with `~/.o9k/roster.json`. Single-agent users
-stay on `dispatch` path A (in-host RESULT subagents) and can ignore this
-section. Skills: `dispatch` (path B) + `roster` § Cross-CLI runs.
+```bash
+command -v team-up && test -f ~/.team-up/roster.json
+```
 
-For long-running workers that may outlive the parent session or survive a host
-reboot, o9k tracks each run on disk under `~/.o9k/runs/<runId>/` with a
-mailbox directory holding `STATUS`, `QUESTIONS.md`, `ANSWER.md`, `RESULT.md`,
-`HEARTBEAT`, and `PROMPT.md`.
+No roster → Path A only. Never invent Path B for a machine that has no roster.
 
-The parent creates the run (`runs.mjs create`), starts the worker
-(`roster dispatch --run-id …`), then spawns a cheap internal watcher that runs
-`node …/runs.mjs wait <runId>` — one blocking OS wait that returns when the
-mailbox reaches `question`, `done`, `failed`, or `watching`. On a question,
-the parent answers via `runs.mjs answer` and **respawns** the watcher; it never
-polls the mailbox itself.
+## Model choice
 
-After a host reboot, the systemd unit `o9k-resume.service` (Linux, see
-`plugins/o9k-roster/systemd/`) or the launchd agent `com.o9k.resume.plist`
-(macOS, see `plugins/o9k-roster/launchd/`) runs `o9k-runs resume`
-agentlessly — no parent
-process required. Parent re-attach is `manual` by default (no auto-tmux).
+Dispatch decides *whether* to delegate; team-up decides *who* does it. Map the
+task to a role and let `team-up dispatch` resolve the model — never pick one by
+vibe, and never hard-code a model name in a prompt or skill.
 
-Worker prompts should use
-`plugins/o9k-roster/templates/worker-prompt.md` — HEARTBEAT updates are
-mandatory so stale runs can be detected.
-
-Full design: `docs/superpowers/specs/2026-07-17-cross-cli-run-resume-design.md`
+Full contract: the `dispatch` skill (§ Incomplete-spawn gate) and team-up's
+`roster` skill (§ Cross-CLI runs).

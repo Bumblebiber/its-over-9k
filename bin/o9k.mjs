@@ -77,14 +77,8 @@ function setup() {
   console.log("Claude Code — add the marketplace in a session (plugins are not");
   console.log("installed by this CLI):");
   console.log("  /plugin marketplace add Bumblebiber/its-over-9k");
-  console.log("  /plugin install o9k-core@o9k");
-  console.log("  /plugin install o9k-caveman@o9k");
-  console.log("  /plugin install o9k-scout@o9k");
-  console.log("  /plugin install o9k-dispatch@o9k");
-  console.log("  /plugin install o9k-memory@o9k");
-  console.log("  /plugin install o9k-recon@o9k");
-  console.log("  /plugin install o9k-roster@o9k");
-  console.log("  then: /o9k-init");
+  console.log("  /plugin install o9k-core@o9k        # required — arbitration + wiring");
+  console.log("  then: /o9k-init      # picks the optional pillars with you");
   console.log("");
   console.log("Memory backend (recommended):");
   console.log("  npm i -g hmem-mcp && hmem init");

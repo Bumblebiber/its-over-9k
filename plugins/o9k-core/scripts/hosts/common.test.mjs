@@ -70,8 +70,6 @@ test("HOOK_WRAPPERS lists the shared wrapper names with timeouts", () => {
     "o9k-memory-session",
     "o9k-update-check",
     "o9k-memory-precompact",
-    "o9k-roster-limit-watch",
-    "o9k-md-provenance",
   ]);
   assert.ok(HOOK_WRAPPERS.every((w) => typeof w.timeout === "number"));
 });

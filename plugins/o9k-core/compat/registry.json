@@ -16,7 +16,10 @@
     "structural-search": { "exclusive": false, "desc": "AST-level queries (feeds overview, builds none)" },
     "discovery": { "exclusive": false, "desc": "scouting new companion frameworks" },
     "vcs": { "exclusive": false, "desc": "version control" },
-    "roster": { "exclusive": false, "desc": "role-based model selection + limit-aware dispatch (runtime owned by standalone team-up; o9k-roster is adapter)" }
+    "roster": { "exclusive": false, "desc": "role-based model selection + limit-aware dispatch (owned by standalone team-up)" },
+    "statusline": { "exclusive": true, "desc": "the host status bar" },
+    "provenance": { "exclusive": false, "desc": "attribution stamps on agent-written files" },
+    "benchmark": { "exclusive": false, "desc": "measuring companion stacks" }
   },
 
   "bundles": {
@@ -25,16 +28,41 @@
     "max": ["hmem", "context7", "ponytail", "superpowers", "beads", "serena", "astGrep", "ccusage"]
   },
   "frameworks": {
-    "o9k-core": { "kind": "pillar", "label": "o9k-core", "concerns": ["doctrine"] },
-    "o9k-caveman": { "kind": "pillar", "label": "o9k-caveman", "concerns": ["output-style"] },
-    "o9k-scout": { "kind": "pillar", "label": "o9k-scout", "concerns": ["overview"] },
-    "o9k-dispatch": { "kind": "pillar", "label": "o9k-dispatch", "concerns": ["dispatch"] },
-    "o9k-memory": { "kind": "pillar", "label": "o9k-memory", "concerns": ["memory-integration"] },
-    "o9k-recon": { "kind": "pillar", "label": "o9k-recon", "concerns": ["discovery"] },
-    "o9k-roster": {
+    "o9k-core": {
       "kind": "pillar",
-      "label": "o9k-roster",
-      "concerns": ["roster"]
+      "label": "o9k-core",
+      "concerns": ["doctrine"],
+      "required": true,
+      "audience": "Everyone — this is o9k itself: the arbitration table that decides which tool owns which concern, plus the host wiring and /o9k-init, /o9k-guide, /o9k-update, /o9k-stats. Nothing else here works without it.",
+      "notFor": "Nobody; if you don't want core, you don't want o9k."
+    },
+    "o9k-scout": {
+      "kind": "pillar",
+      "label": "o9k-scout",
+      "concerns": ["overview"],
+      "audience": "People working in real codebases, especially large or unfamiliar ones. Stops the 20k-token 'let me look around' burn: search before read, read narrow, one repo map per session.",
+      "notFor": "Sessions that touch few files, or work that isn't code at all (writing, research, ops) — there is nothing to be disciplined about."
+    },
+    "o9k-dispatch": {
+      "kind": "pillar",
+      "label": "o9k-dispatch",
+      "concerns": ["dispatch"],
+      "audience": "People whose work involves broad sweeps — repo-wide searches, log analysis, digesting long docs, several independent subtasks. Those run in subagents and return conclusions instead of dumping transcripts into your main context.",
+      "notFor": "Short, single-file, single-thread sessions. Spawning a subagent for a two-file change costs more than it saves."
+    },
+    "o9k-memory": {
+      "kind": "pillar",
+      "label": "o9k-memory",
+      "concerns": ["memory-integration"],
+      "audience": "People with projects that span many sessions and who already run (or want) a memory MCP. Gives you a session-start briefing, recall of past decisions, and a state flush before compaction.",
+      "notFor": "One-off tasks, throwaway repos, or anyone unwilling to install TIM or hmem — without a backend this pillar has nothing to wire."
+    },
+    "o9k-recon": {
+      "kind": "pillar",
+      "label": "o9k-recon",
+      "concerns": ["discovery"],
+      "audience": "People who actively curate their tool stack — evaluating new plugins/MCPs, keeping the compatibility matrix current, installing companion bundles. Mostly a maintainer's pillar.",
+      "notFor": "Anyone whose stack is settled. Recon is scouting, not day-to-day work; you can install it later the day you go shopping."
     },
 
     "git": {
@@ -105,6 +133,58 @@
       "install": "npm install -g ccusage"
     },
 
+    "//spun-out": "Formerly o9k pillars. o9k connects frameworks; it does not ship features of its own. These are now standalone repos that o9k only arbitrates and offers to install.",
+    "caveman-mode": {
+      "kind": "companion",
+      "label": "Caveman Mode (output compression)",
+      "concerns": ["output-style"],
+      "detect": { "plugin": ["caveman-mode", "o9k-caveman"] },
+      "install": "claude plugin marketplace add Bumblebiber/caveman-mode && claude plugin install caveman-mode",
+      "audience": "Long sessions where the agent's own prose is a real share of the context. Code and safety-critical text stay uncompressed.",
+      "notFor": "People who read the agent's output as documentation, or who find telegraphic style harder to follow.",
+      "wasPillar": "o9k-caveman"
+    },
+    "team-up": {
+      "kind": "companion",
+      "label": "team-up (multi-agent roster + mailbox runs)",
+      "concerns": ["roster"],
+      "detect": { "path": ["team-up"], "file": ["~/.team-up/roster.json", "~/.o9k/roster.json"] },
+      "install": "npm install -g team-up && team-up init",
+      "audience": "People who drive several CLIs/models at once — planner/implementer/reviewer pipelines, deterministic model picks by role, limit-aware fallback chains.",
+      "notFor": "Single-model, single-CLI users. It is a whole orchestration runtime; needs tmux, and on Windows needs WSL.",
+      "wasPillar": "o9k-roster"
+    },
+    "o9k-statusline": {
+      "kind": "companion",
+      "label": "o9k-statusline (multi-host status bar)",
+      "concerns": ["statusline"],
+      "detect": { "path": ["o9k-statusline"], "file": ["~/.o9k/statusline.json"] },
+      "install": "npm install -g o9k-statusline && o9k-statusline-wire --hosts claude:replace",
+      "audience": "People who want model, context fill, limit headroom, git state and memory project visible at a glance in Claude Code, Cursor or Hermes.",
+      "notFor": "Codex and OpenCode users (no statusline API), and anyone already happy with a custom status bar.",
+      "wasPillar": "o9k-core/statusline"
+    },
+    "md-provenance": {
+      "kind": "companion",
+      "label": "md-provenance (markdown attribution)",
+      "concerns": ["provenance"],
+      "detect": { "plugin": ["md-provenance"], "file": ["~/.o9k/md-provenance-intent.json"] },
+      "install": "claude plugin marketplace add Bumblebiber/md-provenance && claude plugin install md-provenance",
+      "audience": "Anyone whose repo fills up with agent-written HANDOFF/PLAN/RESULT files and who later needs to know which agent wrote what, why, and on whose instruction.",
+      "notFor": "Repos where agents barely write Markdown — the stamps are then pure noise.",
+      "wasPillar": "o9k-core/md-provenance"
+    },
+    "bundle-bench": {
+      "kind": "companion",
+      "label": "bundle-bench (companion stack benchmark)",
+      "concerns": ["benchmark"],
+      "detect": { "plugin": ["bundle-bench"] },
+      "install": "claude plugin marketplace add Bumblebiber/bundle-bench && claude plugin install bundle-bench",
+      "audience": "Maintainers and anyone who wants pass-count and cost numbers for a companion combo instead of trusting READMEs.",
+      "notFor": "Casual users — one ablation run costs a normal working session in real tokens.",
+      "wasPillar": "o9k-recon/bundle-bench"
+    },
+
     "claudeMem": {
       "kind": "rival",
       "label": "claude-mem",
@@ -155,8 +235,8 @@
       "label": "token-optimizer-mcp",
       "concerns": ["output-style", "overview"],
       "detect": { "mcp": ["token-optimizer"] },
-      "vs": "caveman + scout (pillars)",
-      "why": "Same concern, opaque middle-man: it rewrites context in flight. caveman+scout achieve the savings at the source (say less, load less) and stay inspectable — /o9k-stats can prove the effect.",
+      "vs": "caveman-mode + o9k-scout",
+      "why": "Same concern, opaque middle-man: it rewrites context in flight. caveman-mode and scout achieve the savings at the source (say less, load less) and stay inspectable — /o9k-stats can prove the effect.",
       "migrate": { "adapter": "derived-index" }
     },
     "taskMaster": {

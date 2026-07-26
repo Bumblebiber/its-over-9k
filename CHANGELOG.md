@@ -11,6 +11,36 @@ breaking distribution change (e.g. reclaiming the name from the old hmem CLI).
 
 ## [Unreleased]
 
+### Changed — o9k is a connector, not a feature bundle
+
+**Breaking.** o9k no longer ships features of its own. Five things were split
+into standalone repos, keeping their git history:
+
+| Was | Now | Concern |
+|-----|-----|---------|
+| `o9k-roster` pillar | [team-up](https://github.com/Bumblebiber/team-up) | multi-agent roster |
+| `o9k-caveman` pillar | [caveman-mode](https://github.com/Bumblebiber/caveman-mode) | output style |
+| `o9k-core/scripts/statusline/` | [o9k-statusline](https://github.com/Bumblebiber/o9k-statusline) | host status bar |
+| `o9k-core` md-provenance | [md-provenance](https://github.com/Bumblebiber/md-provenance) | file attribution |
+| `benchmarks/` + `bundle-bench` skill | [bundle-bench](https://github.com/Bumblebiber/bundle-bench) | benchmarking |
+
+All five stay first-class in `compat/registry.json` as companions with
+`audience` / `notFor` text — o9k still arbitrates their concerns, offers to
+install them in `/o9k-init`, and enforces `dispatch` path B once a team-up
+roster exists. It just no longer owns the code.
+
+- **Every pillar past `o9k-core` is opt-in, default no.** `/o9k-init` asks one
+  pillar at a time and reads out both who it's for and who should skip it (from
+  the registry). "Complete" is no longer the goal: core plus one pillar is a
+  correct install. Not everyone writes much code, and an unused pillar is pure
+  session-start tax.
+- `o9k-doctor` flags a `statusLine` still pointing at the removed in-tree
+  script as `orphaned` instead of letting it break silently.
+- `o9k-uninstall` no longer touches statusline wiring — the spun-out packages
+  uninstall themselves; it lists them as manual follow-ups.
+- Removed the `roster/` hook target, the `o9k-roster-limit-watch` and
+  `o9k-md-provenance` wrappers, and the `PostToolUse` hook from o9k-core.
+
 ### Added
 - **o9k-init memory choice** — interview picks **TIM** (`npm i -g tim-cli`),
   **hmem** (`npm i -g hmem-mcp`), a **custom** memory MCP, or skip. Snapshot

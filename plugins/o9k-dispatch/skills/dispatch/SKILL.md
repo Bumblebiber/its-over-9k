@@ -1,9 +1,11 @@
 ---
 name: dispatch
-description: "Cost-gated subagent dispatch for context isolation. Use for broad searches, lookups, log analysis, doc digestion, independent subtasks, OR whenever you spawn an external CLI worker via o9k-roster (planner/implementer/reviewer in tmux, cursor-agent/claude/codex/hermes). Path A = in-host RESULT subagents. Path B = mailbox run + roster dispatch --run-id + cheap in-host watcher (runs wait) — REQUIRED for every external CLI tmux spawn when ~/.o9k/roster.json exists; bare roster dispatch without a watcher is an incomplete spawn (parent never gets notified)."
+description: "Cost-gated subagent dispatch for context isolation. Use for broad searches, lookups, log analysis, doc digestion, independent subtasks, OR whenever you spawn an external CLI worker via the team-up companion (planner/implementer/reviewer in tmux, cursor-agent/claude/codex/hermes). Path A = in-host RESULT subagents. Path B = mailbox run + team-up dispatch --run-id + cheap in-host watcher (runs wait) — REQUIRED for every external CLI tmux spawn when a team-up roster exists; bare dispatch without a watcher is an incomplete spawn (parent never gets notified)."
 ---
 
-> **Note:** Cross-CLI mailbox runtime is owned by standalone \`team-up\` (o9k-roster plugin is a thin adapter). Path-B contract unchanged: create → dispatch \`--run-id\` → \`runs wait\`.
+> **Note:** The cross-CLI mailbox runtime is the standalone `team-up` package —
+> o9k ships no roster code, it only arbitrates the concern. Path-B contract
+> unchanged: create → dispatch `--run-id` → `runs wait`.
 
 # dispatch — Subagent Isolation
 
@@ -15,18 +17,18 @@ run the noisy work where the noise is free.
 | Path | When | What you do |
 |---|---|---|
 | **A — In-host (default)** | Greps, digests, memory lookup, Haiku-class helpers — work that stays inside this host's subagent tool | Host Task/subagent tool; RESULT-only contract below |
-| **B — Cross-CLI mailbox** | `~/.o9k/roster.json` exists **and** you are putting work in an **external** CLI process (tmux via `$ROSTER dispatch`, or equivalent Cursor/Claude/Codex/Hermes worker the parent will not drive turn-by-turn) | Mailbox + `--run-id` + **cheap in-host watcher** — see checklist below |
+| **B — Cross-CLI mailbox** | a `team-up` roster exists **and** you are putting work in an **external** CLI process (tmux via `team-up dispatch`, or equivalent Cursor/Claude/Codex/Hermes worker the parent will not drive turn-by-turn) | Mailbox + `--run-id` + **cheap in-host watcher** — see checklist below |
 
-Roster installed is **opt-in for the machine**. Once it is installed, Path B is **not** optional for external CLI workers. Skipping the watcher is how parents go silent while tmux sits idle or stuck.
+team-up is **opt-in for the machine**. Once it is installed, Path B is **not** optional for external CLI workers. Skipping the watcher is how parents go silent while tmux sits idle or stuck.
 
 Detection (cheap):
 
 ```bash
 # Path B applies when BOTH succeed AND the work is an external CLI worker:
-test -f ~/.o9k/roster.json && test -f "<marketplace>/plugins/o9k-roster/scripts/runs.mjs"
+command -v team-up && test -f ~/.team-up/roster.json
 ```
 
-Without `roster.json` → Path A only (or legacy Hermes notify_on_complete). Missing files = no-op for single-agent users — never invent Path B.
+Without team-up → Path A only (or legacy Hermes notify_on_complete). No roster = no-op for single-agent users — never invent Path B.
 
 ## Incomplete-spawn gate (read before you tell the human "it's running")
 
@@ -104,15 +106,13 @@ no sign-off:
 
 ## Path B — External CLI checklist
 
-Full protocol detail lives in the `roster` skill § Cross-CLI runs.
+Full protocol detail lives in team-up's own `roster` skill § Cross-CLI runs.
 
 ### Copy-paste recipe (Overseer / parent)
 
-Always use `node` (scripts are not +x). Prefer repo or plugin-cache path:
-
 ```bash
-ROSTER="node $HOME/projects/o9k/plugins/o9k-roster/scripts/roster.mjs"
-RUNS="node $HOME/projects/o9k/plugins/o9k-roster/scripts/runs.mjs"
+ROSTER="team-up"
+RUNS="team-up runs"
 TASK_DIR="~/projects/tasks/task-foo"
 PROMPT="$TASK_DIR/PLANNER_PROMPT.md"   # bare task text is fine — create wraps it
 
@@ -162,15 +162,15 @@ unless the user asks.
 Integrate the conclusion; discard the rest. If a result contradicts the main
 context, say so explicitly and resolve it — don't silently keep both versions.
 
-## Model choice (when o9k-roster is installed)
+## Model choice (when team-up is installed)
 
-Dispatch decides WHETHER to delegate; roster decides WHO does it. Before
+Dispatch decides WHETHER to delegate; team-up decides WHO does it. Before
 spawning a Path B worker, map the task to a roster role and use
-`roster dispatch` (with `--run-id`) — never invent a model by vibe. See the
-`roster` skill.
+`team-up dispatch` (with `--run-id`) — never invent a model by vibe. See
+team-up's `roster` skill.
 
-Without o9k-roster / without `~/.o9k/roster.json`, skip this section entirely
-(Path A uses the host's normal subagent model defaults).
+Without team-up, skip this section entirely (Path A uses the host's normal
+subagent model defaults).
 
 ## Skill metadata (maintainers)
 

@@ -23,7 +23,7 @@ last scout, not from zero.
 - Before proposing a new companion bundle or hand-installing an MCP server.
 - **`/o9k-init` Step 2b** — user gave Go to evaluate an *unknown* installed
   tool (not in `compat/registry.json`). Start at Step 2 (score); escalate to
-  Step 4 trial / `bundle-bench` only if the README verdict is inconclusive.
+  Step 4 trial / the `bundle-bench` companion only if the README verdict is inconclusive.
 - **Not every session** — scheduled recon (weekly-ish). Recon has a cost;
   amortize it.
 
@@ -150,7 +150,7 @@ Then, if it earns a slot:
    workflow only after 🔴 checks pass.
 3. Save the finding to memory (`memory` skill) so the next scout diffs against it.
 4. Before it graduates into a *recommended* bundle: measure the combination,
-   not just the candidate — that's the `bundle-bench` skill
+   not just the candidate — that's the `bundle-bench` companion (own repo)
    (`benchmarks/run-bench.sh`). The trial proves a candidate is clean alone;
    bundle-bench proves it earns its seat next to the others.
 

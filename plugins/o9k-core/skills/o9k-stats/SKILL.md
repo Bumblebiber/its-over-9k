@@ -14,11 +14,12 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/o9k-stats.mjs"
 
 Present the output compactly (caveman rules apply). Interpretation guide:
 
-- **output share of total traffic** — the lever `caveman` pulls. Uncompressed
+- **output share of total traffic** — the lever `caveman` pulls (companion
+  `caveman-mode`; skip this line if it is not installed). Uncompressed
   agents typically sit noticeably higher; falling share across sessions =
   compression working.
 - **avg output/turn** — watch the trend, not the absolute: it should drop after
-  enabling `o9k-caveman` (upstream caveman reports ~50–65% output reduction).
+  installing `caveman-mode` (upstream caveman reports ~50–65% output reduction).
 - **cache read vs fresh input** — high cache-read share is healthy (stable
   context prefix); lots of fresh input suggests context churn — check `scout`
   discipline and whether something regenerates the repo map every turn.

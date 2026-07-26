@@ -27,7 +27,6 @@ function buildCodexHooksPatch(home) {
             "o9k-core-session",
             "o9k-memory-session",
             "o9k-update-check",
-            "o9k-roster-limit-watch",
           ].map((name) => ({
             type: "command",
             command: cmd(`${name}.sh`),

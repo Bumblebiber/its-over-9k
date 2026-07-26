@@ -1,8 +1,8 @@
 # Combining Frameworks Without Collisions
 
-o9k is a meta-framework: it assumes you'll mix it with other tools. This page
-lists the tested combinations, what each adds, and the conflict rules that keep
-them from fighting. The general law (from `using-o9k`): **exactly one owner per
+o9k is a connector between frameworks: mixing tools is the whole point, and o9k
+ships almost nothing of its own. This page lists the tested combinations, what
+each adds, and the conflict rules that keep them from fighting. The general law (from `using-o9k`): **exactly one owner per
 concern** — one output style, one SessionStart injector, one repo map, one plan,
 one dispatch mechanism, one memory backend.
 
@@ -36,7 +36,9 @@ state · workflow methodology · subagent dispatch · memory backend.
 
 | Layer | Tool | Notes |
 |-------|------|-------|
-| Efficiency doctrine | **o9k** (this repo) | The five pillars |
+| Arbitration & wiring | **o9k-core** (this repo) | Required. Every other pillar is opt-in — `/o9k-init` asks one at a time. |
+| Output style | **[caveman-mode](https://github.com/Bumblebiber/caveman-mode)** | Spun out of o9k. One style owner, ever. |
+| Multi-agent roster | **[team-up](https://github.com/Bumblebiber/team-up)** | Spun out of o9k. Only if you drive several CLIs. |
 | Memory MCP | **[TIM](https://github.com/Bumblebiber/tim)** (npm `tim-cli`) or **[hmem](https://github.com/Bumblebiber/hmem)** (npm `hmem-mcp`) | Pick one in `/o9k-init` — never run both. Custom MCP allowed; o9k hooks only auto-drive TIM/hmem. |
 | Live docs | **[Context7](https://github.com/upstash/context7)** | Orthogonal, near-zero risk, high payoff |
 | Workflow methodology | **[superpowers](https://github.com/obra/superpowers)** | Optional, excellent |
@@ -52,12 +54,14 @@ Install the whole stack in one shot with `o9k-recon`'s bundle installer — see
 
 ## Compatibility matrix
 
-Verdict is relative to a **default o9k install** (all five pillars on).
+Verdict is relative to an install with the overlapping o9k pillar **enabled**.
+Pillars are opt-in, so a 🔴 verdict is moot when the user never installed the
+pillar it blocks — check before you report a conflict.
 
 | Framework | Concern it claims | vs o9k | Owner rule |
 |-----------|-------------------|:------:|------------|
 | [grill-me](https://github.com/mattpocock/skills/tree/main/skills/productivity/grill-me) | Spec-challenge questioning | 🟢 | New axis — o9k has no spec-review pillar. Not a methodology owner (single skill file, no hooks/state); slots into whichever spine's "plan" step wants it. |
-| [Ponytail](https://github.com/DietrichGebert/ponytail) | Code minimalism (YAGNI / smallest diff) | 🟢 | New axis — o9k has no code-volume pillar. Composes with caveman. |
+| [Ponytail](https://github.com/DietrichGebert/ponytail) | Code minimalism (YAGNI / smallest diff) | 🟢 | New axis — o9k has no code-volume pillar. Composes with caveman-mode. |
 | [Context7](https://github.com/upstash/context7) | Live library-docs injection | ⚪ | None — o9k has no docs pillar. |
 | [ccusage](https://github.com/ryoppippi/ccusage) | Cost ($) / usage reporting | ⚪ | Complements `/o9k-stats` (context share ≠ dollars). |
 | pr-review / LSP / semgrep plugins | Review, code-intel, security | ⚪ | Different job entirely. |
@@ -74,7 +78,7 @@ Verdict is relative to a **default o9k install** (all five pillars on).
 | [claude-context](https://github.com/zilliztech/claude-context) | Semantic code index | 🔴 | Overview builder (vector). Collides with scout's map. Pick one. |
 | [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp) | Code knowledge graph | 🔴 | Overview builder (graph). Collides with scout's map. Pick one. |
 | [tokenmax-mcp](https://github.com/justinjamesmathew/tokenmax-mcp) | Compressed symbol map | 🔴 | Overview builder + symbol view. Collides with scout **and** Serena. |
-| [token-optimizer-mcp](https://github.com/ooples/token-optimizer-mcp) | Output + tool compression | 🔴 | Overlaps `caveman` + `scout`. Replacement, not addition. |
+| [token-optimizer-mcp](https://github.com/ooples/token-optimizer-mcp) | Output + tool compression | 🔴 | Overlaps `caveman-mode` + `scout`. Replacement, not addition. |
 | [BMAD](https://github.com/bmad-code-org/BMAD-METHOD) | Methodology + roles + plan | 🔴 | Methodology owner. Collides with superpowers *and* carries its own plan store. Pick one spine. |
 | [spec-kit](https://github.com/github/spec-kit) | Spec-driven methodology | 🔴 | Methodology owner. One process spine. |
 | [SuperClaude](https://github.com/SuperClaude-Org/SuperClaude_Framework) | Methodology + commands | 🔴 | Methodology owner. One process spine. |
@@ -223,11 +227,12 @@ that store wins over beads (or disable it and keep beads).
 store like beads. One plan owner — beads or task-master, not both.
 
 ### caveman (JuliusBrussee) — output compression
-MIT. The original. `o9k-caveman` is an adaptation tuned to compose with the other
-pillars (shared exception list, arbitration-aware). **Conflict:** installing BOTH
-upstream caveman and `o9k-caveman` = two style owners. Pick one. Upstream's
-`/caveman-stats` and `/caveman-compress` are usable alongside `o9k-caveman` if you
-keep only its *skill* disabled.
+MIT. The original. [caveman-mode](https://github.com/Bumblebiber/caveman-mode) is
+an adaptation tuned to compose with the o9k pillars (shared exception list,
+arbitration-aware); it used to be the `o9k-caveman` pillar and now lives in its
+own repo. **Conflict:** installing BOTH upstream caveman and caveman-mode = two
+style owners. Pick one. Upstream's `/caveman-stats` and `/caveman-compress` are
+usable alongside caveman-mode if you keep only its *skill* disabled.
 
 ### LLMLingua (Microsoft) — input compression
 Research-grade prompt compression (up to 20×) via a small scoring model. No Claude
@@ -239,8 +244,8 @@ revisit if a turnkey MCP wrapper appears.
 
 - **Two memory MCPs** (hmem + TIM, or either + claude-mem / mem0 / memory-mcp):
   double SessionStart injection, split-brain state. One only.
-- **Two output/tool compressors** (o9k-caveman + upstream caveman;
-  o9k-caveman/scout + token-optimizer-mcp).
+- **Two output/tool compressors** (caveman-mode + upstream caveman;
+  caveman-mode/scout + token-optimizer-mcp).
 - **Two+ overview builders** (scout's map + Graphify + claude-context +
   codebase-memory-mcp + Serena onboarding + codesight) on the same repo in the
   same session.

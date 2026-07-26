@@ -71,10 +71,10 @@ banner "Live library docs  (concern: none — orthogonal, pure add)"
 step   "Context7 — up-to-date docs injection" \
        "claude mcp add context7 -- npx -y @upstash/context7-mcp"
 
-banner "Code minimalism  (concern: code volume — composes with caveman)"
+banner "Code minimalism  (concern: code volume — composes with caveman-mode)"
 manual "Ponytail (DietrichGebert) — the lazy senior dev, ~54% less code" \
        "in a Claude Code session: /plugin marketplace add DietrichGebert/ponytail && /plugin install ponytail  (see https://ponytail.dev)"
-say    "      caveman owns prose tone; Ponytail owns the code decision. Zero-conflict multiplier."
+say    "      caveman-mode owns prose tone; Ponytail owns the code decision. Zero-conflict multiplier."
 
 if [ "$BUNDLE" = "minimal" ]; then
   banner "Done (minimal)"

@@ -37,7 +37,7 @@ The three highest-payoff, lowest-risk companions. Good on any project.
 |------|---------|---------------|
 | [hmem](https://github.com/Bumblebiber/hmem) / [TIM](https://github.com/Bumblebiber/tim) | Memory MCP | Bundle slot defaults to hmem; `/o9k-init` can install TIM (`tim-cli`) or a custom MCP instead. One memory owner. |
 | [Context7](https://github.com/upstash/context7) | Live docs | Orthogonal — o9k has no docs pillar. |
-| [Ponytail](https://github.com/DietrichGebert/ponytail) | Code minimalism | New axis — trims the *diff*; caveman trims the *prose*. They stack. |
+| [Ponytail](https://github.com/DietrichGebert/ponytail) | Code minimalism | New axis — trims the *diff*; caveman-mode trims the *prose*. They stack. |
 
 ### `recommended` — the tested full stack
 `minimal` plus the three optional-but-excellent companions, each owning a
@@ -77,7 +77,7 @@ design (pick at most one, yourself):
   claude-context, codebase-memory-mcp, tokenmax. These *replace* scout's map;
   adding one is a deliberate architecture choice, not a bundle add.
 - **Alternative all-in-one optimizers** — token-optimizer-mcp (replaces
-  caveman+scout).
+  caveman-mode+scout).
 - **Alternative methodology spines** — BMAD, spec-kit, SuperClaude (superpowers is
   the bundle's spine).
 
