@@ -34,7 +34,7 @@ const active = [];
 // o9k's to issue — arbitrating installed frameworks is what o9k is for.
 if (companions["caveman"]) active.push("compress output (caveman)");
 if (pillars["o9k-scout"]) active.push("search-before-read, one repo map (scout)");
-if (pillars["o9k-dispatch"]) active.push("isolate broad sweeps in subagents (dispatch)");
+if (companions["team-up"]) active.push("isolate broad sweeps in subagents (dispatch)");
 if (pillars["o9k-memory"]) active.push("persist state before compaction (memory)");
 
 const lines = [

@@ -36,7 +36,7 @@ already done:
 |---------------|---------------|
 | No memory backend | `/o9k-init` picks TIM (`npm i -g tim-cli && tim init`), hmem (`npm i -g hmem-mcp && hmem init`), or a custom MCP — without one, sessions start from zero. |
 | Missing pillar(s) | `/plugin install <name>@o9k` for each. |
-| Stock superpowers `dispatching-parallel-agents` still enabled | `o9k-dispatch` owns dispatch by default — offer to disable the superpowers dispatch skill. |
+| Stock superpowers `dispatching-parallel-agents` still enabled | `team-up` owns dispatch by default — offer to disable the superpowers dispatch skill. |
 | Two memory backends | Say which one wins (TIM preferred by hooks) and offer to remove the other. |
 | Wants the companion stack | `install/o9k-companions.sh recommended` (dry run first — the companion-bundles skill handles it). |
 

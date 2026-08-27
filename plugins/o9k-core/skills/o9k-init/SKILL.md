@@ -163,7 +163,7 @@ two of its four skills claim concerns o9k assigns elsewhere. Skip `team-up` on
 native Windows and say why (needs tmux/bash → WSL).
 
 If the user says "just give me the usual" or otherwise delegates the whole
-choice: install `o9k-core` + `o9k-scout` + `o9k-dispatch`, say that in one
+choice: install `o9k-core` + `o9k-scout`, say that in one
 line, and note that memory, recon and the spun-out packages are one
 `/o9k-init` away. Do not silently install more than that on a delegation.
 
@@ -213,7 +213,7 @@ If the user installs team-up, run `team-up init` and tell them to curate the
 roster (models, chains) — the scaffold is example data. Say once in the final
 report: **every external CLI worker spawn must complete the mailbox protocol**
 (`runs create` → `dispatch --run-id` → cheap `runs wait` watcher) — see
-`dispatch` path B and `docs/MULTI-AGENT.md`.
+team-up's `dispatch` path B and `docs/MULTI-AGENT.md`.
 
 ### Multi-CLI hosts (do not install CLIs)
 
