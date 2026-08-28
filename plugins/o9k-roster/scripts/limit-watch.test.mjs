@@ -28,11 +28,38 @@ test("prints warning when a provider crosses warn_at", () => {
   const rosterPath = path.join(dir, "roster.json");
   const usagePath = path.join(dir, "usage.json");
   fs.writeFileSync(rosterPath, JSON.stringify({
-    models: {}, roles: {}, limits: { warn_at: 0.9, handoff_at: 0.95 },
+    models: { m: { provider: "anthropic", cli: ["claude"] } },
+    roles: {},
+    limits: { warn_at: 0.9, handoff_at: 0.95 },
   }));
   fs.writeFileSync(usagePath, JSON.stringify({ providers: { anthropic: { used: 0.92 } } }));
-  const out = run({ O9K_ROSTER: rosterPath, O9K_USAGE: usagePath });
+  const out = run({ O9K_ROSTER: rosterPath, O9K_USAGE: usagePath, O9K_LIMIT_WATCH_CLI: "claude" });
   assert.match(out, /anthropic at 92%/);
+});
+
+test("ignores other-cli windows when scoped to claude", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lw-"));
+  const rosterPath = path.join(dir, "roster.json");
+  const usagePath = path.join(dir, "usage.json");
+  fs.writeFileSync(rosterPath, JSON.stringify({
+    models: {},
+    roles: {},
+    limits: { warn_at: 0.9, handoff_at: 0.95 },
+  }));
+  fs.writeFileSync(usagePath, JSON.stringify({
+    windows: {
+      "claude:session": { used: 0.92 },
+      "codex:weekly": { used: 1.0, resets_at: "2026-12-01T00:00:00Z" },
+    },
+  }));
+  const out = run({
+    O9K_ROSTER: rosterPath,
+    O9K_USAGE: usagePath,
+    O9K_LIMIT_WATCH_CLI: "claude",
+  });
+  assert.match(out, /claude:session at 92%/);
+  assert.doesNotMatch(out, /codex:weekly/);
+  assert.doesNotMatch(out, /HANDOFF\.md/);
 });
 
 test("exit 0 even with corrupt usage.json", () => {

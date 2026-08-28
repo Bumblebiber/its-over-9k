@@ -11,10 +11,12 @@ const RUN_HOOK = path.join(MARKETPLACE, "o9k-core/hooks/adapters/run-o9k-hook.sh
 const SESSION_START_TARGETS: readonly string[] = __O9K_SESSION_TARGETS__;
 
 function runHook(target: string): string | undefined {
+  const env: NodeJS.ProcessEnv = { ...process.env, O9K_MARKETPLACE_ROOT: MARKETPLACE };
+  if (target === "roster/limit-watch") env.O9K_LIMIT_WATCH_CLI = "opencode";
   const result = spawnSync("bash", [RUN_HOOK, target], {
     stdio: ["ignore", "pipe", "pipe"],
     encoding: "utf8",
-    env: { ...process.env, O9K_MARKETPLACE_ROOT: MARKETPLACE },
+    env,
   });
   const out = result.stdout?.trim();
   return out || undefined;

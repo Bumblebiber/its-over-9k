@@ -60,6 +60,10 @@ and leave `caveman-compress` off when `o9k-memory` is installed.
   `o9k-md-provenance` wrappers, and the `PostToolUse` hook from o9k-core.
 
 ### Added
+- **Sandbox extract (o9k-scout).** `scout-extract.mjs --profile vitest` digests
+  vitest JSON reporter output into a ≤2 KB failure summary with stderr
+  `SCOUT_EXTRACT` receipts; skill documents the redirect→extract one-liner.
+  Spec: `docs/superpowers/specs/2026-07-17-o9k-scout-sandbox-extract-design.md`.
 - **o9k-init memory choice** — interview picks **TIM** (`npm i -g tim-cli`),
   **hmem** (`npm i -g hmem-mcp`), a **custom** memory MCP, or skip. Snapshot
   lists choices; registry/update-check track `tim-cli`.
