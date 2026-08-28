@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  o9k agentless cross-CLI run resume after login — macOS launchd agent.
+  Mirror of systemd/o9k-resume.service (one-shot at load, no KeepAlive).
+
+  Install (symlink runs.mjs first, same as the systemd unit):
+    mkdir -p ~/.local/bin && ln -sf <repo>/plugins/o9k-roster/scripts/runs.mjs ~/.local/bin/o9k-runs
+    cp com.o9k.resume.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.o9k.resume.plist
+
+  Uninstall:
+    launchctl bootout gui/$(id -u)/com.o9k.resume
+
+  $HOME is resolved through /bin/sh because launchd does not expand ~ in
+  ProgramArguments. node must be reachable from a login shell (-l).
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.o9k.resume</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>-lc</string>
+    <string>exec node "$HOME/.local/bin/o9k-runs" resume</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/tmp/o9k-resume.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/o9k-resume.log</string>
+</dict>
+</plist>

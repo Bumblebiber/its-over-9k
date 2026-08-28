@@ -1,0 +1,10 @@
+{
+  "name": "o9k-caveman",
+  "displayName": "o9k Caveman",
+  "version": "0.1.0",
+  "description": "Output compression: telegraphic response style with lite/full/ultra levels and automatic fallback to full prose for safety-critical content. Adapted from JuliusBrussee/caveman (MIT).",
+  "author": { "name": "Bumblebiber" },
+  "repository": "https://github.com/Bumblebiber/its-over-9k",
+  "license": "MIT",
+  "keywords": ["token-efficiency", "output-style", "caveman", "o9k"]
+}

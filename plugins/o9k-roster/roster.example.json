@@ -1,0 +1,171 @@
+{
+  "$comment": "o9k-roster user config. Copied to ~/.o9k/roster.json by 'roster init'. Curate models/roles/chains yourself — o9k ships no live model list. cmd templates are argv arrays; {model}, {prompt}, and {effort} are substituted per element. Effort is a CLI-native string; precedence chain-entry > role > model; unset drops the flag and its value from argv; no cross-CLI mapping. Chain entries may be bare model ids (uses models[m].cli[0]) or CLI×model pins ('cursor:grok-4.5-high' / {\"cli\":\"hermes\",\"model\":\"deepseek-v4-pro\"}).",
+  "clis": {
+    "claude": { "cmd": ["claude", "--model", "{model}", "--effort", "{effort}", "{prompt}"] },
+    "codex": { "cmd": ["codex", "--model", "{model}", "-c", "model_reasoning_effort={effort}", "{prompt}"] },
+    "cursor": { "cmd": ["cursor-agent", "--model", "{model}", "{prompt}"] },
+    "opencode": { "cmd": ["opencode", "--model", "{model}", "--prompt", "{prompt}"] },
+    "hermes": { "cmd": ["hermes", "chat", "-q", "{prompt}", "--model", "{model}"] }
+  },
+  "subscriptions": ["claude", "codex", "cursor"],
+  "usage_watcher": {
+    "tick_sec": 60,
+    "intervals": { "idle_heartbeat_hours": 24, "active_min": 20, "busy_min": 8 }
+  },
+  "models": {
+    "claude-fable-5": {
+      "provider": "anthropic",
+      "tier": "frontier",
+      "cli": ["claude"],
+      "effort": "high",
+      "limit_windows": ["claude:session", "claude:week", "claude:5h", "claude:fable-week"],
+      "price": { "in": null, "out": null, "note": "fill in per effort level" },
+      "strengths": ["architecture", "review"],
+      "weaknesses": ["cost"]
+    },
+    "claude-opus": {
+      "provider": "anthropic",
+      "tier": "high",
+      "cli": ["claude"],
+      "limit_windows": ["claude:session", "claude:week", "claude:5h"]
+    },
+    "claude-sonnet-5": {
+      "provider": "anthropic",
+      "tier": "mid",
+      "cli": ["claude"],
+      "limit_windows": ["claude:session", "claude:week", "claude:5h"]
+    },
+    "claude-haiku": {
+      "provider": "anthropic",
+      "tier": "low",
+      "cli": ["claude"],
+      "limit_windows": ["claude:session", "claude:week", "claude:5h"]
+    },
+    "gpt-5.6-sol": {
+      "provider": "openai",
+      "tier": "frontier",
+      "cli": ["codex"],
+      "limit_windows": ["codex:weekly"]
+    },
+    "gpt-5.6-terra": {
+      "provider": "openai",
+      "tier": "high",
+      "cli": ["codex"],
+      "limit_windows": ["codex:weekly"]
+    },
+    "gpt-5.6-luna": {
+      "provider": "openai",
+      "tier": "mid",
+      "cli": ["codex"],
+      "limit_windows": ["codex:weekly"]
+    },
+    "gpt-5.4-mini": {
+      "provider": "openai",
+      "tier": "low",
+      "cli": ["codex"],
+      "limit_windows": ["codex:weekly"]
+    },
+    "composer-2.5": {
+      "provider": "cursor",
+      "tier": "mid",
+      "cli": ["cursor"],
+      "limit_windows": ["cursor:included"]
+    },
+    "grok-4.5-high": {
+      "provider": "xai",
+      "tier": "high",
+      "cli": ["cursor", "opencode", "hermes"]
+    },
+    "deepseek-v4-pro": {
+      "provider": "deepseek",
+      "tier": "mid",
+      "cli": ["hermes", "opencode"]
+    },
+    "deepseek-v4-flash": {
+      "provider": "deepseek",
+      "tier": "low",
+      "cli": ["hermes", "opencode"]
+    }
+  },
+  "roles": {
+    "planner": {
+      "chain": [
+        "claude:claude-opus",
+        "codex:gpt-5.6-sol",
+        "claude:claude-sonnet-5",
+        "codex:gpt-5.6-terra"
+      ]
+    },
+    "reviewer": {
+      "chain": [
+        "claude:claude-opus",
+        "claude:claude-sonnet-5",
+        "codex:gpt-5.6-terra"
+      ]
+    },
+    "advisor": {
+      "effort": "max",
+      "chain": [
+        { "cli": "claude", "model": "claude-fable-5", "effort": "max" },
+        { "cli": "codex", "model": "gpt-5.6-sol", "effort": "ultra" },
+        "claude:claude-opus"
+      ]
+    },
+    "implementer": {
+      "chain": [
+        "cursor:composer-2.5",
+        "cursor:grok-4.5-high",
+        "codex:gpt-5.6-luna",
+        "claude:claude-sonnet-5",
+        "hermes:deepseek-v4-pro"
+      ]
+    },
+    "researcher": {
+      "chain": [
+        "codex:gpt-5.6-luna",
+        "claude:claude-sonnet-5",
+        "hermes:deepseek-v4-pro"
+      ]
+    },
+    "prompt-writer": {
+      "chain": ["claude:claude-sonnet-5", "codex:gpt-5.6-luna"]
+    },
+    "frontend-designer": {
+      "chain": [
+        "cursor:composer-2.5",
+        "cursor:grok-4.5-high",
+        "claude:claude-sonnet-5",
+        "codex:gpt-5.6-luna"
+      ]
+    },
+    "triager": {
+      "chain": [
+        "claude:claude-haiku",
+        "codex:gpt-5.4-mini",
+        "hermes:deepseek-v4-flash"
+      ]
+    },
+    "scout": {
+      "chain": [
+        "claude:claude-haiku",
+        "hermes:deepseek-v4-flash",
+        "codex:gpt-5.4-mini"
+      ]
+    },
+    "summarizer": {
+      "chain": [
+        "hermes:deepseek-v4-flash",
+        "claude:claude-haiku",
+        "codex:gpt-5.4-mini"
+      ]
+    },
+    "test-writer": {
+      "chain": [
+        "claude:claude-sonnet-5",
+        "cursor:composer-2.5",
+        "codex:gpt-5.6-luna"
+      ]
+    }
+  },
+  "limits": { "warn_at": 0.9, "handoff_at": 0.95, "handoff_at_burst": 0.8 }
+}

@@ -55,6 +55,9 @@ and leave `caveman-compress` off when `o9k-memory` is installed.
 - **o9k-init memory choice** — interview picks **TIM** (`npm i -g tim-cli`),
   **hmem** (`npm i -g hmem-mcp`), a **custom** memory MCP, or skip. Snapshot
   lists choices; registry/update-check track `tim-cli`.
+- **CLI-native effort (o9k-roster)** — optional `effort` on chain entries,
+  roles, and models; `{effort}` substitution in `clis.*.cmd` with drop-the-pair
+  omit when unset; `pick`/`dispatch` print `effort:` when resolved.
 - **Opt-in o9k statusline (`scripts/statusline/`)** — selectable elements, host
   translation for Claude/Cursor/Hermes; Codex/OpenCode reported unsupported.
   Wired only from `/o9k-init` (default skip) — never from refresh-hosts.

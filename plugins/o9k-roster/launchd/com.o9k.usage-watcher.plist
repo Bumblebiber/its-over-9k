@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  o9k-roster adaptive subscription usage watcher — macOS launchd agent.
+  Mirror of systemd/o9k-usage-watcher.service.
+
+  Install (pick one wrapper install first, same as the systemd unit):
+    ln -sf <repo>/plugins/o9k-roster/scripts/o9k-usage-watcher.sh ~/.local/bin/o9k-usage-watcher
+    # or copy the wrapper and export O9K_ROSTER_SCRIPTS=<repo>/plugins/o9k-roster/scripts
+    # via an EnvironmentVariables dict in this plist.
+
+  Then:
+    cp com.o9k.usage-watcher.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.o9k.usage-watcher.plist
+
+  Uninstall:
+    launchctl bootout gui/$(id -u)/com.o9k.usage-watcher
+
+  $HOME is resolved through /bin/sh because launchd does not expand ~ in
+  ProgramArguments.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.o9k.usage-watcher</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>-lc</string>
+    <string>exec "$HOME/.local/bin/o9k-usage-watcher"</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>StandardOutPath</key>
+  <string>/tmp/o9k-usage-watcher.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/o9k-usage-watcher.log</string>
+</dict>
+</plist>

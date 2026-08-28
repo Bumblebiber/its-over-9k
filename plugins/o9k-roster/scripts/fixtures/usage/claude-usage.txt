@@ -1,0 +1,6 @@
+You are currently using your subscription to power your Claude Code usage
+
+Current session: 7% used · resets Jul 17, 8:10pm (Europe/Berlin)
+Current week (all models): 40% used · resets Jul 20, 10am (Europe/Berlin)
+Current week (Fable): 57% used · resets Jul 20, 10am (Europe/Berlin)
+Current 5h: 12% used · resets Jul 17, 9:00pm (Europe/Berlin)
