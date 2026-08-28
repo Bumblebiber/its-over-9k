@@ -1,0 +1,39 @@
+{
+  "skill_name": "dispatch",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "You are the Overseer. A team-up roster exists. Task dir ~/projects/tasks/task-usage-balance-fix/ already has SPEC.md and PLANNER_PROMPT.md. Spawn a planner (Claude via team-up) to grill+plan the Usage & Balance Checker fix. Do NOT actually run commands — write the exact ordered steps/commands you would run, then stop. Return only that plan.",
+      "expected_output": "Ordered spawn plan that includes runs create, team-up dispatch with --run-id, and a cheap in-host watcher that only runs `runs wait`. Must NOT be bare team-up dispatch alone.",
+      "files": [],
+      "expectations": [
+        "Mentions runs create or runs.mjs create",
+        "Includes team-up dispatch with --run-id",
+        "Includes a cheap/in-host watcher that runs `runs wait`",
+        "Does not treat bare `team-up dispatch` without mailbox as complete"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "PLAN.md is ready in ~/projects/tasks/task-foo/. Roster is configured. Spawn the implementer phase so you get notified when it finishes. Do NOT execute — list the exact commands/steps only.",
+      "expected_output": "Complete Path B: create run → dispatch --run-id implementer → watcher runs wait.",
+      "files": [],
+      "expectations": [
+        "Mentions runs create or runs.mjs create",
+        "dispatch role implementer includes --run-id",
+        "Includes watcher / runs wait"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Find where OpenRouter credits are parsed in ~/.hermes/scripts/check-usage.py. Roster is configured. What dispatch path do you use? Write the steps (do not execute).",
+      "expected_output": "Path A in-host search/subagent only — no mailbox, no team-up dispatch tmux.",
+      "files": [],
+      "expectations": [
+        "Chooses Path A / in-host subagent (or says no external CLI spawn)",
+        "Does NOT require runs create + mailbox for this lookup",
+        "Does NOT spawn team-up dispatch to tmux for a simple file lookup"
+      ]
+    }
+  ]
+}
