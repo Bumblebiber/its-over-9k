@@ -27,6 +27,3 @@ jobs:
           # intentional word-split; repo test paths have no spaces
           # shellcheck disable=SC2086
           node --test $files
-      - name: Run wait-mailbox shell test
-        shell: bash
-        run: bash plugins/o9k-roster/scripts/wait-mailbox.test.sh

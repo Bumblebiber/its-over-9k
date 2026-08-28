@@ -13,21 +13,29 @@ breaking distribution change (e.g. reclaiming the name from the old hmem CLI).
 
 ### Changed — o9k is a connector, not a feature bundle
 
-**Breaking.** o9k no longer ships features of its own. Five things were split
+**Breaking.** o9k no longer ships features of its own. Six things were split
 into standalone repos, keeping their git history:
 
 | Was | Now | Concern |
 |-----|-----|---------|
 | `o9k-roster` pillar | [team-up](https://github.com/Bumblebiber/team-up) | multi-agent roster |
+| `o9k-dispatch` pillar | [team-up](https://github.com/Bumblebiber/team-up) | subagent isolation |
 | `o9k-caveman` pillar | upstream [caveman](https://github.com/JuliusBrussee/caveman) — fork dropped, not re-published | output style |
 | `o9k-core/scripts/statusline/` | [o9k-statusline](https://github.com/Bumblebiber/o9k-statusline) | host status bar |
 | `o9k-core` md-provenance | [md-provenance](https://github.com/Bumblebiber/md-provenance) | file attribution |
 | `benchmarks/` + `bundle-bench` skill | [bundle-bench](https://github.com/Bumblebiber/bundle-bench) | benchmarking |
 
-All five stay first-class in `compat/registry.json` as companions with
+All of them stay first-class in `compat/registry.json` as companions with
 `audience` / `notFor` text — o9k still arbitrates their concerns, offers to
 install them in `/o9k-init`, and enforces `dispatch` path B once a team-up
 roster exists. It just no longer owns the code.
+
+`dispatch` followed the roster because the two halves of that skill were never
+separable in practice: path B *is* the mailbox protocol team-up implements, and
+path A is the cost gate that decides whether to reach for it. team-up now owns
+the whole `dispatch` concern; o9k keeps only the arbitration entry, and the
+session-start standing order for subagent isolation fires on the team-up
+companion instead of a pillar.
 
 **caveman was not re-published.** o9k's `o9k-caveman` was a 64-line stripped
 fork of [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) (167
@@ -36,7 +44,7 @@ itself an "own feature", and it only ever existed because upstream ships
 neighbouring skills that collide with o9k pillars — which is precisely what the
 arbitration layer is for. So the fork is gone and upstream is the registered
 `output-style` companion, carrying a new `caveats` field: disable `cavecrew`
-(subagent delegation → `o9k-dispatch`) and `caveman-stats` (→ `/o9k-stats`),
+(subagent delegation → team-up) and `caveman-stats` (→ `/o9k-stats`),
 and leave `caveman-compress` off when `o9k-memory` is installed.
 
 - **Every pillar past `o9k-core` is opt-in, default no.** `/o9k-init` asks one

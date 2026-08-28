@@ -5,7 +5,7 @@
     "output-style": { "exclusive": true, "desc": "how the agent writes (compression, tone)" },
     "overview": { "exclusive": true, "desc": "the one repo map / code index per session" },
     "symbols": { "exclusive": true, "desc": "symbol-level navigation and edits" },
-    "dispatch": { "exclusive": true, "desc": "subagent isolation mechanism" },
+    "dispatch": { "exclusive": true, "desc": "subagent isolation mechanism (owned by standalone team-up)" },
     "memory": { "exclusive": true, "desc": "persistent memory backend", "note": "the o9k-memory hooks prefer TIM; uninstall one to be unambiguous." },
     "memory-integration": { "exclusive": false, "desc": "hooks wiring a memory backend into sessions" },
     "methodology": { "exclusive": true, "desc": "the process spine (plan/TDD/review workflow)" },
@@ -42,13 +42,6 @@
       "concerns": ["overview"],
       "audience": "People working in real codebases, especially large or unfamiliar ones. Stops the 20k-token 'let me look around' burn: search before read, read narrow, one repo map per session.",
       "notFor": "Sessions that touch few files, or work that isn't code at all (writing, research, ops) — there is nothing to be disciplined about."
-    },
-    "o9k-dispatch": {
-      "kind": "pillar",
-      "label": "o9k-dispatch",
-      "concerns": ["dispatch"],
-      "audience": "People whose work involves broad sweeps — repo-wide searches, log analysis, digesting long docs, several independent subtasks. Those run in subagents and return conclusions instead of dumping transcripts into your main context.",
-      "notFor": "Short, single-file, single-thread sessions. Spawning a subagent for a two-file change costs more than it saves."
     },
     "o9k-memory": {
       "kind": "pillar",
@@ -104,7 +97,7 @@
       "label": "superpowers (methodology plugin)",
       "concerns": ["methodology"],
       "detect": { "plugin": ["superpowers"] },
-      "//": "2026-07-17 Benni: dispatch owner = o9k-dispatch; removed dispatch from superpowers concerns (skill dispatching-parallel-agents disabled/archived)"
+      "//": "2026-07-17 Benni: removed dispatch from superpowers concerns (skill dispatching-parallel-agents disabled/archived). 2026-08-27: dispatch owner moved from pillar o9k-dispatch to standalone team-up."
     },
     "beads": {
       "kind": "companion",
@@ -142,18 +135,18 @@
       "install": "claude plugin marketplace add JuliusBrussee/caveman && claude plugin install caveman",
       "audience": "Long sessions where the agent's own prose is a real share of the context. ~65% measured output reduction; code, commands and error strings stay verbatim.",
       "notFor": "People who read the agent's output as documentation, or who find telegraphic style harder to follow.",
-      "caveats": "Upstream ships four skills; two claim concerns o9k already assigns. Disable `cavecrew` (subagent delegation → owner is o9k-dispatch) and `caveman-stats` (→ /o9k-stats). `caveman-compress` rewrites CLAUDE.md and other memory files — leave it off when o9k-memory is installed. The `caveman` skill itself is the one you want.",
+      "caveats": "Upstream ships four skills; two claim concerns o9k already assigns. Disable `cavecrew` (subagent delegation → owner is team-up) and `caveman-stats` (→ /o9k-stats). `caveman-compress` rewrites CLAUDE.md and other memory files — leave it off when o9k-memory is installed. The `caveman` skill itself is the one you want.",
       "wasPillar": "o9k-caveman — fork dropped, upstream registered instead"
     },
     "team-up": {
       "kind": "companion",
-      "label": "team-up (multi-agent roster + mailbox runs)",
-      "concerns": ["roster"],
+      "label": "team-up (subagent dispatch + multi-agent roster + mailbox runs)",
+      "concerns": ["roster", "dispatch"],
       "detect": { "path": ["team-up"] },
       "install": "npm install -g team-up && team-up init",
       "audience": "People who drive several CLIs/models at once — planner/implementer/reviewer pipelines, deterministic model picks by role, limit-aware fallback chains.",
       "notFor": "Single-model, single-CLI users. It is a whole orchestration runtime; needs tmux, and on Windows needs WSL.",
-      "wasPillar": "o9k-roster"
+      "wasPillar": "o9k-roster, o9k-dispatch"
     },
     "o9k-statusline": {
       "kind": "companion",

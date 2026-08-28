@@ -52,7 +52,7 @@ Before adding anything beyond the bundle script, read the concern→owner table 
 [using-o9k](../../o9k-core/skills/using-o9k/SKILL.md). One active owner per
 concern — no exceptions.
 
-**Dispatch:** `o9k-dispatch` owns subagent isolation (native `dispatch` skill).
+**Dispatch:** `team-up` owns subagent isolation (its `dispatch` skill).
 Superpowers contributes methodology only. If upstream superpowers still has
 `dispatching-parallel-agents` enabled, **disable it** — two dispatch owners is
 a 🔴 collision per using-o9k arbitration.

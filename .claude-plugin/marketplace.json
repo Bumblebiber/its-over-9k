@@ -16,11 +16,6 @@
       "description": "Optional. Context discipline: load structure before files, search before read, one canonical repo map per session. For people working in real codebases."
     },
     {
-      "name": "o9k-dispatch",
-      "source": "./plugins/o9k-dispatch",
-      "description": "Optional. Cost-gated subagent fan-out: isolate searches and decomposable work in subagents that return results, not transcripts. For work with broad sweeps."
-    },
-    {
       "name": "o9k-memory",
       "source": "./plugins/o9k-memory",
       "description": "Optional. Persistent memory integration: session-start briefing, on-demand recall, save-before-compact. Prefers TIM (npm tim-cli), falls back to hmem (npm hmem-mcp). For projects spanning many sessions."

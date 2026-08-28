@@ -33,7 +33,6 @@ separately and defaults to **no**.
 |--------|--------|--------------|------------|
 | **Doctrine & arbitration** | `o9k-core` *(required)* | Everyone. The arbitration table, host wiring, and the `/o9k-*` commands. This is o9k. | — |
 | **Context discipline** | `o9k-scout` | People working in real codebases, especially large or unfamiliar ones. Search before read, one canonical repo map per session. | Your sessions touch few files, or your work isn't code. |
-| **Subagent isolation** | `o9k-dispatch` | Work with broad sweeps — repo-wide searches, log analysis, digesting long docs. Subagents return conclusions, not transcripts. | Short, single-file sessions; a subagent then costs more than it saves. |
 | **Memory** | `o9k-memory` | Projects spanning many sessions. Briefing at session start, recall on demand, flush before compaction. | One-off tasks, or you don't want a memory MCP ([TIM](https://github.com/Bumblebiber/tim) / [hmem](https://github.com/Bumblebiber/hmem)) installed. |
 | **Discovery** | `o9k-recon` | People who curate their tool stack — scouting new frameworks, installing companion bundles. | Your stack is settled. Install it the day you go shopping. |
 
@@ -45,7 +44,7 @@ same for/skip framing, and o9k keeps arbitrating their concerns.
 
 | Package | Concern | Who it's for |
 |---------|---------|--------------|
-| [caveman](https://github.com/JuliusBrussee/caveman) *(upstream, not ours)* | output style | Long sessions where the agent's own prose is a real share of the context. ~65% measured output reduction; code, commands and error strings stay verbatim. Disable its `cavecrew` and `caveman-stats` skills — those concerns belong to `o9k-dispatch` and `/o9k-stats`. |
+| [caveman](https://github.com/JuliusBrussee/caveman) *(upstream, not ours)* | output style | Long sessions where the agent's own prose is a real share of the context. ~65% measured output reduction; code, commands and error strings stay verbatim. Disable its `cavecrew` and `caveman-stats` skills — those concerns belong to `team-up` and `/o9k-stats`. |
 | [team-up](https://github.com/Bumblebiber/team-up) | multi-agent roster | Driving several CLIs/models at once: role→model fallback chains, usage collector, limit watch, cross-CLI mailbox runs. See [docs/MULTI-AGENT.md](docs/MULTI-AGENT.md). |
 | [o9k-statusline](https://github.com/Bumblebiber/o9k-statusline) | status bar | Model, context fill, limit headroom, git and memory project at a glance in Claude Code, Cursor or Hermes. |
 | [md-provenance](https://github.com/Bumblebiber/md-provenance) | file attribution | Repos filling up with agent-written HANDOFF/PLAN/RESULT files, where you later need to know who wrote what and why. |
@@ -213,7 +212,7 @@ gets along:
 | **task-master** | ⚪ | ⚪ | ⚪ | ⚪ | ⚠️² | 🔴 | ⚪ | ⚪ | ⚠️³ | — | 🔴 |
 | **BMAD·spec-kit·SuperClaude** | ⚪ | ⚪ | ⚪ | ⚪ | 🔴 | 🔴 | ⚪ | ⚪ | ⚪ | 🔴 | —⁴ |
 
-1. **o9k × superpowers:** `o9k-dispatch` owns subagent isolation by default;
+1. **o9k × superpowers:** `team-up` owns subagent isolation by default;
    superpowers owns methodology. Disable stock `dispatching-parallel-agents` only
    if it is still enabled.
 2. **superpowers × beads/task-master:** a plan *store* beats plan *files* — the

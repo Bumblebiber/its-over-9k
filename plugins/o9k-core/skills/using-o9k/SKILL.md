@@ -20,8 +20,8 @@ user opted into — read the table, not your memory of a default install.
 |-----------|---------|----------------------|
 | Writing any response | Output compression | `caveman` (upstream project) |
 | About to open/read/explore code | Context discipline | `scout` (o9k-scout) |
-| A search, lookup, or decomposable task | Subagent isolation | `dispatch` path A (o9k-dispatch) |
-| External CLI worker (tmux / cross-CLI) | Multi-agent roster | `team-up` + `dispatch` path B — **required** once a roster exists |
+| A search, lookup, or decomposable task | Subagent isolation | `dispatch` path A (team-up) |
+| External CLI worker (tmux / cross-CLI) | Multi-agent roster | team-up's `dispatch` path B — **required** once a roster exists |
 | Session start, project questions, "what was the state?" | Memory | `memory` (o9k-memory) |
 | Conflict between any of the above | Arbitration | this skill |
 
@@ -72,15 +72,15 @@ through it and offers to apply the fix.
 
 | Concern | Owner | Displaced alternatives |
 |---------|-------|------------------------|
-| Output style / tone | upstream `caveman` | Claude Code output-styles, persona skills; caveman's own `cavecrew` (dispatch) and `caveman-stats` (cost) skills — disable those two |
+| Output style / tone | upstream `caveman` | Claude Code output-styles, persona skills; caveman's own `cavecrew` (dispatch, owner is team-up) and `caveman-stats` (cost) skills — disable those two |
 | Session-start context injection | the memory MCP's hook (TIM or hmem) | any other SessionStart injector |
 | The repo overview map | `o9k-scout` (one map per session) | codesight + Serena + repo-map all generating overviews |
 | Symbol-level navigation/edits | Serena MCP if installed, else plain tools | — |
 | "The plan" | beads if installed, else the plan file | plan content duplicated into CLAUDE.md or memory |
 | Task/issue state | beads if installed, else memory T-entries | parallel TODO markdown files |
 | Workflow methodology (TDD, review, brainstorm) | superpowers if installed | — |
-| Subagent dispatch (in-host) | `o9k-dispatch` path A | superpowers' `dispatching-parallel-agents` (disabled 2026-07-17 — owner is o9k) |
-| Cross-CLI who/spawn + mailbox | `team-up` (own repo) + `o9k-dispatch` path B once a roster exists | hard-coded model picks; bare `team-up dispatch` without `runs create` + `--run-id` + watcher; a second dispatch owner |
+| Subagent dispatch (in-host) | `team-up`'s `dispatch` path A | superpowers' `dispatching-parallel-agents` (disabled 2026-07-17 — owner is team-up) |
+| Cross-CLI who/spawn + mailbox | `team-up` (own repo), `dispatch` path B once a roster exists | hard-coded model picks; bare `team-up dispatch` without `runs create` + `--run-id` + watcher; a second dispatch owner |
 | The host status bar | `o9k-statusline` (own repo) | a second statusLine command per host |
 | Markdown attribution | `md-provenance` (own repo) | hand-written "written by" headers |
 
